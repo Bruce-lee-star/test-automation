@@ -1,0 +1,49 @@
+# ============================================================================
+# test-automation（独立构建单元）版本控制忽略规则
+#   本仓库只应包含：pom.xml、spotbugs-exclude.xml、src/**
+#   —— 其余均为构建产物 / 运行期缓存 / 崩溃转储，绝不入库。
+# ============================================================================
+
+# ---------- 构建产物（Maven：classes/jars/报告/serenity 站点；实测 320MB）----------
+target/
+**/target/
+
+# ---------- Playwright 浏览器缓存（由 mvn exec ... playwright CLI install 生成；勿入库）----------
+.playwright/
+
+# ---------- JVM 崩溃转储与回放日志（HS 错误日志，含环境信息）----------
+hs_err_pid*.log
+replay_pid*.log
+*.hprof
+
+# ---------- 测试运行期产物 ----------
+downloads/
+screenshots/
+traces/
+*.trace.zip
+
+# ---------- IDE / 编辑器 ----------
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+*.swp
+
+# ---------- 操作系统 ----------
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ---------- 本地凭据/环境覆盖（凭据一律经环境变量或 CI Secrets 注入，绝不入库）----------
+*.local
+.env
+.env.*
+!/.env.example
+*.p12
+*.jks
+*.pfx
+*.key
