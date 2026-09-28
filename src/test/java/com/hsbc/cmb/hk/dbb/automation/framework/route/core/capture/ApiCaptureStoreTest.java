@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.hsbc.cmb.hk.dbb.automation.framework.route.core.capture.ApiCaptureStore;
@@ -14,7 +13,7 @@ import com.hsbc.cmb.hk.dbb.automation.framework.route.core.capture.CapturedApiCa
 import com.hsbc.cmb.hk.dbb.automation.framework.route.core.rule.RouteHandleType;
 
 /**
- * ApiCaptureStore 行为护盾：delay/mock/modify 全量采集 + onResponse 兜底去重 + 即时清理。
+ * ApiCaptureStore 行为护盾：delay/mock/modify 全量采集 + 同 URL 记录去重 + 即时清理。
  */
 public class ApiCaptureStoreTest {
 
@@ -50,25 +49,17 @@ public class ApiCaptureStoreTest {
     }
 
     @Test
-    public void onResponsePassthroughDoesNotOverrideRicherHandlerRecord() {
+    public void laterMonitorRecordForSameUrlDoesNotOverrideRicherMockRecord() {
         ApiCaptureStore store = new ApiCaptureStore();
         // Handler 记录一条 MOCK（携带 mock 信息）
         store.record(call("/api/login", "https://x/api/login", RouteHandleType.MOCK));
-        // onResponse 兜底针对同一 URL 记录 MONITOR —— 应被去重跳过
+        // 同一 URL 再来一条信息量更少的 MONITOR —— 应被去重跳过（保留更富信息的那条）
         store.record(call("/api/login", "https://x/api/login", RouteHandleType.MONITOR));
 
         List<CapturedApiCall> calls = store.getApiCalls("/api/login");
-        assertEquals( 1,  calls.size(), "passthrough must not duplicate the handler record");
+        assertEquals( 1,  calls.size(), "同一 URL 的记录不得重复堆积");
         assertEquals(RouteHandleType.MOCK, calls.get(0).handleType());
         assertEquals(RouteHandleType.MOCK, store.getLastApiCall("/api/login").handleType());
-    }
-
-    @Test
-    public void unregisteredTrafficCapturedViaPassthrough() {
-        ApiCaptureStore store = new ApiCaptureStore();
-        store.record(call("/api/unknown", "https://x/api/unknown", RouteHandleType.MONITOR));
-        assertNotNull(store.getLastApiCall("/api/unknown"));
-        assertEquals(RouteHandleType.MONITOR, store.getLastApiCall("/api/unknown").handleType());
     }
 
     @Test

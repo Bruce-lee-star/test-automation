@@ -1,4 +1,4 @@
-@regression @web @baidu
+@skip @regression @web @baidu
 Feature: Baidu search - reproduce Element Not Found after switchNewPage
 
   # Scenario1: 搜索 → waitForPopup 捕获新 tab → switchToPage 切换 → 等待

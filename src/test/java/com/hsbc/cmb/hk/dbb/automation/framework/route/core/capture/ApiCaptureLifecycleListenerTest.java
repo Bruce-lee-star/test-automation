@@ -6,27 +6,25 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Collections;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.hsbc.cmb.hk.dbb.automation.framework.route.core.capture.ApiCaptureLifecycle;
 import com.hsbc.cmb.hk.dbb.automation.framework.route.core.capture.ApiCaptureManager;
-import com.hsbc.cmb.hk.dbb.automation.framework.route.core.rule.RouteHandleType;
 
 /**
- * 回归护盾：锁定 {@link ApiCaptureLifecycle#start(Page)} 的 Page 级监听器<b>幂等注册</b>。
+ * 回归护盾：锁定 {@link ApiCaptureLifecycle#start(Page)} 的 Page 级监听器<b>幂等注册</b>，
+ * 并锁定「<b>绝不订阅 {@code page.onResponse}</b>」。
  *
- * <p><b>背景</b>：修复前，重复调用 {@code start(page)} 会叠加多个 {@code page.onResponse} /
- * {@code page.onClose} 监听器，导致同一响应被兜底通道重复记录（破坏去重与计数），且监听器累积至
- * Page 关闭才解绑。修复后：同一 Page 无论 {@code start} 几次，{@code onResponse} /
- * {@code onClose} 仅注册一次；且 {@code stop(page)} 清理注册标记后，可再次 {@code start}
- * 重新挂上监听器（re-attach 场景）。
+ * <p><b>背景</b>：原实现会在 Page 启动时注册 {@code page.onResponse} 做「全局兜底被动捕获」，
+ * 该订阅是驱动侧 {@code Object doesn't exist: response@…} 竞态的唯一触发源
+ * （Playwright 在 {@code BrowserContextImpl.handleEvent} 的 response 分支解析已被回收的
+ * {@code response@} 句柄时抛异常，且发生在业务 lambda 之前、无法拦截，会污染同连接在途调用）。
+ * 该通道已于 2026-09-28 <b>整体删除</b>，响应侧观测改走 route 通道
+ * （{@code Request#existingResponse()}）。
  *
  * <p>本测试用 Mockito 纯单测（mock Playwright {@code Page}/{@code BrowserContext}），
  * 不依赖浏览器运行时；与 {@link ApiCaptureLifecycle} 同包以访问其 package-private 静态方法。
@@ -38,10 +36,8 @@ public class ApiCaptureLifecycleListenerTest {
 
     @BeforeEach
     public void setUp() {
-        // 兜底采集默认开启，确保 onResponse 监听器会被注册
+        // 采集总开关保持开启，确保 start(page) 走到监听器注册分支
         ApiCaptureManager.setApiCaptureEnabled(true);
-        // 被动捕获（onResponse 兜底通道）默认开启，确保幂等注册护盾断言 onResponse 注册 1 次
-        ApiCaptureManager.setPassthroughEnabled(true);
         page = mock(Page.class);
         ctx = mock(BrowserContext.class);
         when(page.context()).thenReturn(ctx);
@@ -58,41 +54,33 @@ public class ApiCaptureLifecycleListenerTest {
     }
 
     @Test
-    public void start_samePageRepeatedly_registersListenersOnlyOnce() {
-        //  关键不变量：同一 Page 多次 start，Page 级 onResponse / onClose 仅注册一次（幂等）
+    public void start_samePageRepeatedly_registersCloseListenerOnlyOnce() {
+        //  关键不变量：同一 Page 多次 start，Page 级 onClose 仅注册一次（幂等），
+        //  否则会在页面关闭时重复 detach，且监听器累积至页面关闭才解绑
         ApiCaptureLifecycle.start(page);
         ApiCaptureLifecycle.start(page);
         ApiCaptureLifecycle.start(page);
 
-        verify(page, times(1)).onResponse(any());
         verify(page, times(1)).onClose(any());
         // Context 级关闭钩子同样幂等（复用 CONTEXT_CLOSE_REGISTERED 的 putIfAbsent 保护）
         verify(ctx, times(1)).onClose(any());
     }
 
     @Test
-    public void stopThenStart_reRegistersListeners() {
+    public void stopThenStart_reRegistersCloseListener() {
         ApiCaptureLifecycle.start(page);   // 注册 1 次
         ApiCaptureLifecycle.stop(page);    // 清理注册标记，允许重注册
         ApiCaptureLifecycle.start(page);   // re-attach：应再次挂上监听器
 
-        //  关键不变量：stop 后 start 能重新注册，否则页面 re-attach 后采集静默失效
-        verify(page, times(2)).onResponse(any());
+        //  关键不变量：stop 后 start 能重新注册，否则页面 re-attach 后会话清理静默失效
         verify(page, times(2)).onClose(any());
     }
 
     @Test
-    public void recordPassthrough_storesSingleCallWithOnResponseSource() {
-        //  锁住兜底通道确实落库 + captureSource 残留值已从 PASSIVE 改为 ON_RESPONSE
-        String url = "https://api.example.com/v1/accounts";
-        ApiCaptureManager.getInstance().recordPassthrough(
-                url, 200, "GET", Collections.emptyMap(), Collections.emptyMap());
+    public void responseListenerIsNeverRegistered() {
+        ApiCaptureLifecycle.start(page);
 
-        CapturedApiCall call = ApiCaptureManager.getInstance().getStore().getCallByUrl(url);
-        assertNotNull( call, "兜底通道应记录该 URL 的调用");
-        assertEquals(
-                "ON_RESPONSE",  call.captureSource(), "兜底采集 captureSource 应为 ON_RESPONSE（去除 PASSIVE 残留）");
-        assertEquals(
-                RouteHandleType.MONITOR,  call.handleType(), "兜底采集 handleType 应为 MONITOR");
+        //  被动捕获通道已整体删除：任何路径下都不得订阅 response 事件
+        verify(page, never()).onResponse(any());
     }
 }

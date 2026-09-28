@@ -132,11 +132,6 @@ public class RoutePerformanceStressTest {
                 "route-demo-service 未启动（" + ORIGIN_URL + "），跳过 Route 性能压测");
         pw = Playwright.create();
         browser = pw.chromium().launch();
-        //  高 churn 护盾：本套件 100 并发真压测会令浏览器侧 response@ 对象被快速 GC，
-        //  若开启全局 onResponse 兜底被动捕获，Playwright 在事件分发层解析失效 response@ 时会抛
-        //  "Object doesn't exist" 并污染同连接在途的 page.evaluate（压测脚本）。关闭被动捕获从根上消除该
-        //  race；已注册流量仍由 MonitorHandler 的 waitForResponse 通道独立采集，本套件断言不受影响。
-        ApiCaptureManager.setPassthroughEnabled(false);
     }
 
     /** 探测 demo-service 是否可达（短超时，避免 CI 长时间阻塞）。 */
@@ -158,11 +153,9 @@ public class RoutePerformanceStressTest {
 
     @AfterAll
     public static void shutdown() {
-        //  try/finally 保证：无论路径如何，被动捕获开关必复位、浏览器资源必释放——避免连接损坏时
+        //  try/finally 保证：无论路径如何，浏览器资源必释放——避免连接损坏时
         //  browser.close() 抛 "Cannot find command to respond" 阻断 pw.close() 导致 Playwright 进程泄漏。
         try {
-            //  复位被动捕获开关，避免影响同 JVM 内其它测试（surefire 默认并行 fork 隔离，此处仍显式复位）
-            ApiCaptureManager.setPassthroughEnabled(true);
             //  显式清空各 Context 采集存储，即时释放内存（兜底于 WeakHashMap 自动回收之外）
             ApiCaptureManager.getInstance().clearAllContexts();
         } finally {

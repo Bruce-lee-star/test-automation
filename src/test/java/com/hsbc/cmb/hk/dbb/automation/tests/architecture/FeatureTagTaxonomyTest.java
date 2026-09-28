@@ -59,7 +59,8 @@ class FeatureTagTaxonomyTest {
             "login", "baidu", "scan", "scan-record", "picker", "e2e-sandbox",
             "parallel-logon", "concurrent-logon",
             "route-composite", "route-coverage", "route-capability-stop", "route-parallel-smoke",
-            "delay", "click", "hover", "type", "check", "select", "popup", "download", "dialog");
+            "delay", "click", "hover", "type", "check", "select", "popup", "download", "dialog",
+            "firefox", "edge", "webkit", "route-edge", "test");
 
     /** 维度四：状态（默认排除 / 重试标记）。 */
     private static final Set<String> STATUS = Set.of("skip", "flaky");

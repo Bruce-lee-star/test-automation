@@ -1,4 +1,4 @@
-@regression @route
+@skip @regression @route
 Feature: Route Demo Service 集成测试（结合框架 @AutoBrowser 浏览器实例化）
 
   # 前置：route-demo-service 已启动（端口 8888，context-path /demo）

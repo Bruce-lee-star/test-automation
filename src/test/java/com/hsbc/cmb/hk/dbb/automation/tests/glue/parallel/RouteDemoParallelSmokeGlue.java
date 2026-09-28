@@ -41,11 +41,15 @@ public class RouteDemoParallelSmokeGlue {
     }
 
     @After
-    public void afterScenario() {
+    public void afterScenario(io.cucumber.java.Scenario scenario) {
         try {
             steps.cleanup();
         } finally {
-            FrameworkCore.getInstance().afterTest();
+            //  A5（2026-09-26）：本 glue 的 @Before/@After 位于 glue 包内 → 对<b>全部</b> scenario 生效，
+            //  且先于 Serenity testFinished 执行，故它是框架实际的收尾入口。此处把 cucumber 的权威结果
+            //  传下去：feature 模式下"本用例失败"→ 只丢本用例 Page（防"存活但已坏"的 Page 跨用例传染）、
+            //  保留 Context/登录态 → 同一 sessionKey 的下个用例既不带脏数据、又免登录。
+            FrameworkCore.getInstance().afterTest(scenario != null && scenario.isFailed());
         }
     }
 

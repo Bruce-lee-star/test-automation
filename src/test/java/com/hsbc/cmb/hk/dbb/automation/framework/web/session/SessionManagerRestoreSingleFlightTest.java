@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -68,7 +69,9 @@ public class SessionManagerRestoreSingleFlightTest {
         try (var w = Files.newBufferedWriter(metaPath(), StandardCharsets.UTF_8)) {
             props.store(w, "unit-test");
         }
-        Files.write(sessionPath(), new byte[0]);
+        // P1-3 (2026-09-27): storageState content must pass JSON integrity validation; empty file is no longer valid.
+        // Write a minimal legal Playwright storageState snapshot.
+        Files.writeString(sessionPath(), "{\"cookies\":[],\"origins\":[]}", StandardCharsets.UTF_8);
     }
 
     /** 并发收集异常，断言"零未捕获异常"。 */
@@ -97,6 +100,8 @@ public class SessionManagerRestoreSingleFlightTest {
         BrowserContext ctx = mock(BrowserContext.class);
         // storageState() 无参重载须返回非空（否则 saveSession 内 STORAGE_CONTENT_CACHE.put(null) 抛 NPE）
         when(ctx.storageState()).thenReturn("{}");
+        // saveSession 走带参重载 storageState(StorageStateOptions)：必须同样 stub，否则返回 null → 原子写 NPE
+        when(ctx.storageState(any(BrowserContext.StorageStateOptions.class))).thenReturn("{}");
         when(provider.getContext()).thenReturn(ctx);
         when(provider.getBrowser()).thenReturn(mock(Browser.class));
         when(provider.getPlaywright()).thenReturn(mock(Playwright.class));
@@ -132,6 +137,8 @@ public class SessionManagerRestoreSingleFlightTest {
                         loginInvocations.incrementAndGet();
                         SessionManager.saveSession(key, homeUrl);
                     }
+                    // ConcurrencyGate 场景闸门：测试环境无 Cucumber 收口，须显式释放，否则同 key 后续线程永久阻塞
+                    SessionManager.releaseSessionGate();
                     results.add(restored);
                     done.countDown();
                 }));
@@ -173,7 +180,10 @@ public class SessionManagerRestoreSingleFlightTest {
                         Thread.currentThread().interrupt();
                         return;
                     }
-                    results.add(SessionManager.restoreSession(key));
+                    boolean restored = SessionManager.restoreSession(key);
+                    // ConcurrencyGate 场景闸门：测试环境无 Cucumber 收口，须显式释放
+                    SessionManager.releaseSessionGate();
+                    results.add(restored);
                     done.countDown();
                 }));
             }

@@ -17,15 +17,17 @@
 
     <properties>
         <framework.version>1.0.0</framework.version>
-        <!-- Cucumber 标签过滤（B-1/B-2）：默认跑所有未显式跳过的场景（not @skip）；
-             用 -Dtags=@其他 覆盖；-Dtags= （空串）跑全部。本属性经 failsafe 的 systemPropertyVariables
-             注入为 cucumber.filter.tags，是【主运行器 CucumberTestRunnerIT】的单一事实来源。
-             但注意：下面 failsafe excludes 里那三个 @Suite 运行器各自用 @ConfigurationParameter
-             硬编码了标签（@parallel-logon / @concurrent-logon / @route-parallel-smoke），本属性对其无效，
-             故它们不参与默认 verify（原因与定向运行命令见 excludes 注释）。
-             另：默认 not @skip 仍含依赖 localhost:8888/8899 的 @route/@api 场景，本机无演示服务时请显式传标签，
-             例如自包含口径（CI e2e 使用）：-Dtags='( @e2e-sandbox or @picker ) and not @skip' -->
-        <tags>not @skip</tags>
+        <!-- 2026-09-27 JUnit4 执行器回退：junit.platform.version 从根 pom 的 1.14.0（JUnit5 时代为 cucumber-junit-platform-engine 升的）降回 1.11.4，与 junit-jupiter/junit-vintage 5.11.4 官方配对（1.14.0 + vintage 5.11.4 触发 JUnitPlatformProvider NoClassDefFoundError，failsafe E2E 0 tests） -->
+        <junit.platform.version>1.11.4</junit.platform.version>
+        <!-- Cucumber 标签过滤：默认只跑 @test 场景（对齐 master 的 CucumberTestRunnerIT 注解 @test）。
+             本属性经 failsafe 的 systemPropertyVariables 注入为 cucumber.filter.tags，是主运行器
+             【CucumberTestRunnerIT】的单一事实来源（覆盖其 @CucumberOptions(tags) 注解）。
+             定向覆盖（运行器仍只扫 features 目录，标签交给本属性）：
+               mvn verify -Dit.test=CucumberTestRunnerIT -Dtags='@login'
+               mvn verify -Dit.test=CucumberTestRunnerIT -Dtags='@route or @api'
+             注意：failsafe excludes 里那三个并行运行器各自硬编码标签，本属性对其无效，
+             故它们不参与默认 verify（定向运行命令见 excludes 注释）。 -->
+        <tags>@test</tags>
 
         <!-- Checkstyle 门禁：本模块【显式关闭】（2026-09-23，本地全量实测）。
              原因：parent 的 configLocation 为 ${maven.multiModuleProjectDirectory}/checkstyle.xml，用于定位
@@ -63,6 +65,12 @@
         <dependency>
             <groupId>com.hsbc.cmb.dbb.hk.automation</groupId>
             <artifactId>pw-route</artifactId>
+            <version>${framework.version}</version>
+        </dependency>
+        <!-- Route V2（渐进引入）：与 pw-route 并行共存，业务层按需切换 RouteDsl2；不改变现有 pw-route -->
+        <dependency>
+            <groupId>com.hsbc.cmb.dbb.hk.automation</groupId>
+            <artifactId>pw-route-v2</artifactId>
             <version>${framework.version}</version>
         </dependency>
         <dependency>
@@ -122,7 +130,7 @@
         </dependency>
         <dependency>
             <groupId>net.serenity-bdd</groupId>
-            <artifactId>serenity-junit5</artifactId>
+            <artifactId>serenity-junit</artifactId>
             <scope>test</scope>
         </dependency>
         <!-- JUnit 5（Jupiter）：测试基座（2026-09-11 JUnit5 升级，替代 junit:junit 4.13.2） -->
@@ -136,15 +144,18 @@
             <artifactId>junit-jupiter-engine</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- Cucumber runner 迁移为 @Suite（替代 @RunWith(CucumberWithSerenity)），驱动 cucumber-junit-platform-engine -->
+        <!-- JUnit 4：执行器回退 master 方案（2026-09-27，P0）——CucumberWithSerenity runner（Serenity 主体接管，scenario tags 天然写入 TestOutcome，根治 JUnit5 旁挂下 @firefox/@edge 覆盖失效）。 -->
         <dependency>
-            <groupId>io.cucumber</groupId>
-            <artifactId>cucumber-junit-platform-engine</artifactId>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.2</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- cucumber-junit：@RunWith(CucumberWithSerenity) 的 JUnit4 桥接（serenity-cucumber 依赖其运行器） -->
         <dependency>
-            <groupId>org.junit.platform</groupId>
-            <artifactId>junit-platform-suite</artifactId>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-junit</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -215,9 +226,21 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>${maven-failsafe-plugin.version}</version>
+                <dependencies>
+                    <!-- 2026-09-27 JUnit4 执行器回退：显式挂 surefire-junit47 provider + classpath 排除 junit-platform/jupiter（JUnit5 单测走 surefire 的 JUnitPlatformProvider），自动检测才能落到 JUnit47Provider，@RunWith(CucumberWithSerenity) runner 才会被 -Dit.test 发现 -->
+                    <dependency>
+                        <groupId>org.apache.maven.surefire</groupId>
+                        <artifactId>surefire-junit47</artifactId>
+                        <version>${maven-failsafe-plugin.version}</version>
+                    </dependency>
+                </dependencies>
                 <configuration>
                     <useFile>false</useFile>
                     <rerunFailingTestsCount>${rerunFailingTestsCount}</rerunFailingTestsCount>
+                    <classpathDependencyExcludes>
+                        <classpathDependencyExclude>org.junit.platform:*</classpathDependencyExclude>
+                        <classpathDependencyExclude>org.junit.jupiter:*</classpathDependencyExclude>
+                    </classpathDependencyExcludes>
                     <forkCount>1</forkCount>
                     <!-- Cucumber 主流程整体超时兜底（防 Playwright 导航/采集阻塞拖垮整轮）
                          X-9：提为可配置属性（默认 1800s），CI 可 -DforkedProcessTimeoutInSeconds=N 覆盖 -->

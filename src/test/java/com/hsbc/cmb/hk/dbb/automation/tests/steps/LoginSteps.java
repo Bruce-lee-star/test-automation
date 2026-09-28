@@ -1,11 +1,10 @@
-package com.hsbc.cmb.hk.dbb.automation.tests.steps;
+package com.hsbc.cmb.hk.dbb.automation.tests.steps;
+
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.concurrent.ConcurrentContextExecutor;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.web.page.factory.PageObjectFactory;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.page.scan.RoleElementPicker;
-import com.hsbc.cmb.hk.dbb.automation.framework.route.core.capture.ApiCaptureContext;
-import com.hsbc.cmb.hk.dbb.automation.framework.route.core.capture.CapturedApiCall;
-import com.hsbc.cmb.hk.dbb.automation.framework.route.dsl.RouteDsl;
+import com.hsbc.cmb.hk.dbb.automation.framework.route.v2.dsl.RouteDsl2;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.session.SessionManager;
 
 import com.hsbc.cmb.hk.dbb.automation.tests.pages.HomePage;
@@ -76,75 +75,74 @@ public class LoginSteps {
         logger.info("========================================");
 
 
-        if (SessionManager.restoreSession(sessionKey)) {
-            // Session 已准备好（可能是从文件恢复，也可能是 Feature 级别缓存）
-            RouteDsl.on(loginPage.getPage())
-                    .api("notifications/streams")
-                    .mock()
-                    .mockBody("{}")
-                    .done()
-                    .api("profile/list")
-                    .mock()
-                    .interceptResponse()
-                    .mockReplaceField("updateContctOverlayFlag", false)
-                    .mockReplaceField("isOverBlockedDate", false)
-                    .done()
-                    .api("leftmenu/permissionLeftMenuConfig")
-                    .monitor()
-                    .expectStatus(200)
-                    .expectJsonPath("enableAdminTools", "YY")
-                    .timeout(60)
-                    .done()
-                    .start();
-            // 【简化API】自动处理 Feature 缓存和 meta 文件读取
-            String homeUrl = SessionManager.getHomeUrl(sessionKey);
+        if (!SessionManager.restoreSession(sessionKey, this::performLogin)) {
+            // 框架已通过 performLogin 完成登录（本线程为 leader，或 follower 已复用落盘 session），无需额外处理
+            return;
+        }
+        // Session 已准备好（可能是从文件恢复，也可能是 Feature 级别缓存）—— 走「复用」路径
+        RouteDsl2.on(loginPage.getPage())
+                .api("notifications/streams")
+                .mock()
+                .mockBody("{}")
+                .done()
+                .api("profile/list")
+                .mock()
+                .interceptResponse()
+                .mockReplaceField("updateContctOverlayFlag", false)
+                .mockReplaceField("isOverBlockedDate", false)
+                .done()
+                .api("leftmenu/permissionLeftMenuConfig")
+                .monitor()
+                .expectStatus(200)
+                .expectJsonPath("enableAdminTools", "Y")
+                .timeout(60)
+                .done()
+                .start();
+        // 【简化API】自动处理 Feature 缓存和 meta 文件读取
+        String homeUrl = SessionManager.getHomeUrl(sessionKey);
 
-            if (homeUrl == null || homeUrl.isEmpty()) {
-                logger.warn("Session file exists but no homeUrl found, cannot skip login");
-                SessionManager.clearSession(sessionKey);
-                performLogin();
-                return;
-            }
-
-            logger.info("Session restored, navigating to homeUrl: {}", homeUrl);
-
-            // 验证 session 是否有效：通过 try-catch 包裹整个验证流程
-            // storageState 跨 Context 场景下，服务端可能因安全机制关闭 Page
-            // 若发生 TargetClosedError，降级为完整登录流程
-            try {
-                loginPage.navigateTo(homeUrl);
-
-                // 【优化】移除 waitForTimeout(15000)：navigation 的 waitUntil 已等待页面加载
-                // 15s 的静止等待可能让 DBB 服务端的 session 校验触发 Page 关闭
-                String currentUrl = loginPage.getCurrentUrl();
-                logger.info("Current URL after navigation: {}", currentUrl);
-
-                if (currentUrl.contains("/logon")) {
-                    logger.warn("Session invalid (redirected to login page)");
-                    performLogin();
-                    return;
-                }
-
-                // Session 有效，等待首页元素
-                homePage.quickLink.waitForVisible(60);
-
-                if (BDDUtils.getCurrentProfile() != null && !BDDUtils.getCurrentProfile().isEmpty()) {
-                    switchProfile(BDDUtils.getCurrentProfile());
-                    logger.info("Session validated, switched to config profile: {}",
-                            BDDUtils.getCurrentProfile());
-                }
-                return; // Session 有效，跳过登录
-            } catch (Exception e) {
-                // 捕获 TargetClosedError / PlaywrightException 等 Page 异常
-                logger.warn("Session restore failed (page/context closed during navigation or validation): {} - falling back to full login", e.getMessage());
-                SessionManager.clearSession(sessionKey);
-                performLogin();
-                return;
-            }
+        if (homeUrl == null || homeUrl.isEmpty()) {
+            logger.warn("Session file exists but no homeUrl found, cannot skip login");
+            SessionManager.clearSession(sessionKey);
+            performLogin();
+            return;
         }
 
-        // Session 无效或不存在，执行登录
-        performLogin();
+        logger.info("Session restored, navigating to homeUrl: {}", homeUrl);
+
+        // 验证 session 是否有效：通过 try-catch 包裹整个验证流程
+        // storageState 跨 Context 场景下，服务端可能因安全机制关闭 Page
+        // 若发生 TargetClosedError，降级为完整登录流程
+        try {
+            loginPage.navigateTo(homeUrl);
+
+            // 【优化】移除 waitForTimeout(15000)：navigation 的 waitUntil 已等待页面加载
+            // 15s 的静止等待可能让 DBB 服务端的 session 校验触发 Page 关闭
+            String currentUrl = loginPage.getCurrentUrl();
+            logger.info("Current URL after navigation: {}", currentUrl);
+
+            if (currentUrl.contains("/logon")) {
+                logger.warn("Session invalid (redirected to login page)");
+                performLogin();
+                return;
+            }
+
+            // Session 有效，等待首页元素
+            homePage.quickLink.waitForVisible(60);
+
+            if (BDDUtils.getCurrentProfile() != null && !BDDUtils.getCurrentProfile().isEmpty()) {
+                switchProfile(BDDUtils.getCurrentProfile());
+                logger.info("Session validated, switched to config profile: {}",
+                        BDDUtils.getCurrentProfile());
+            }
+            return; // Session 有效，跳过登录
+        } catch (Exception e) {
+            // 捕获 TargetClosedError / PlaywrightException 等 Page 异常
+            logger.warn("Session restore failed (page/context closed during navigation or validation): {} - falling back to full login", e.getMessage());
+            SessionManager.clearSession(sessionKey);
+            performLogin();
+            return;
+        }
     }
 
     /**
@@ -163,7 +161,7 @@ public class LoginSteps {
         loginPage.paswordIpt.type(BDDUtils.getCurrentPassword());
         loginPage.physicalDeviceLabel.click();
         loginPage.securityCodeIpt.type(BDDUtils.getSecurityCode(BDDUtils.getCurrentSecurityUrl()));
-        RouteDsl.on(loginPage.getPage())
+        RouteDsl2.on(loginPage.getPage())
                 .api("/error/profile-error.jsp")
                 .monitor()
                 .expectStatus(200)
@@ -182,7 +180,7 @@ public class LoginSteps {
                 .api("leftmenu/permissionLeftMenuConfig")
                 .monitor()
                 .expectStatus(200)
-                .expectJsonPath("enableAdminTools", "YY")
+                .expectJsonPath("enableAdminTools", "Y")
                 .timeout(60)
                 .done()
                 .api("profile/list")
@@ -217,24 +215,6 @@ public class LoginSteps {
         // 3. 保存元数据（homeUrl + timestamp）
         String homeUrl = loginPage.getCurrentUrl();
         SessionManager.saveSession(sessionKey, homeUrl);
-        // 诊断：打印所有已捕获的 API 调用
-        ApiCaptureContext context = ApiCaptureContext.getCurrent();
-        java.util.Map<String, java.util.List<CapturedApiCall>> allCalls = context.getAllApiCalls();
-        logger.info("=== Captured API calls after login: {} endpoints ===", allCalls.size());
-        if (allCalls.isEmpty()) {
-            logger.warn("No API calls were captured. Possible causes:");
-            logger.warn("  1. API patterns need '**/' prefix to match full URL (check RouteEngine.registerInternal normalization)");
-            logger.warn("  2. The SPA may use different API paths than expected");
-            logger.warn("  3. The API calls may have been made before RouteDsl.start() or after monitor timeout");
-        } else {
-            for (java.util.Map.Entry<String, java.util.List<CapturedApiCall>> entry : allCalls.entrySet()) {
-                CapturedApiCall call = entry.getValue().get(entry.getValue().size() - 1);
-                logger.info("  [{}] {} {} ({} calls total)",
-                        call.method(), entry.getKey(), call.statusCode(), entry.getValue().size());
-            }
-        }
-
-
         //  API 断言由框架自动检查（PlaywrightListener.checkAndFailOnApiAssertions）
         // 每个步骤结束时自动抛出 AssertionError，无需业务代码手动检查
 
@@ -243,21 +223,45 @@ public class LoginSteps {
 
     /**
      * 切换 Profile
+     *
+     * <p>根治（此前 10/10 失败）：DBB 首页登录后会反复路由规范化（en-US↔en-us），期间 DOM 被销毁重建，
+     * 若先 {@code getText()}（innerText）再等可见，会在导航抖动期抛 PlaywrightException。故必须先
+     * {@code waitForVisible}（框架内置导航重试）吸收重定向、待 dropdown 稳定后再读/点。
+     * 另：profile/list 的 mock 偶发被 RouteV2 route.fetch 竞态丢弃（fail-open 放行真实响应 →
+     * updateContctOverlayFlag=true 弹出遮罩），故用 {@code jsClick} 绕过遮罩的 actionability 拦截。</p>
      */
     private void switchProfile(String profile) {
-        if (!homePage.profileSwitcher.getText().contains(profile)) {
-            homePage.profileSwitcher.waitForVisible(30).click();
-            homePage.locator(String.format("//span[text()='%s']", profile)).click();
+        homePage.waitForDOMContentLoaded(10000);
+        // 先等 dropdown 稳定（吸收登录后 en-US↔en-us 路由规范化导致的 DOM 重建），再做读/点
+        homePage.profileSwitcher.waitForVisible(60);
+        if (!readProfileText().contains(profile)) {
+            homePage.profileSwitcher.jsClick(); // 绕过可能的遮罩拦截
+            // 固定 5s 让下拉渲染；waitForTimeout 已由框架层做成 nav-safe（导航销毁 frame 时
+            // 自动降级为 Thread.sleep 兜底），无需测试层额外 try/catch。
+            homePage.waitForTimeout(5000);
+            homePage.locator(String.format("//*[text()='%s']", profile)).waitForVisible(30).click();
             logger.info("Clicked profile: {}", profile);
-            if (!homePage.quickLink.isVisible()) {
-                throw new RuntimeException("Profile switch failed with " + profile);
-            }
-            homePage.quickLink.waitForVisible(30);
+            homePage.quickLink.waitForVisible(60);
 
             // 切换 profile 后保存 session
             String homeUrl = loginPage.getCurrentUrl();
             SessionManager.saveSession(sessionKey, homeUrl);
         }
+    }
+
+    /**
+     * 读当前 profile 文本，吸收登录后导航/重定向抖动（innerText 在 DOM 重建期会抛异常，
+     * 被框架包装为 ElementOperationException）。短重试即可越过瞬时抖动。
+     */
+    private String readProfileText() {
+        for (int i = 0; i < 5; i++) {
+            try {
+                return homePage.profileSwitcher.getText();
+            } catch (Exception e) {
+                homePage.waitForTimeout(500);
+            }
+        }
+        return homePage.profileSwitcher.getText();
     }
 
     /**

@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.hsbc.cmb.hk.dbb.automation.framework.route.core.capture.ApiCaptureManager;
 import com.hsbc.cmb.hk.dbb.automation.framework.route.core.capture.CapturedApiCall;
@@ -53,17 +52,6 @@ public class ApiCaptureManagerTest {
     }
 
     @Test
-    public void passthroughForUnregisteredTraffic() {
-        ApiCaptureManager mgr = ApiCaptureManager.getInstance();
-        mgr.beginApiCapture();
-
-        mgr.recordPassthrough("https://x/api/free", 200, "GET", null, null);
-        CapturedApiCall c = mgr.getLastApiCall("/api/free");
-        assertNotNull(c);
-        assertEquals(RouteHandleType.MONITOR, c.handleType());
-    }
-
-    @Test
     public void scenarioIsolationClearsStore() {
         ApiCaptureManager mgr = ApiCaptureManager.getInstance();
         mgr.beginApiCapture();
@@ -81,10 +69,8 @@ public class ApiCaptureManagerTest {
         mgr.setApiCaptureEnabled(false);
 
         mgr.record(call("/api/a", "https://x/api/a", RouteHandleType.MOCK));
-        mgr.recordPassthrough("https://x/api/b", 200, "GET", null, null);
 
         assertEquals(0, mgr.getApiCalls("/api/a").size());
-        assertEquals(0, mgr.getApiCalls("/api/b").size());
     }
 
     @Test

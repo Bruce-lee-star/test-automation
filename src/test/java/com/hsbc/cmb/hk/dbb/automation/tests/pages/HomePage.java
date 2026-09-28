@@ -16,7 +16,7 @@ import com.hsbc.cmb.hk.dbb.automation.framework.web.page.base.AbstractManagedPag
  */
 public class HomePage extends AbstractManagedPage {
 
-    @Element("#quick_link_section")
+    @Element("h3[aria-label=\"Recent activity\"]")
     public PageElement quickLink;
 
     @Element("[id='topnav.profileswitcher.dropdown']")

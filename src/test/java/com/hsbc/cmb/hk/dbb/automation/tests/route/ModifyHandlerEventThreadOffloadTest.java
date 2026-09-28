@@ -7,24 +7,20 @@ import com.hsbc.cmb.hk.dbb.automation.framework.route.handler.ModifyHandler;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Frame;
 import com.microsoft.playwright.Page;
-import com.microsoft.playwright.PlaywrightException;
 import com.microsoft.playwright.Request;
 import com.microsoft.playwright.Response;
 import com.microsoft.playwright.Route;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
 
 import java.util.Collections;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -32,31 +28,23 @@ import static org.mockito.Mockito.when;
 
 /**
  * 评审 F-08 / P1-4 回归网：{@link ModifyHandler} 的观测<b>必须下沉到工作线程</b>，
- * Playwright 事件线程不得同步等待 {@code page.waitForResponse}。
+ * Playwright 事件线程不得同步等待真实响应。
  *
- * <p><b>为何需要它</b>：原实现在事件线程同步执行 {@code page.waitForResponse}（≤30s），
- * 单 context 内该路由分发被串行化 → 后续请求 handler 全部排队 → 级联超时（F-08）。
- * 本测试把 {@code waitForResponse} 打桩为<b>阻塞 {@value #OBSERVE_BLOCK_MS}ms 后抛
- * {@link PlaywrightException}</b>（等价于「慢后端 / 观测失败」这一最坏路径），据此断言：</p>
+ * <p><b>实现基线（A-05）</b>：观测不再走 {@code page.waitForResponse}，改为
+ * {@code req.existingResponse()} 本地轮询（{@code modifyPollScheduler} 每 25ms 递归轮询），
+ * {@code route.resume(opts)} 由 {@code RouteEngine.scheduleDeferred} 调度到延迟线程执行。
+ * 本测试据此断言（2026-09-27 同步适配，原 waitForResponse 桩已随实现下线）：</p>
  * <ol>
- *   <li>{@code handle(...)} 在调用线程上<b>毫秒级返回</b>（远小于阻塞时长）—— 事件线程零阻塞；</li>
- *   <li>阻塞调用发生在 {@code modify-observe-*} <b>守护</b>线程上，而非调用线程；</li>
- *   <li>在途计数协议：提交前事件线程已 {@code increment}（等待窗口内 {@code activeRequests==1}，
- *       主线程不会误判「全部完成」），任务结束必然回到 0（不泄漏计数、不永久阻塞 awaitCompletion）；</li>
- *   <li>路由生命周期契约在异步路径同样成立：观测失败后 route 仍被放行（恰好终结一次）。</li>
+ *   <li>{@code handle(...)} 在调用线程上<b>毫秒级返回</b>——事件线程零阻塞；</li>
+ *   <li>{@code resume} 由守护调度线程执行，而非调用（事件）线程；</li>
+ *   <li>在途计数协议：提交前事件线程已 {@code increment}（等待窗口内 {@code activeRequests==1}），
+ *       任务结束必然回到 0（不泄漏计数、不永久阻塞 awaitCompletion）；</li>
+ *   <li>多次 handle 均不阻塞调用线程，route 均被放行（恰好终结一次）。</li>
  * </ol>
  *
- * <p>打桩走「observation 失败」分支（而非成功分支）是刻意的：该分支只涉及
- * {@code waitForResponse} → {@code safeResume} 这条最核心的阻塞链路，不牵入落库 / 报告 / 断言等
- * 周边协作方，使本测试聚焦于「事件线程是否被阻塞」这一 F-08 的唯一验收点。</p>
- *
- * <p>用 Playwright 接口 mock（{@code Route}/{@code Request}/{@code Frame}/{@code Page}）驱动，
- * 无需真实浏览器。</p>
+ * <p>用 Playwright 接口 mock 驱动，无需真实浏览器。</p>
  */
 public class ModifyHandlerEventThreadOffloadTest {
-
-    /** 打桩的观测阻塞时长：远大于「事件线程是否被阻塞」的判定阈值，使断言方向明确。 */
-    private static final long OBSERVE_BLOCK_MS = 2000;
 
     /** 事件线程允许的最大返回耗时：真实无阻塞时应为毫秒级，2000ms 阻塞必然超此阈值。 */
     private static final long EVENT_THREAD_BUDGET_MS = 1000;
@@ -70,19 +58,15 @@ public class ModifyHandlerEventThreadOffloadTest {
         long elapsed = System.currentTimeMillis() - started;
 
         assertTrue(elapsed < EVENT_THREAD_BUDGET_MS,
-                "F-08：事件线程不得同步等待观测（实测 handle 耗时 " + elapsed + "ms，"
-                        + "而被打桩的 waitForResponse 阻塞 " + OBSERVE_BLOCK_MS + "ms）");
-        assertTrue(fx.observationStarted.await(5, TimeUnit.SECONDS), "观测任务应已被提交并开始执行");
+                "F-08：事件线程不得同步等待观测（实测 handle 耗时 " + elapsed + "ms）");
 
-        Thread observed = fx.observeThread.get();
-        assertNotSame(Thread.currentThread(), observed,
-                "观测必须在工作线程执行，而不是调用（事件）线程");
-        assertTrue(observed.getName().startsWith("modify-observe-"),
-                "观测应运行在专用池线程上（实际线程名：" + observed.getName() + "）");
-        assertTrue(observed.isDaemon(), "观测线程应为守护线程，不得阻止 JVM 退出");
-
-        //  路由生命周期契约：观测失败后必须放行，绝不留下永久 pending 的请求
+        // A-05：resume 由延迟调度线程执行（RouteEngine.scheduleDeferred → DelayScheduler）
         verify(fx.route, timeout(5000)).resume(any(Route.ResumeOptions.class));
+
+        Thread resumed = fx.resumeThread.get();
+        assertNotSame(Thread.currentThread(), resumed,
+                "resume 必须在工作线程执行，而不是调用（事件）线程");
+        assertTrue(resumed.isDaemon(), "调度线程应为守护线程，不得阻止 JVM 退出");
     }
 
     @Test
@@ -94,45 +78,55 @@ public class ModifyHandlerEventThreadOffloadTest {
 
         ModifyHandler.handle(fx.route, fx.rule, 0);
 
-        //  提交前已在事件线程递增：此后（观测尚在阻塞）不得出现 activeRequests==0 的空窗，
+        //  提交前已在事件线程递增：此后（观测尚在进行）不得出现 activeRequests==0 的空窗，
         //  否则 awaitCompletion 会在「已放行但观测未完成」时误判「全部完成」。
         assertEquals(1, ctx.getActiveRequests(),
                 "F-08：观测在途期间必须对 awaitCompletion 可见（提交前同步递增）");
 
-        assertTrue(fx.observationStarted.await(5, TimeUnit.SECONDS), "观测任务应已开始执行");
         assertTrue(waitUntilZero(ctx, 5000), "观测结束后在途计数必须回到 0（配对递减，不得泄漏）");
     }
 
     @Test
     public void repeatedHandlesUseTheSameExecutorAndNeverBlockTheCaller() throws Exception {
         Fixture first = new Fixture();
+        long s1 = System.currentTimeMillis();
         ModifyHandler.handle(first.route, first.rule, 0);
-        assertTrue(first.observationStarted.await(5, TimeUnit.SECONDS));
+        assertTrue(System.currentTimeMillis() - s1 < EVENT_THREAD_BUDGET_MS,
+                "F-08：首次 handle 不得阻塞调用线程");
+        verify(first.route, timeout(5000)).resume(any(Route.ResumeOptions.class));
 
         Fixture second = new Fixture();
-        long started = System.currentTimeMillis();
+        long s2 = System.currentTimeMillis();
         ModifyHandler.handle(second.route, second.rule, 0);
-        long elapsed = System.currentTimeMillis() - started;
-
-        //  第一个任务仍在阻塞观测中，第二个请求的事件线程依旧不被反压（有界队列 + 多工作线程）
-        assertTrue(elapsed < EVENT_THREAD_BUDGET_MS,
-                "并发观测不得反压事件线程（实测 " + elapsed + "ms）");
-        assertTrue(second.observationStarted.await(5, TimeUnit.SECONDS),
-                "第二个观测任务应并行执行，不被前一个的长阻塞串行化");
+        assertTrue(System.currentTimeMillis() - s2 < EVENT_THREAD_BUDGET_MS,
+                "F-08：重复 handle 不得阻塞调用线程");
+        verify(second.route, timeout(5000)).resume(any(Route.ResumeOptions.class));
     }
 
-    private static boolean waitUntilZero(ApiCaptureContext ctx, long timeoutMs) throws InterruptedException {
+    /** 说明用断言：mock 的 request/frame/page 链自洽（防止 fixture 静默失效使断言失去意义）。 */
+    @Test
+    public void fixtureWiresTheSamePageChainItStubs() {
+        Fixture fx = new Fixture();
+        assertSame(fx.page, fx.route.request().frame().page(), "mock 链应指向同一 Page 实例");
+        assertEquals("GET", fx.route.request().method());
+    }
+
+    private static boolean waitUntilZero(ApiCaptureContext ctx, long timeoutMs) {
         long deadline = System.currentTimeMillis() + timeoutMs;
         while (System.currentTimeMillis() < deadline) {
             if (ctx.getActiveRequests() == 0) {
                 return true;
             }
-            Thread.sleep(20);
+            try {
+                Thread.sleep(20);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
         }
-        return false;
+        return ctx.getActiveRequests() == 0;
     }
 
-    /** 每个用例一套独立的 Playwright mock 链 + 可观测的执行证据。 */
     private static final class Fixture {
         private final BrowserContext context = mock(BrowserContext.class);
         private final Page page = mock(Page.class);
@@ -141,8 +135,7 @@ public class ModifyHandlerEventThreadOffloadTest {
         private final Route route = mock(Route.class);
         private final RouteRule rule = new RouteRule();
 
-        private final CountDownLatch observationStarted = new CountDownLatch(1);
-        private final AtomicReference<Thread> observeThread = new AtomicReference<>();
+        private final AtomicReference<Thread> resumeThread = new AtomicReference<>();
 
         private Fixture() {
             rule.setUrlPattern("/demo/api/users");
@@ -156,24 +149,13 @@ public class ModifyHandlerEventThreadOffloadTest {
             when(route.request()).thenReturn(request);
             when(page.context()).thenReturn(context);
             when(page.isClosed()).thenReturn(false);
-            when(page.waitForResponse(
-                    ArgumentMatchers.<Predicate<Response>>any(),
-                    any(Page.WaitForResponseOptions.class),
-                    any(Runnable.class)))
-                    .thenAnswer(invocation -> {
-                        observeThread.set(Thread.currentThread());
-                        observationStarted.countDown();
-                        Thread.sleep(OBSERVE_BLOCK_MS);
-                        throw new PlaywrightException("simulated slow/absent response (F-08 stub)");
-                    });
+            // A-05：观测经 req.existingResponse() 轮询，立即返回 mock Response（轮询即刻完成，避免 30s 超时）
+            when(request.existingResponse()).thenReturn(mock(Response.class));
+            // resume 由 RouteEngine.scheduleDeferred（延迟线程）调度执行：记录其线程以断言「不在事件线程」
+            doAnswer(invocation -> {
+                resumeThread.set(Thread.currentThread());
+                return null;
+            }).when(route).resume(any(Route.ResumeOptions.class));
         }
-    }
-
-    /** 说明用断言：mock 的 request/frame/page 链自洽（防止 fixture 静默失效使断言失去意义）。 */
-    @Test
-    public void fixtureWiresTheSamePageChainItStubs() {
-        Fixture fx = new Fixture();
-        assertSame(fx.page, fx.route.request().frame().page(), "mock 链应指向同一 Page 实例");
-        assertEquals("GET", fx.route.request().method());
     }
 }
