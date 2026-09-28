@@ -47,3 +47,23 @@ Desktop.ini
 *.jks
 *.pfx
 *.key
+
+# ---------- 调试/诊断临时产物（实测长期以 untracked 形态堆积，add -A 时极易误入库）----------
+# 根目录日志/转储（仅锚定根，避免误伤 src 下的黄金文件等 .txt 测试资源）
+/1.txt
+/2.txt
+/e2e_*.txt
+/sf*.txt
+/fs_desc.txt
+/lay.txt
+/mt.txt
+/verify_run*.log
+*.log
+# 一次性调试脚本（_fix_* / _diag_* / _clean_diag* / BOM 变体）
+_fix_*.ps1
+_diag_*.ps1
+_clean_diag*.ps1
+*_bom.ps1
+# 误用未展开属性的构建目录（根名就叫 ${project.build.directory}）与临时 io 目录
+/${project.build.directory}/
+/io/
