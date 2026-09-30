@@ -62,12 +62,7 @@
             <artifactId>pw-web-ui</artifactId>
             <version>${framework.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.hsbc.cmb.dbb.hk.automation</groupId>
-            <artifactId>pw-route</artifactId>
-            <version>${framework.version}</version>
-        </dependency>
-        <!-- Route V2（渐进引入）：与 pw-route 并行共存，业务层按需切换 RouteDsl2；不改变现有 pw-route -->
+        <!-- Route V2：唯一路由实现（V1 pw-route 已整体移除；业务层统一使用 RouteDsl2） -->
         <dependency>
             <groupId>com.hsbc.cmb.dbb.hk.automation</groupId>
             <artifactId>pw-route-v2</artifactId>
@@ -259,18 +254,12 @@
                                ParallelLogon / ConcurrentLogon → 公司 SIT 网络与凭据
                                  （实测 page=...qualityassurance-amh-gbb-sit.p2g.netd2.hsbc.com.hk、
                                    6 个 O63/O38/O88 登录任务约 70s 超时）
-                               RouteDemoParallelSmoke → 本地 8888 演示服务
-                                 （实测 net::ERR_CONNECTION_REFUSED at http://localhost:8888/demo/api/search；
-                                   CI 决策 P0-5 ③ 本期不启动该服务）
                              覆盖不丢：failsafe 的 -Dit.test 会【覆盖】includes/excludes，故定向执行即可（各运行器已硬编码
                              自身标签，无需再传 -Dtags）：
                                mvn verify -Dit.test=CucumberParallelLogonRunnerIT -Dserenity.parallel.for.tests=4 -Dplaywright.browser.headless=true
-                               mvn verify -Dit.test=CucumberConcurrentLogonRunnerIT -Dplaywright.browser.headless=true
-                               mvn verify -Dit.test=CucumberRouteDemoParallelSmokeRunnerIT -Dplaywright.browser.headless=true
-                                 （需先启动演示服务：mvn -f route-demo-service/pom.xml spring-boot:run） -->
+                               mvn verify -Dit.test=CucumberConcurrentLogonRunnerIT -Dplaywright.browser.headless=true -->
                         <exclude>**/CucumberParallelLogonRunnerIT.java</exclude>
                         <exclude>**/CucumberConcurrentLogonRunnerIT.java</exclude>
-                        <exclude>**/CucumberRouteDemoParallelSmokeRunnerIT.java</exclude>
                     </excludes>
                     <testClassesDirectory>${project.build.testOutputDirectory}</testClassesDirectory>
                     <classesDirectory>${project.build.outputDirectory}</classesDirectory>

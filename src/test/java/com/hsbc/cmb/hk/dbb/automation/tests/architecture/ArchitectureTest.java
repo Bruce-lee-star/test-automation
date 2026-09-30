@@ -118,18 +118,6 @@ public class ArchitectureTest {
                 .check(CLASSES_NO_TESTS);
     }
 
-    @Test
-    public void routeCoreMustNotDependOnRouteHandler() {
-        noClasses()
-                .that().resideInAPackage("..framework.route.core.capture..")
-                    .or().resideInAPackage("..framework.route.core.rule..")
-                    .or().resideInAPackage("..framework.route.core.engine..")
-                    .or().resideInAPackage("..framework.route.core.lifecycle..")
-                    .or().resideInAPackage("..framework.route.core.spi..")
-                .should().dependOnClassesThat().resideInAPackage("..framework.route.handler..")
-                .check(CLASSES_NO_TESTS);
-    }
-
     /** L4：地基包 common 不得反向依赖 api（保持 common 为最底层、零上层依赖）。 */
     @Test
     public void commonMustNotDependOnApi() {
