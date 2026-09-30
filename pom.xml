@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.hsbc.cmb.dbb.hk.automation</groupId>
         <artifactId>Automation_WebUI_Framework_BDD</artifactId>
-        <version>1.0.0</version>
+        <version>1.0.1</version>
         <relativePath/>
     </parent>
 
@@ -16,7 +16,7 @@
     <description>Cucumber/Serenity test suite: features, step definitions, CucumberTestRunnerIT. Aggregates all framework modules.</description>
 
     <properties>
-        <framework.version>1.0.0</framework.version>
+        <framework.version>1.0.1</framework.version>
         <!-- 2026-09-27 JUnit4 执行器回退：junit.platform.version 从根 pom 的 1.14.0（JUnit5 时代为 cucumber-junit-platform-engine 升的）降回 1.11.4，与 junit-jupiter/junit-vintage 5.11.4 官方配对（1.14.0 + vintage 5.11.4 触发 JUnitPlatformProvider NoClassDefFoundError，failsafe E2E 0 tests） -->
         <junit.platform.version>1.11.4</junit.platform.version>
         <!-- Cucumber 标签过滤：默认只跑 @test 场景（对齐 master 的 CucumberTestRunnerIT 注解 @test）。

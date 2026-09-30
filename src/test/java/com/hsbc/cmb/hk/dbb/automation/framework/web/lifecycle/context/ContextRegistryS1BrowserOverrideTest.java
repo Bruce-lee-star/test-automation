@@ -34,11 +34,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * S1 回归测试（feature 模式浏览器覆盖失效修复）。
+ * S1 回归测试（浏览器标签覆盖失效修复）。
  *
- * <p>问题背景：feature 模式（{@code restart.browser.for.each=feature}）下同一 feature 内
- * {@link ContextRegistryImpl#getContext()} 会复用线程级 {@code CURRENT_CONTEXT_BY_THREAD}，
- * 而旧实现在复用判定<b>之前</b>从不重新校验浏览器类型，导致后续 scenario 的
+ * <p>问题背景：{@link ContextRegistryImpl#getContext()} 会在复用线程级 {@code CURRENT_CONTEXT_BY_THREAD}
+ * 之前先重新校验浏览器类型；旧实现在复用判定<b>之前</b>从不重新校验，导致后续 scenario 的
  * {@code @firefox}/{@code @edge} 标签覆盖来不及生效。</p>
  *
  * <p>修复形态（{@code ContextRegistryImpl.getContext()} 第 62–72 行）：在复用判定之前，若已确立

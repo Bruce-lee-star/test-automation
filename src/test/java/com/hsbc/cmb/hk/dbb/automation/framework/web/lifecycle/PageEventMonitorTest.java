@@ -1,9 +1,12 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.event.PageEventMonitor;
+import com.hsbc.cmb.hk.dbb.automation.framework.web.config.WebFrameworkConfig;
 
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Page;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -29,6 +32,25 @@ import static org.mockito.Mockito.verify;
  */
 @SuppressWarnings("unchecked")
 public class PageEventMonitorTest {
+
+    @BeforeEach
+    void enableDiagnosticSubscriptions() {
+        WebFrameworkConfig.PLAYWRIGHT_PAGE_EVENTS_PAGE_ENABLED.setValue("true");
+        WebFrameworkConfig.PLAYWRIGHT_PAGE_EVENTS_PAGE_ERROR_ENABLED.setValue("true");
+        WebFrameworkConfig.PLAYWRIGHT_PAGE_EVENTS_CONSOLE_ENABLED.setValue("true");
+        WebFrameworkConfig.PLAYWRIGHT_PAGE_EVENTS_REQUEST_FAILED_ENABLED.setValue("true");
+        WebFrameworkConfig.PLAYWRIGHT_PAGE_EVENTS_CRASH_ENABLED.setValue("true");
+    }
+
+    @AfterEach
+    void disableDiagnosticSubscriptions() {
+        WebFrameworkConfig.PLAYWRIGHT_PAGE_EVENTS_PAGE_ENABLED.setValue("false");
+        WebFrameworkConfig.PLAYWRIGHT_PAGE_EVENTS_PAGE_ERROR_ENABLED.setValue("false");
+        WebFrameworkConfig.PLAYWRIGHT_PAGE_EVENTS_CONSOLE_ENABLED.setValue("false");
+        WebFrameworkConfig.PLAYWRIGHT_PAGE_EVENTS_REQUEST_FAILED_ENABLED.setValue("false");
+        WebFrameworkConfig.PLAYWRIGHT_PAGE_EVENTS_CRASH_ENABLED.setValue("false");
+    }
+
 
     @Test
     public void registerContextWiresOnPageAndPropagatesToNewPages() {

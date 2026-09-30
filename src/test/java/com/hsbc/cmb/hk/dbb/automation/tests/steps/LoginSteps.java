@@ -128,7 +128,7 @@ public class LoginSteps {
             }
 
             // Session 有效，等待首页元素
-            homePage.quickLink.waitForVisible(60);
+            homePage.quickLink.waitForVisible(45);
 
             if (BDDUtils.getCurrentProfile() != null && !BDDUtils.getCurrentProfile().isEmpty()) {
                 switchProfile(BDDUtils.getCurrentProfile());
@@ -231,11 +231,8 @@ public class LoginSteps {
      * updateContctOverlayFlag=true 弹出遮罩），故用 {@code jsClick} 绕过遮罩的 actionability 拦截。</p>
      */
     private void switchProfile(String profile) {
-        homePage.waitForDOMContentLoaded(10000);
-        // 先等 dropdown 稳定（吸收登录后 en-US↔en-us 路由规范化导致的 DOM 重建），再做读/点
-        homePage.profileSwitcher.waitForVisible(60);
         if (!readProfileText().contains(profile)) {
-            homePage.profileSwitcher.jsClick(); // 绕过可能的遮罩拦截
+            homePage.profileSwitcher.waitForVisible(60).click(); // 绕过可能的遮罩拦截
             // 固定 5s 让下拉渲染；waitForTimeout 已由框架层做成 nav-safe（导航销毁 frame 时
             // 自动降级为 Thread.sleep 兜底），无需测试层额外 try/catch。
             homePage.waitForTimeout(5000);

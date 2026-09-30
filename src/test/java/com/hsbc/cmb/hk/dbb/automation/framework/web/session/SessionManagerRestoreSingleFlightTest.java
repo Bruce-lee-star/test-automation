@@ -7,6 +7,7 @@ import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -89,6 +90,11 @@ public class SessionManagerRestoreSingleFlightTest {
         }
     }
 
+    /**
+     * 本类表征「已有会话 → 并发复用 + 单飞」。2026-09-30 收口后，免登录复用已成为<b>全局默认行为</b>
+     * （每 case 重建 Context 但注入已落盘 storageState，复用始终开启，不再依赖 restart 策略档位），
+     * 故无需再钉住 feature 模式；restoreSession 的 per-sessionKey 单飞协调对全模式生效。
+     */
     @AfterEach
     public void tearDown() {
         PlaywrightManager.resetProvider();

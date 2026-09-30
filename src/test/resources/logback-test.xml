@@ -58,8 +58,14 @@
         <appender-ref ref="FILE"/>
     </root>
 
-    <!-- 项目日志级别 -->
-    <logger name="com.hsbc.cmb.dbb.hk.automation" level="DEBUG"/>
+    <!--
+      项目日志级别（2026-09-28 修正）：
+      原写法包名写反了（com.hsbc.cmb.dbb.hk.automation vs 真实包 com.hsbc.cmb.hk.dbb.automation），
+      属死配置；且即便写对，固定 DEBUG 也会让框架详细日志刷屏 —— 详细日志正确开关是
+      framework.verbose.logging（VerboseLogging 会把本项目包 logger 提到 DEBUG）。
+      故此处保持基线 INFO：默认只输出关键信息。
+    -->
+    <logger name="com.hsbc.cmb.hk.dbb.automation" level="INFO"/>
     
     <!-- Playwright 日志级别 -->
     <logger name="com.microsoft.playwright" level="WARN"/>

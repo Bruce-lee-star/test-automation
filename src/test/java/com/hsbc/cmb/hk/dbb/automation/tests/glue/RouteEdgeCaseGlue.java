@@ -120,17 +120,17 @@ public class RouteEdgeCaseGlue {
         }
     }
 
-    /** 确保页面已导航到 DBB home（约 blank / 空 URL 时用 feature 会话的 homeUrl 导航；不重复登录）。 */
+    /** 确保页面已导航到 DBB home（约 blank / 空 URL 时用已恢复会话的 homeUrl（meta 来源）导航；不重复登录）。 */
     private Page ensureNavigatedToHome(Page page) {
         String url = page.url();
         if (url == null || url.isEmpty() || url.startsWith("about:")) {
-            String homeUrl = SessionManager.getFeatureHomeUrl();
+            String homeUrl = SessionManager.getHomeUrl();
             if (homeUrl != null && !homeUrl.isEmpty() && !page.isClosed()) {
-                LOGGER.info("[RouteEdge] page was {} -> navigating to feature home: {}", url, homeUrl);
+                LOGGER.info("[RouteEdge] page was {} -> navigating to home: {}", url, homeUrl);
                 page.navigate(homeUrl);
 
             } else {
-                LOGGER.warn("[RouteEdge] page is blank but no feature homeUrl available; route may not hit real APIs");
+                LOGGER.warn("[RouteEdge] page is blank but no homeUrl available; route may not hit real APIs");
             }
         }
         return page;
