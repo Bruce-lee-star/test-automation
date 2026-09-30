@@ -1,7 +1,7 @@
 package com.hsbc.cmb.hk.dbb.automation.tests.glue;
 
-import com.hsbc.cmb.hk.dbb.automation.framework.route.v2.dsl.RouteDsl2;
-import com.hsbc.cmb.hk.dbb.automation.framework.route.v2.monitor.CapturedApiCall;
+import com.hsbc.cmb.hk.dbb.automation.framework.route.dsl.RouteDsl;
+import com.hsbc.cmb.hk.dbb.automation.framework.route.monitor.CapturedApiCall;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.session.SessionManager;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.annotations.AutoBrowser;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.page.factory.PageObjectFactory;
@@ -58,31 +58,31 @@ public class RouteEdgeCaseGlue {
         this.registeredCase = caseName;
         Page page = ensureNavigatedToHome(page());
         switch (caseName) {
-            case "capture" -> RouteDsl2.on(page)
+            case "capture" -> RouteDsl.on(page)
                     .api(PROFILE_LIST_PATTERN).monitor().capture().captureBody(true).done()
                     .api(LEFT_MENU_PATTERN).monitor().capture().captureBody(true).done()
                     .start();
-            case "nonjson-capture" -> RouteDsl2.on(page)
+            case "nonjson-capture" -> RouteDsl.on(page)
                     .api("/**").monitor().capture().captureBody(true).done()
                     .start();
-            case "nonjson-mock" -> RouteDsl2.on(page)
+            case "nonjson-mock" -> RouteDsl.on(page)
                     .api(NON_JSON_PATTERN)
                     .mock().status(200).contentType("text/html; charset=utf-8")
                     .body("<html><body>mock-error-html</body></html>").done()
                     .api(NON_JSON_PATTERN).monitor().capture().captureBody(true).done()
                     .start();
-            case "monitor" -> RouteDsl2.on(page)
+            case "monitor" -> RouteDsl.on(page)
                     .api(PROFILE_LIST_PATTERN)
                     .monitor().expectStatus(200).timeout(15).done()
                     .start();
-            case "cascade" -> RouteDsl2.on(page)
+            case "cascade" -> RouteDsl.on(page)
                     .api(PROFILE_LIST_PATTERN).monitor().expectStatus(200).timeout(15).done()
                     .api(LEFT_MENU_PATTERN).monitor().expectStatus(200).timeout(15).done()
                     .api("notifications/streams").monitor().expectStatus(200).timeout(15).done()
                     .api("auth/assert").monitor().expectStatus(200).timeout(15).done()
                     .api(PROFILE_LIST_PATTERN).mock().mockReplaceField("updateContctOverlayFlag", false).done()
                     .start();
-            case "unmatched" -> RouteDsl2.on(page)
+            case "unmatched" -> RouteDsl.on(page)
                     .api(UNMATCHED_PATTERN).monitor().expectStatus(200).timeout(5).done()
                     .start();
             default -> fail("unknown route edge case: " + caseName);
@@ -137,7 +137,7 @@ public class RouteEdgeCaseGlue {
     }
 
     private void assertCaptureRecordsJsonApis() {
-        List<CapturedApiCall> calls = RouteDsl2.dumpCaptured(page());
+        List<CapturedApiCall> calls = RouteDsl.dumpCaptured(page());
         assertFalse(calls.isEmpty(), "capture must have recorded at least one call");
         CapturedApiCall profile = calls.stream()
                 .filter(c -> c.url().contains(PROFILE_LIST_PATTERN))
@@ -151,7 +151,7 @@ public class RouteEdgeCaseGlue {
     }
 
     private void assertCaptureRecordsNonJsonResponses() {
-        List<CapturedApiCall> calls = RouteDsl2.dumpCaptured(page());
+        List<CapturedApiCall> calls = RouteDsl.dumpCaptured(page());
         assertFalse(calls.isEmpty(), "non-json capture must have recorded traffic");
         boolean htmlSeen = calls.stream().anyMatch(c -> {
             String ct = c.responseHeaders().entrySet().stream()
@@ -165,7 +165,7 @@ public class RouteEdgeCaseGlue {
     }
 
     private void assertNonJsonMockFailsOpen() {
-        List<CapturedApiCall> calls = RouteDsl2.dumpCaptured(page());
+        List<CapturedApiCall> calls = RouteDsl.dumpCaptured(page());
         // 条件断言：若 error.jsp 被请求（被 mock 命中），响应体必须是 mock HTML；
         // 未被请求则仅断言页面健康（mock 注册对非 JSON 数据不炸本身就是验收点）。
         calls.stream().filter(c -> c.url().contains("profile-error.jsp")).forEach(c -> {

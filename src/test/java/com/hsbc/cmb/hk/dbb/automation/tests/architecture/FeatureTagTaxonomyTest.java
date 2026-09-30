@@ -58,7 +58,7 @@ class FeatureTagTaxonomyTest {
     private static final Set<String> DOMAIN = Set.of(
             "login", "baidu", "scan", "scan-record", "picker", "e2e-sandbox",
             "parallel-logon", "concurrent-logon",
-            "route-v2-e2e",
+            "route-e2e",
             "delay", "click", "hover", "type", "check", "select", "popup", "download", "dialog",
             "firefox", "edge", "webkit", "route-edge", "test");
 

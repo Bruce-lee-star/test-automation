@@ -1,9 +1,9 @@
 package com.hsbc.cmb.hk.dbb.automation.tests.route;
 
-import com.hsbc.cmb.hk.dbb.automation.framework.route.v2.RouteEngine2;
-import com.hsbc.cmb.hk.dbb.automation.framework.route.v2.RouteRuntime;
-import com.hsbc.cmb.hk.dbb.automation.framework.route.v2.dsl.RouteCapability;
-import com.hsbc.cmb.hk.dbb.automation.framework.route.v2.dsl.RouteDsl2;
+import com.hsbc.cmb.hk.dbb.automation.framework.route.RouteEngine;
+import com.hsbc.cmb.hk.dbb.automation.framework.route.RouteRuntime;
+import com.hsbc.cmb.hk.dbb.automation.framework.route.dsl.RouteCapability;
+import com.hsbc.cmb.hk.dbb.automation.framework.route.dsl.RouteDsl;
 import com.microsoft.playwright.APIRequestContext;
 import com.microsoft.playwright.APIResponse;
 import com.microsoft.playwright.BrowserContext;
@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * Route V2 能力全量覆盖 + 资源泄漏体检（mock 驱动，无需浏览器 / 不依赖 DBB 环境）。
  *
  * <p>范围对齐登录场景（{@code Given logon DBB "O63_SIT1" environment as user "WP7UAT2_2"}）里
- * 实际用到的四种能力及其"边角"，全部走 {@link RouteDsl2} 公共 API：
+ * 实际用到的四种能力及其"边角"，全部走 {@link RouteDsl} 公共 API：
  * <ul>
  *   <li><b>MOCK</b>：静态体 / 字段替换 / {@code when(...).thenSet(...)} 条件替换（命中与不命中两条分支）/
  *       {@code interceptResponse()} 取真实响应 / status+headers+contentType / {@code mockBodyFromFile}
@@ -60,7 +60,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * <p>响应夹具取真实 DBB 返回：{@code mocks/dbb/leftmenu-permissionLeftMenuConfig.json}、
  * {@code mocks/dbb/pinned-account.json}、{@code mocks/dbb/insight-retrieve.json}。
  */
-public class RouteV2CapabilityCoverageTest {
+public class RouteCapabilityCoverageTest {
 
     private static final String FIX_LEFTMENU = "mocks/dbb/leftmenu-permissionLeftMenuConfig.json";
     private static final String FIX_PINNED = "mocks/dbb/pinned-account.json";
@@ -76,18 +76,18 @@ public class RouteV2CapabilityCoverageTest {
 
     @BeforeEach
     public void setUp() {
-        runtimeBaseline = RouteEngine2.activeRuntimes();
+        runtimeBaseline = RouteEngine.activeRuntimes();
     }
 
     @AfterEach
     public void tearDown() {
         try {
             if (ctx != null) {
-                RouteEngine2.shutdown(ctx);
+                RouteEngine.shutdown(ctx);
             }
         } finally {
             // 泄漏体检：每个用例结束，runtime 注册表必须回落基线（否则 context→runtime 映射在被持有）
-            assertEquals(runtimeBaseline, RouteEngine2.activeRuntimes(),
+            assertEquals(runtimeBaseline, RouteEngine.activeRuntimes(),
                     "用例结束后 runtime 注册表必须回落基线（无泄漏）");
             ctx = null;
             runtime = null;
@@ -136,7 +136,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("MOCK：夹具静态体 + 字段替换（pinned-account 真实响应）")
     public void mockStaticBodyFromFixtureReplacesField() {
         newMockContext();
-        RouteDsl2.on(ctx)
+        RouteDsl.on(ctx)
                 .api("/dbb/pinned-accounts")
                 .mock().status(200).contentType("application/json")
                 .mockBodyFromFile(FIX_PINNED)
@@ -159,7 +159,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("MOCK：when(...).thenSet(...) 条件命中时写入新值")
     public void conditionalWhenThenSetAppliesWhenMatched() {
         newMockContext();
-        RouteDsl2.on(ctx)
+        RouteDsl.on(ctx)
                 .api("/dbb/pinned-accounts")
                 .mock().status(200).contentType("application/json")
                 .mockBodyFromFile(FIX_PINNED)
@@ -180,7 +180,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("MOCK：when(...).thenSet(...) 条件不命中时保留原值")
     public void conditionalWhenThenSetKeepsValueWhenNotMatched() {
         newMockContext();
-        RouteDsl2.on(ctx)
+        RouteDsl.on(ctx)
                 .api("/dbb/pinned-accounts")
                 .mock().status(200).contentType("application/json")
                 .mockBodyFromFile(FIX_PINNED)
@@ -207,7 +207,7 @@ public class RouteV2CapabilityCoverageTest {
         Mockito.when(apiResponse.body()).thenReturn(fixture(FIX_INSIGHT).getBytes(StandardCharsets.UTF_8));
         Mockito.when(apiCtx.fetch(Mockito.anyString(), Mockito.any())).thenReturn(apiResponse);
 
-        RouteDsl2.on(ctx)
+        RouteDsl.on(ctx)
                 .api("/dbb/insight/retrieve")
                 .mock().interceptResponse()
                 .mockReplaceField("$.message", "MOCKED")
@@ -229,7 +229,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("MOCK：status / contentType / 自定义 header 全部落到终结点")
     public void mockStatusHeadersContentTypeApplied() {
         newMockContext();
-        RouteDsl2.on(ctx)
+        RouteDsl.on(ctx)
                 .api("/dbb/mocked-status")
                 .mock().status(201)
                 .contentType("application/json")
@@ -254,7 +254,7 @@ public class RouteV2CapabilityCoverageTest {
     public void mockBodyFromFileMissingResourceFailsFast() {
         newMockContext();
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                RouteDsl2.on(ctx)
+                RouteDsl.on(ctx)
                         .api("/dbb/nope")
                         .mock().mockBodyFromFile("mocks/dbb/does-not-exist.json")
                         .register());
@@ -267,7 +267,7 @@ public class RouteV2CapabilityCoverageTest {
     public void mockInterceptConflictsWithStaticBody() {
         newMockContext();
         assertThrows(IllegalArgumentException.class, () ->
-                RouteDsl2.on(ctx)
+                RouteDsl.on(ctx)
                         .api("/dbb/conflict")
                         .mock().interceptResponse().body("{}")
                         .register());
@@ -281,7 +281,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("MODIFY：header 新增 + method 改写 + body 字段改写，一次 resume 携带全部改动")
     public void modifyRequestHeaderMethodAndBody() {
         newMockContext();
-        RouteDsl2.on(ctx)
+        RouteDsl.on(ctx)
                 .api("/dbb/modify-all")
                 .modifyRequest()
                 .setRequestHeader("X-Env", "mock")
@@ -305,7 +305,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("MODIFY：removeRequestHeader 删除指定头且保留其它头")
     public void modifyRemoveRequestHeaderDropsIt() {
         newMockContext();
-        RouteDsl2.on(ctx)
+        RouteDsl.on(ctx)
                 .api("/dbb/modify-remove")
                 .modifyRequest()
                 .removeRequestHeader("x-drop")
@@ -327,7 +327,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("MODIFY：body 字段 改（SET）/ 数组追加（ADD）/ 删（REMOVE）三个操作并存")
     public void modifyRequestBodyAddSetRemoveField() {
         newMockContext();
-        RouteDsl2.on(ctx)
+        RouteDsl.on(ctx)
                 .api("/dbb/modify-body")
                 .modifyRequest()
                 .modifyRequestBody("$.user", "u2")
@@ -352,7 +352,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("MODIFY：表单（urlencoded）字段改写")
     public void modifyFormFieldOnUrlEncodedBody() {
         newMockContext();
-        RouteDsl2.on(ctx)
+        RouteDsl.on(ctx)
                 .api("/dbb/modify-form")
                 .modifyRequest()
                 .modifyFormField("password", "new")
@@ -374,7 +374,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("MODIFY：非适用 content-type 明确拒绝修改，fail-open 原样放行")
     public void modifyNonApplicableContentTypeFailsOpen() {
         newMockContext();
-        RouteDsl2.on(ctx)
+        RouteDsl.on(ctx)
                 .api("/dbb/modify-binary")
                 .modifyRequest()
                 .modifyRequestBody("$.a", "1")
@@ -397,7 +397,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("DELAY：delay(0) 无有效延时 → 立即放行（链式裁决 fallback）")
     public void delayZeroReleasesImmediately() {
         newMockContext();
-        RouteDsl2.on(ctx).api("/dbb/delay-zero").delay(0).done().start();
+        RouteDsl.on(ctx).api("/dbb/delay-zero").delay(0).done().start();
         Consumer<Route> handler = handler();
 
         Route route = mockRoute(mockRequest("https://host/dbb/delay-zero", "GET", null, null, null));
@@ -412,7 +412,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("DELAY：delay(1) 真延时后才放行（对齐到点必 resume 契约）")
     public void delayOneSecondResumesAfterDelay() {
         newMockContext();
-        RouteDsl2.on(ctx).api("/dbb/delay-one").delay(1).done().start();
+        RouteDsl.on(ctx).api("/dbb/delay-one").delay(1).done().start();
         Consumer<Route> handler = handler();
 
         Route route = mockRoute(mockRequest("https://host/dbb/delay-one", "GET", null, null, null));
@@ -431,7 +431,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("MONITOR：expectStatus 命中 → 不定案失败")
     public void monitorExpectStatusPasses() {
         newMockContext();
-        RouteDsl2.on(ctx).api("/dbb/monitor-status").monitor().expectStatus(200).register();
+        RouteDsl.on(ctx).api("/dbb/monitor-status").monitor().expectStatus(200).register();
         Consumer<Route> handler = handler();
 
         Response response = mockJsonResponse(200, fixture(FIX_INSIGHT));
@@ -446,7 +446,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("MONITOR：expectStatus 不符 → 定案为断言失败")
     public void monitorExpectStatusMismatchSettlesAsFailure() {
         newMockContext();
-        RouteDsl2.on(ctx).api("/dbb/monitor-status-fail").monitor().expectStatus(200).register();
+        RouteDsl.on(ctx).api("/dbb/monitor-status-fail").monitor().expectStatus(200).register();
         Consumer<Route> handler = handler();
 
         Response response = mockJsonResponse(500, "{\"error\":\"boom\"}");
@@ -461,7 +461,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("MONITOR：expectJsonPath 对 leftmenu 真实响应命中（enableAdminTools=Y）")
     public void monitorExpectJsonPathAgainstLeftmenuFixturePasses() {
         newMockContext();
-        RouteDsl2.on(ctx)
+        RouteDsl.on(ctx)
                 .api("/dbb/leftmenu/permissionLeftMenuConfig")
                 .monitor().expectStatus(200)
                 .expectJsonPath("$.enableAdminTools", "Y")
@@ -484,7 +484,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("MONITOR：expectJsonPath 值不符 → 定案失败")
     public void monitorExpectJsonPathMismatchSettlesAsFailure() {
         newMockContext();
-        RouteDsl2.on(ctx)
+        RouteDsl.on(ctx)
                 .api("/dbb/leftmenu/permissionLeftMenuConfig")
                 .monitor().expectStatus(200)
                 .expectJsonPath("$.enableAdminTools", "N")
@@ -505,7 +505,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("MONITOR：expectJsonPath 路径不存在 → 定案失败（与值不符区分）")
     public void monitorExpectJsonPathMissingPathSettlesAsFailure() {
         newMockContext();
-        RouteDsl2.on(ctx)
+        RouteDsl.on(ctx)
                 .api("/dbb/leftmenu/permissionLeftMenuConfig")
                 .monitor()
                 .expectJsonPath("$.noSuchFlag", "Y")
@@ -526,7 +526,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("MONITOR：expectBodyContains + expectBodyRegex 命中 → 不定案")
     public void monitorExpectBodyContainsAndRegexPass() {
         newMockContext();
-        RouteDsl2.on(ctx)
+        RouteDsl.on(ctx)
                 .api("/dbb/monitor-body-text")
                 .monitor().expectStatus(200)
                 .expectBodyContains("SUCCESS")
@@ -547,7 +547,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("MONITOR：expectFormField 对 urlencoded 响应命中")
     public void monitorExpectFormFieldPasses() {
         newMockContext();
-        RouteDsl2.on(ctx)
+        RouteDsl.on(ctx)
                 .api("/dbb/monitor-form")
                 .monitor().expectStatus(200)
                 .expectFormField("result", "OK")
@@ -573,7 +573,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("MONITOR：响应始终未到达 + 超时窗口 → 定案为超时失败")
     public void monitorTimeoutWithoutResponseSettlesAsFailure() {
         newMockContext();
-        RouteDsl2.on(ctx)
+        RouteDsl.on(ctx)
                 .api("/dbb/monitor-timeout")
                 .monitor().expectStatus(200).timeoutMs(200L)
                 .register();
@@ -596,7 +596,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("编排：同 pattern 多能力合并 —— MODIFY 改 body 与 MONITOR 观测同时生效")
     public void mergedCapabilitiesOnSamePatternBothApply() {
         newMockContext();
-        RouteDsl2.on(ctx)
+        RouteDsl.on(ctx)
                 .api("/dbb/merged/**").modifyRequest().modifyRequestBody("$.user", "merged").done()
                 .api("/dbb/merged/**").monitor().expectStatus(200).done()
                 .start();
@@ -620,7 +620,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("泄漏：dispatch 后无残留 claim、无未确证撤销、IO 无拒绝")
     public void dispatchLeavesNoResidualClaimsAndCountsHit() {
         newMockContext();
-        RouteDsl2.on(ctx).api("/dbb/leak-check").monitor().expectStatus(200).register();
+        RouteDsl.on(ctx).api("/dbb/leak-check").monitor().expectStatus(200).register();
         Consumer<Route> handler = handler();
 
         Response response = mockJsonResponse(200, "{\"code\":\"200\"}");
@@ -636,7 +636,7 @@ public class RouteV2CapabilityCoverageTest {
 
         // 泄漏体检数值读出（每轮跑完可直接比对基线/差值）
         System.out.println("[LEAK-REPORT] activeRuntimes(baseline/now)=" + runtimeBaseline + "/"
-                + RouteEngine2.activeRuntimes()
+                + RouteEngine.activeRuntimes()
                 + ", dispatches=" + runtime.metrics().dispatches()
                 + ", hits=" + runtime.metrics().hits()
                 + ", claims=" + runtime.claims().size()
@@ -650,7 +650,7 @@ public class RouteV2CapabilityCoverageTest {
     @DisplayName("泄漏：runtime 关闭后 IO / 撤销 / 巡检线程全部退出，注册表回落")
     public void shutdownReleasesRuntimeThreadsAndRegistryEntry() {
         BrowserContext local = newMockContext();
-        RouteDsl2.on(local)
+        RouteDsl.on(local)
                 .api("/dbb/thread-leak")
                 .monitor().expectStatus(200).expectJsonPath("$.code", "200")
                 .register();
@@ -661,16 +661,16 @@ public class RouteV2CapabilityCoverageTest {
         Route route = mockRoute(mockRequest("https://host/dbb/thread-leak", "GET", null, null, response));
         handler.accept(route);
         sleep(200L);
-        assertEquals(runtimeBaseline + 1, RouteEngine2.activeRuntimes(),
+        assertEquals(runtimeBaseline + 1, RouteEngine.activeRuntimes(),
                 "注册后应新增 1 个 runtime 条目");
 
-        RouteEngine2.shutdown(local);
-        assertEquals(runtimeBaseline, RouteEngine2.activeRuntimes(),
+        RouteEngine.shutdown(local);
+        assertEquals(runtimeBaseline, RouteEngine.activeRuntimes(),
                 "关闭后 runtime 注册表必须回落基线");
 
         List<String> residual = awaitNoAliveRuntimeThreads(5_000L);
         System.out.println("[LEAK-REPORT] afterShutdown activeRuntimes(baseline/now)=" + runtimeBaseline + "/"
-                + RouteEngine2.activeRuntimes() + ", residualRuntimeThreads=" + residual);
+                + RouteEngine.activeRuntimes() + ", residualRuntimeThreads=" + residual);
         assertTrue(residual.isEmpty(), "runtime 关闭后不得残留线程: " + residual);
     }
 
@@ -686,7 +686,7 @@ public class RouteV2CapabilityCoverageTest {
         apiCtx = Mockito.mock(APIRequestContext.class);
         Mockito.when(ctx.request()).thenReturn(apiCtx);
         Mockito.when(ctx.pages()).thenReturn(List.of());
-        runtime = RouteEngine2.runtimeOf(ctx);
+        runtime = RouteEngine.runtimeOf(ctx);
         return ctx;
     }
 

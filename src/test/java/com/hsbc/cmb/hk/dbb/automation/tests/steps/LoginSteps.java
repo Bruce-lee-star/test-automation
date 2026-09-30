@@ -4,7 +4,7 @@ import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.concurrent.Concurr
 
 import com.hsbc.cmb.hk.dbb.automation.framework.web.page.factory.PageObjectFactory;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.page.scan.RoleElementPicker;
-import com.hsbc.cmb.hk.dbb.automation.framework.route.v2.dsl.RouteDsl2;
+import com.hsbc.cmb.hk.dbb.automation.framework.route.dsl.RouteDsl;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.session.SessionManager;
 
 import com.hsbc.cmb.hk.dbb.automation.tests.pages.HomePage;
@@ -80,7 +80,7 @@ public class LoginSteps {
             return;
         }
         // Session 已准备好（可能是从文件恢复，也可能是 Feature 级别缓存）—— 走「复用」路径
-        RouteDsl2.on(loginPage.getPage())
+        RouteDsl.on(loginPage.getPage())
                 .api("notifications/streams")
                 .mock()
                 .mockBody("{}")
@@ -161,7 +161,7 @@ public class LoginSteps {
         loginPage.paswordIpt.type(BDDUtils.getCurrentPassword());
         loginPage.physicalDeviceLabel.click();
         loginPage.securityCodeIpt.type(BDDUtils.getSecurityCode(BDDUtils.getCurrentSecurityUrl()));
-        RouteDsl2.on(loginPage.getPage())
+        RouteDsl.on(loginPage.getPage())
                 .api("/error/profile-error.jsp")
                 .monitor()
                 .expectStatus(200)
@@ -227,7 +227,7 @@ public class LoginSteps {
      * <p>根治（此前 10/10 失败）：DBB 首页登录后会反复路由规范化（en-US↔en-us），期间 DOM 被销毁重建，
      * 若先 {@code getText()}（innerText）再等可见，会在导航抖动期抛 PlaywrightException。故必须先
      * {@code waitForVisible}（框架内置导航重试）吸收重定向、待 dropdown 稳定后再读/点。
-     * 另：profile/list 的 mock 偶发被 RouteV2 route.fetch 竞态丢弃（fail-open 放行真实响应 →
+     * 另：profile/list 的 mock 偶发被 Route route.fetch 竞态丢弃（fail-open 放行真实响应 →
      * updateContctOverlayFlag=true 弹出遮罩），故用 {@code jsClick} 绕过遮罩的 actionability 拦截。</p>
      */
     private void switchProfile(String profile) {

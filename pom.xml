@@ -62,10 +62,10 @@
             <artifactId>pw-web-ui</artifactId>
             <version>${framework.version}</version>
         </dependency>
-        <!-- Route V2：唯一路由实现（V1 pw-route 已整体移除；业务层统一使用 RouteDsl2） -->
+        <!-- Route V2：唯一路由实现（V1 pw-route 已整体移除；业务层统一使用 RouteDsl） -->
         <dependency>
             <groupId>com.hsbc.cmb.dbb.hk.automation</groupId>
-            <artifactId>pw-route-v2</artifactId>
+            <artifactId>pw-route</artifactId>
             <version>${framework.version}</version>
         </dependency>
         <dependency>
