@@ -72,9 +72,9 @@ public final class TestLogCapture implements AutoCloseable {
      * <p><b>为何不能直接用 {@code prefix + System.nanoTime()}</b>：{@code %msg} 出口会经
      * {@code SensitiveDataSanitizer} 的值级识别器，其中银行卡号（PAN）候选正则为
      * {@code \b\d(?:[ \-]?\d){12,18}\b}（13~19 位数字），命中后由 Luhn 校验裁定并<b>整体遮蔽</b>为
-     * {@code ***[REDACTED]}。长 uptime 的 JVM 中 {@code System.nanoTime()} 恰为 19 位数字，约 1/10
+     * {@code ***}。长 uptime 的 JVM 中 {@code System.nanoTime()} 恰为 19 位数字，约 1/10
      * 的概率通过 Luhn 校验 → 标记被误罩 → 端到端断言偶发「日志中找不到标记行」（已实测复现：
-     * {@code throwable-e2e-1758096000123456789} → {@code throwable-e2e-***[REDACTED]}）。
+     * {@code throwable-e2e-1758096000123456789} → {@code throwable-e2e-***}）。
      *
      * <p>末尾补一个字母，使数字串不再构成 {@code \b...\b} 词边界，从根本上免疫该误罩
      * （实测 {@code e2e-marker-1758096000123456789z} 原样通过）。

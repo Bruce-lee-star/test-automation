@@ -115,7 +115,7 @@ public class SanitizingMessageConverterTest {
      *
      * <p>背景（实测根因）：早期端到端标记用 {@code "e2e-" + System.nanoTime()}，而 PAN 值级识别器候选
      * 正则为 {@code \b\d(?:[ \-]?\d){12,18}\b}（13~19 位数字），命中后由 Luhn 校验裁定。长 uptime 的 JVM 中
-     * {@code nanoTime()} 恰为 19 位数字，约 1/10 概率通过 Luhn → 标记被整体遮蔽为 {@code ***[REDACTED]}
+     * {@code nanoTime()} 恰为 19 位数字，约 1/10 概率通过 Luhn → 标记被整体遮蔽为 {@code ***}
      * → 端到端断言偶发「日志中找不到标记行」。{@code newMarker} 末尾补字母破除词边界，从根本上免疫。
      */
     @Test

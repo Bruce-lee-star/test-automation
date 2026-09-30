@@ -165,7 +165,7 @@ public class SensitiveDataSanitizerTest {
 
     @Test
     public void maskToken_returnsMaskConstant() {
-        assertEquals("***[REDACTED]", SensitiveDataSanitizer.maskToken());
+        assertEquals("***", SensitiveDataSanitizer.maskToken());
     }
 
     @Test
