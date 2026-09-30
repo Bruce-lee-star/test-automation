@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "dateTime": "2026-09-28T21:23:58.272+08:00",
+    "code": "GBB_S_EA_USR_PREF_000",
+    "description": "OK",
+    "correlationId": "05d1092e-491a-4cea-99d0-dca24b85806d"
+  },
+  "data": {
+    "currentAccounts": {
+      "name": "Current Account",
+      "demiseTradeService": "Y",
+      "legalEntities": [],
+      "products": [],
+      "responseTime": "21:23",
+      "obsStatus": "Y",
+      "maxPinnedAccount": 10,
+      "serviceIds": [
+        "01",
+        "02",
+        "03",
+        "05",
+        "06",
+        "08",
+        "22",
+        "23",
+        ""
+      ],
+      "customerInfoConsumerID": "HKHBAP003205697001SUAAAA",
+      "isDefault": true
+    }
+  }
+}
