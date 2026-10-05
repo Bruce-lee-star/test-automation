@@ -59,6 +59,10 @@ Desktop.ini
 /mt.txt
 /verify_run*.log
 *.log
+# 运行期采集转储 json（仅锚定根目录，避免误伤 src/test/resources 下的夹具/黄金文件）
+# 实测反复以 untracked 形态堆积（insight-retrieve / leftmenu-permissionLeftMenuConfig /
+# pinned-account / profile-list），add -A 时极易误入库；真实响应夹具请放 src/test/resources/mocks/**
+/*.json
 # 一次性调试脚本（_fix_* / _diag_* / _clean_diag* / BOM 变体）
 _fix_*.ps1
 _diag_*.ps1

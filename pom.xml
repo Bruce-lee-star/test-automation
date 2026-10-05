@@ -195,6 +195,9 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <!-- Mockito inline mock-maker 的固定配对：byte-buddy 1.12.23 + objenesis 3.2。
+                 刻意【不】迁进 <dependencyManagement>：enforcer 的 RequireUpperBoundDeps 把 managed 版本与
+                 传递需求比上限（serenity-model 4.3.4 → objenesis 3.4）会判违规；内联声明才被视作本模块显式钉版。 -->
             <groupId>net.bytebuddy</groupId>
             <artifactId>byte-buddy</artifactId>
             <version>1.12.23</version>
@@ -276,7 +279,9 @@
                         <env.code>${env.code}</env.code>
                         <base.url>${base.url}</base.url>
                     </systemPropertyVariables>
-                    <failIfNoTests>false</failIfNoTests>
+                    <!-- 本地对齐 CI 的「IT 数 > 0」可证伪断言：0 条 IT 命中时响亮失败，
+                         而不是在未配置环境（env/base.url 为空）时静默绿。 -->
+                    <failIfNoTests>true</failIfNoTests>
                     <reportsDirectory>${project.build.directory}/failsafe-reports</reportsDirectory>
                 </configuration>
                 <executions>
