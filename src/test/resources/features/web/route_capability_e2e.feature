@@ -29,3 +29,27 @@ Feature: Route V2 能力真实 E2E（DBB SIT，真浏览器）
     Given I arm route v2 e2e case "login-mock"
     And logon DBB "O63_SIT1" environment as user "WP7UAT2_2"
     Then route v2 e2e case "login-mock" assertions pass
+
+
+  Scenario: route v2 e2e - 登录期 MOCK 条件替换 when/then（命中 + 不命中两分支）
+    Given I arm route v2 e2e case "login-mock-when"
+    And logon DBB "O63_SIT1" environment as user "WP7UAT2_2"
+    Then route v2 e2e case "login-mock-when" assertions pass
+
+
+  Scenario: route v2 e2e - 登录期 MODIFY 改写请求（自定义请求头到达服务端）
+    Given I arm route v2 e2e case "login-modify"
+    And logon DBB "O63_SIT1" environment as user "WP7UAT2_2"
+    Then route v2 e2e case "login-modify" assertions pass
+
+
+  Scenario: route v2 e2e - 登录期 DELAY 延时（链路完整 + 规则命中）
+    Given I arm route v2 e2e case "login-delay"
+    And logon DBB "O63_SIT1" environment as user "WP7UAT2_2"
+    Then route v2 e2e case "login-delay" assertions pass
+
+
+  Scenario: route v2 e2e - 登录期能力并存与执行顺序（MODIFY + MOCK + MONITOR 同 pattern）
+    Given I arm route v2 e2e case "login-priority"
+    And logon DBB "O63_SIT1" environment as user "WP7UAT2_2"
+    Then route v2 e2e case "login-priority" assertions pass
