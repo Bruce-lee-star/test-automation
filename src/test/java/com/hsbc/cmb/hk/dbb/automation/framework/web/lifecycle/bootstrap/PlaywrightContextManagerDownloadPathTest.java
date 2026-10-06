@@ -1,6 +1,6 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.bootstrap;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,8 +16,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * 下载保存路径解析单元测试（不启动浏览器）。
@@ -36,7 +36,7 @@ public class PlaywrightContextManagerDownloadPathTest {
         Path dir = Files.createTempDirectory("pw-dl");
         Path result = PlaywrightContextManager.resolveNonConflictingDownloadPath(dir, "report.xlsx");
         assertEquals(dir.resolve("report.xlsx"), result);
-        assertTrue(Files.exists(result), "原子占位应创建该文件（随后由 saveAs 覆写）");
+        assertTrue("原子占位应创建该文件（随后由 saveAs 覆写）", Files.exists(result));
         cleanup(dir);
     }
 
@@ -46,7 +46,7 @@ public class PlaywrightContextManagerDownloadPathTest {
         Files.createFile(dir.resolve("report.xlsx"));
         Path result = PlaywrightContextManager.resolveNonConflictingDownloadPath(dir, "report.xlsx");
         assertEquals(dir.resolve("report (1).xlsx"), result);
-        assertTrue(Files.exists(result), "占位文件应已创建");
+        assertTrue("占位文件应已创建", Files.exists(result));
         cleanup(dir);
     }
 
@@ -96,16 +96,15 @@ public class PlaywrightContextManagerDownloadPathTest {
             }
             start.countDown();
             pool.shutdown();
-            assertTrue(pool.awaitTermination(20, TimeUnit.SECONDS), "并发占位应全部完成");
+            assertTrue("并发占位应全部完成", pool.awaitTermination(20, TimeUnit.SECONDS));
         } finally {
             pool.shutdownNow();
         }
 
-        assertTrue(errors.isEmpty(), "并发占位不应抛异常：" + errors);
-        assertEquals(threads, paths.size(),
-                "并发同名下载必须拿到互不相同的路径（原子占位保证），实际拿到 " + paths.size() + " 个不同路径");
+        assertTrue("并发占位不应抛异常：" + errors, errors.isEmpty());
+        assertEquals("并发同名下载必须拿到互不相同的路径（原子占位保证），实际拿到 " + paths.size() + " 个不同路径", threads, paths.size());
         for (Path p : paths) {
-            assertTrue(Files.exists(p), "每个占位路径都应已被创建：" + p);
+            assertTrue("每个占位路径都应已被创建：" + p, Files.exists(p));
         }
         cleanup(dir);
     }

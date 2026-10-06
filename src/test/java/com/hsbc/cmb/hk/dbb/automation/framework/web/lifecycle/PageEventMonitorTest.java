@@ -5,14 +5,14 @@ import com.hsbc.cmb.hk.dbb.automation.framework.web.config.WebFrameworkConfig;
 
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Page;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.util.function.Consumer;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -33,8 +33,8 @@ import static org.mockito.Mockito.verify;
 @SuppressWarnings("unchecked")
 public class PageEventMonitorTest {
 
-    @BeforeEach
-    void enableDiagnosticSubscriptions() {
+    @Before
+    public void enableDiagnosticSubscriptions() {
         WebFrameworkConfig.PLAYWRIGHT_PAGE_EVENTS_PAGE_ENABLED.setValue("true");
         WebFrameworkConfig.PLAYWRIGHT_PAGE_EVENTS_PAGE_ERROR_ENABLED.setValue("true");
         WebFrameworkConfig.PLAYWRIGHT_PAGE_EVENTS_CONSOLE_ENABLED.setValue("true");
@@ -42,8 +42,8 @@ public class PageEventMonitorTest {
         WebFrameworkConfig.PLAYWRIGHT_PAGE_EVENTS_CRASH_ENABLED.setValue("true");
     }
 
-    @AfterEach
-    void disableDiagnosticSubscriptions() {
+    @After
+    public void disableDiagnosticSubscriptions() {
         WebFrameworkConfig.PLAYWRIGHT_PAGE_EVENTS_PAGE_ENABLED.setValue("false");
         WebFrameworkConfig.PLAYWRIGHT_PAGE_EVENTS_PAGE_ERROR_ENABLED.setValue("false");
         WebFrameworkConfig.PLAYWRIGHT_PAGE_EVENTS_CONSOLE_ENABLED.setValue("false");

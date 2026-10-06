@@ -2,12 +2,12 @@ package com.hsbc.cmb.hk.dbb.automation.framework.web.page.factory;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.web.page.base.ManagedPageAware;
 import com.microsoft.playwright.Page;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Test;
 
 import java.util.function.Supplier;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * {@link PageObjectFactory} 对组合式 PageObject 的「受管 Page 注入」覆盖两条创建路径的回归测试
@@ -42,7 +42,7 @@ public class PageObjectFactoryManagedPageInjectionTest {
         }
     }
 
-    @AfterEach
+    @After
     public void cleanup() {
         PageObjectFactory.unregister(RegisteredProbePage.class);
         PageObjectFactory.clearAll();
@@ -55,8 +55,7 @@ public class PageObjectFactoryManagedPageInjectionTest {
         RegisteredProbePage instance =
                 (RegisteredProbePage) PageObjectFactory.getPage(RegisteredProbePage.class);
 
-        assertNotNull(instance.managedPage,
-                "register()/customSupplier()（推荐路径）必须注入受管 Page —— 修复评审 F-02 前此处为 null");
+        assertNotNull("register()/customSupplier()（推荐路径）必须注入受管 Page —— 修复评审 F-02 前此处为 null", instance.managedPage);
     }
 
     @Test
@@ -64,6 +63,6 @@ public class PageObjectFactoryManagedPageInjectionTest {
         ReflectiveProbePage instance =
                 (ReflectiveProbePage) PageObjectFactory.getPage(ReflectiveProbePage.class);
 
-        assertNotNull(instance.managedPage, "反射回退路径的注入行为不得回归");
+        assertNotNull("反射回退路径的注入行为不得回归", instance.managedPage);
     }
 }

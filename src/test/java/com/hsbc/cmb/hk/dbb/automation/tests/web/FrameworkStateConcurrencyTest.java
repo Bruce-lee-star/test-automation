@@ -2,14 +2,14 @@ package com.hsbc.cmb.hk.dbb.automation.tests.web;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.web.cloud.BrowserStackManager;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.core.FrameworkState;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  * T4-2 去全局变态的并发隔离验证（阶段二串扰验证的本地等价物）。
@@ -47,7 +47,7 @@ public class FrameworkStateConcurrencyTest {
 
         for (int i = 0; i < THREADS; i++) {
             Exception e = results.get(i);
-            assertEquals( "err-" + i,  e.getMessage(), "线程 " + i + " 应只读到自身异常，不得串扰到他人");
+            assertEquals("线程 " + i + " 应只读到自身异常，不得串扰到他人", "err-" + i, e.getMessage());
         }
     }
 
@@ -62,7 +62,7 @@ public class FrameworkStateConcurrencyTest {
         reader.start();
         reader.join(5000);
 
-        assertNull( seen.get(), "未设置过的线程必须读到 null，不得串扰到主线程异常");
+        assertNull("未设置过的线程必须读到 null，不得串扰到主线程异常", seen.get());
     }
 
     /** BrowserStack currentSessionId/Url：多线程各自 set，每个线程只读到自己的 session。 */
@@ -91,10 +91,8 @@ public class FrameworkStateConcurrencyTest {
         for (Thread t : threads) t.join(10000);
 
         for (int i = 0; i < THREADS; i++) {
-            assertEquals( "session-" + i,  idResults.get(i), "线程 " + i + " 应只读到自身 sessionId");
-            assertEquals(
-                    "https://automate.browserstack.com/dashboard/v2/sessions/session-" + i, 
-                    urlResults.get(i), "线程 " + i + " 应只读到自身 sessionUrl");
+            assertEquals("线程 " + i + " 应只读到自身 sessionId", "session-" + i, idResults.get(i));
+            assertEquals("线程 " + i + " 应只读到自身 sessionUrl", "https://automate.browserstack.com/dashboard/v2/sessions/session-" + i, urlResults.get(i));
         }
     }
 
@@ -109,7 +107,7 @@ public class FrameworkStateConcurrencyTest {
         reader.start();
         reader.join(5000);
 
-        assertNull( seen.get(), "未设置过的线程必须读到 null，不得串扰到主线程 session");
+        assertNull("未设置过的线程必须读到 null，不得串扰到主线程 session", seen.get());
     }
 
     private static final class DummyException extends Exception {

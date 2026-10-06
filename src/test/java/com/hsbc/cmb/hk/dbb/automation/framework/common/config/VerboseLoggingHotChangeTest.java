@@ -3,14 +3,14 @@ package com.hsbc.cmb.hk.dbb.automation.framework.common.config;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * 日志门控契约（2026-09-28 重写，取代原 P2-4 的 {@code syncRootLevel} 用例）。
@@ -43,8 +43,8 @@ public class VerboseLoggingHotChangeTest {
     private Level prevProjectLevel;
     private Level prevRootLevel;
 
-    @BeforeEach
-    void setUp() {
+    @Before
+    public void setUp() {
         prevVerbose = System.getProperty(FRAMEWORK_VERBOSE);
         prevTrace = System.getProperty(FRAMEWORK_TRACE);
         prevProjectLevel = projectLevel();
@@ -54,8 +54,8 @@ public class VerboseLoggingHotChangeTest {
         setProjectLevel(SIMULATED_ORIGINAL);
     }
 
-    @AfterEach
-    void tearDown() {
+    @After
+    public void tearDown() {
         //  显式写回原值（不用 clearProperty：清除会落到 Serenity 启动期快照，值不确定）
         System.setProperty(FRAMEWORK_VERBOSE, prevVerbose != null ? prevVerbose : "false");
         System.setProperty(FRAMEWORK_TRACE, prevTrace != null ? prevTrace : "false");
@@ -71,10 +71,9 @@ public class VerboseLoggingHotChangeTest {
         System.setProperty(FRAMEWORK_VERBOSE, "true");
         System.setProperty(FRAMEWORK_TRACE, "false");
 
-        assertTrue(VerboseLogging.isVerboseEnabled(), "framework.verbose.logging=true ⇒ 详细日志开");
-        assertEquals(Level.DEBUG, projectLevel(), "verbose 应把本项目包 logger 提升到 DEBUG");
-        assertEquals(rootBefore, rootLevel(),
-                "root 级别绝不能被改动（旧实现抬 root 会把第三方 DEBUG 一并放开）");
+        assertTrue("framework.verbose.logging=true ⇒ 详细日志开", VerboseLogging.isVerboseEnabled());
+        assertEquals("verbose 应把本项目包 logger 提升到 DEBUG", Level.DEBUG, projectLevel());
+        assertEquals("root 级别绝不能被改动（旧实现抬 root 会把第三方 DEBUG 一并放开）", rootBefore, rootLevel());
     }
 
     @Test
@@ -82,13 +81,12 @@ public class VerboseLoggingHotChangeTest {
         System.setProperty(FRAMEWORK_VERBOSE, "true");
         System.setProperty(FRAMEWORK_TRACE, "false");
         assertTrue(VerboseLogging.isVerboseEnabled());
-        assertEquals(Level.DEBUG, projectLevel(), "前置：verbose 已提级");
+        assertEquals("前置：verbose 已提级", Level.DEBUG, projectLevel());
 
         System.setProperty(FRAMEWORK_VERBOSE, "false");
 
-        assertFalse(VerboseLogging.isVerboseEnabled(), "热改：关闭后查询必须立即返回 false");
-        assertEquals(SIMULATED_ORIGINAL, projectLevel(),
-                "关闭 verbose 必须还原**原始级别**（不得硬编码 INFO；不得永久停在 DEBUG）");
+        assertFalse("热改：关闭后查询必须立即返回 false", VerboseLogging.isVerboseEnabled());
+        assertEquals("关闭 verbose 必须还原**原始级别**（不得硬编码 INFO；不得永久停在 DEBUG）", SIMULATED_ORIGINAL, projectLevel());
     }
 
     @Test
@@ -96,12 +94,12 @@ public class VerboseLoggingHotChangeTest {
         System.setProperty(FRAMEWORK_VERBOSE, "false");
         System.setProperty(FRAMEWORK_TRACE, "true");
         assertTrue(VerboseLogging.isTraceEnabled());
-        assertEquals(Level.TRACE, projectLevel(), "trace 应把本项目包 logger 提升到 TRACE");
+        assertEquals("trace 应把本项目包 logger 提升到 TRACE", Level.TRACE, projectLevel());
 
         System.setProperty(FRAMEWORK_TRACE, "false");
 
-        assertFalse(VerboseLogging.isTraceEnabled(), "热改：关闭 trace 后查询必须立即返回 false");
-        assertEquals(SIMULATED_ORIGINAL, projectLevel(), "关闭 trace 应还原原始级别（热改可降级）");
+        assertFalse("热改：关闭 trace 后查询必须立即返回 false", VerboseLogging.isTraceEnabled());
+        assertEquals("关闭 trace 应还原原始级别（热改可降级）", SIMULATED_ORIGINAL, projectLevel());
     }
 
     private static Level projectLevel() {

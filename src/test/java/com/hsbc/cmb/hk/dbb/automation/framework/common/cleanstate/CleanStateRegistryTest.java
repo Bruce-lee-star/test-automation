@@ -1,22 +1,22 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.common.cleanstate;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Test;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * B-6：{@link CleanStateRegistry} 契约——注册/复位/残留判定/注销，以及断言式清理的数据来源。
  */
-class CleanStateRegistryTest {
+public class CleanStateRegistryTest {
 
-    @AfterEach
-    void cleanup() {
+    @After
+    public void cleanup() {
         // 注册表是静态单例，逐用例清空避免跨用例污染
         CleanStateRegistry.clearResolvers();
     }
@@ -30,7 +30,7 @@ class CleanStateRegistryTest {
     }
 
     @Test
-    void registerAndResetAll_invokesEveryResolver() {
+    public void registerAndResetAll_invokesEveryResolver() {
         AtomicInteger a = new AtomicInteger();
         AtomicInteger b = new AtomicInteger();
         CleanStateRegistry.register(resolver("a", a, () -> false));
@@ -44,18 +44,18 @@ class CleanStateRegistryTest {
     }
 
     @Test
-    void dirtyNames_reportsOnlyDirtyInStableOrder() {
+    public void dirtyNames_reportsOnlyDirtyInStableOrder() {
         CleanStateRegistry.register(resolver("b-dirty", new AtomicInteger(), () -> true));
         CleanStateRegistry.register(resolver("a-dirty", new AtomicInteger(), () -> true));
         CleanStateRegistry.register(resolver("c-clean", new AtomicInteger(), () -> false));
 
         List<String> dirty = CleanStateRegistry.dirtyNames();
 
-        assertEquals(List.of("a-dirty", "b-dirty"), dirty, "仅脏状态、按名稳定排序");
+        assertEquals("仅脏状态、按名稳定排序", List.of("a-dirty", "b-dirty"), dirty);
     }
 
     @Test
-    void resetByName_resetsOnlyTarget() {
+    public void resetByName_resetsOnlyTarget() {
         AtomicInteger a = new AtomicInteger();
         AtomicInteger b = new AtomicInteger();
         CleanStateRegistry.register(resolver("a", a, () -> false));
@@ -68,7 +68,7 @@ class CleanStateRegistryTest {
     }
 
     @Test
-    void unregister_removesResolver() {
+    public void unregister_removesResolver() {
         AtomicInteger a = new AtomicInteger();
         CleanStateRegistry.register(resolver("a", a, () -> false));
 
@@ -80,7 +80,7 @@ class CleanStateRegistryTest {
     }
 
     @Test
-    void emptyRegistry_isNoOp() {
+    public void emptyRegistry_isNoOp() {
         CleanStateRegistry.resetAll();
 
         assertTrue(CleanStateRegistry.dirtyNames().isEmpty());
@@ -88,13 +88,13 @@ class CleanStateRegistryTest {
     }
 
     @Test
-    void isDirty_defaultsToFalse() {
+    public void isDirty_defaultsToFalse() {
         StateResolver plain = new StateResolver() {
             @Override public String name() { return "plain"; }
             @Override public void reset() { }
         };
         CleanStateRegistry.register(plain);
 
-        assertTrue(CleanStateRegistry.dirtyNames().isEmpty(), "默认 isDirty=false 不参与断言");
+        assertTrue("默认 isDirty=false 不参与断言", CleanStateRegistry.dirtyNames().isEmpty());
     }
 }

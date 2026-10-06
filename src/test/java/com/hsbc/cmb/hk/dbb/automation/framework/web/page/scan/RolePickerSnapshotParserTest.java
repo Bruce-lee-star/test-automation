@@ -1,15 +1,15 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.web.page.scan;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.web.page.scan.model.PickSnapshot;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * A-4：{@link RolePickerSnapshotParser#parsePickSnapshot(Object)} 的容错解析契约（纯函数，无浏览器依赖）。
@@ -18,10 +18,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * （null / 非 Map / 元素非 Map）都必须优雅降级为空快照，绝不抛异常——否则一次竞态或脚本版本不一致
  * 就会让"停止并生成"整条链路崩溃。
  */
-class RolePickerSnapshotParserTest {
+public class RolePickerSnapshotParserTest {
 
     @Test
-    void nonMapRaw_returnsEmptySnapshot() {
+    public void nonMapRaw_returnsEmptySnapshot() {
         PickSnapshot s = RolePickerSnapshotParser.parsePickSnapshot("not-a-map");
 
         assertNotNull(s);
@@ -32,7 +32,7 @@ class RolePickerSnapshotParserTest {
     }
 
     @Test
-    void nullRaw_returnsEmptySnapshot() {
+    public void nullRaw_returnsEmptySnapshot() {
         PickSnapshot s = RolePickerSnapshotParser.parsePickSnapshot(null);
 
         assertNotNull(s);
@@ -40,7 +40,7 @@ class RolePickerSnapshotParserTest {
     }
 
     @Test
-    void parsesPageClassAndOps() {
+    public void parsesPageClassAndOps() {
         Map<Object, Object> raw = new HashMap<>();
         raw.put("pageClass", "LoginPage");
         raw.put("ops", List.of(Map.of("op", "closePage", "pageClass", "LoginPage")));
@@ -54,16 +54,15 @@ class RolePickerSnapshotParserTest {
     }
 
     @Test
-    void opsWithoutOpValue_areSkipped() {
+    public void opsWithoutOpValue_areSkipped() {
         Map<Object, Object> raw = new HashMap<>();
         raw.put("ops", List.of(Map.of("pageClass", "P"), Map.of("op", "", "pageClass", "P")));
 
-        assertTrue(RolePickerSnapshotParser.parsePickSnapshot(raw).ops.isEmpty(),
-                "缺少 op 值的页面操作应被跳过");
+        assertTrue("缺少 op 值的页面操作应被跳过", RolePickerSnapshotParser.parsePickSnapshot(raw).ops.isEmpty());
     }
 
     @Test
-    void nonMapElements_areTolerated() {
+    public void nonMapElements_areTolerated() {
         Map<Object, Object> raw = new HashMap<>();
         raw.put("picks", List.of("not-a-map", 42));
         raw.put("steps", List.of("nope"));
@@ -71,7 +70,6 @@ class RolePickerSnapshotParserTest {
 
         PickSnapshot s = RolePickerSnapshotParser.parsePickSnapshot(raw);
 
-        assertTrue(s.entries.isEmpty() && s.steps.isEmpty() && s.ops.isEmpty(),
-                "非 Map 元素应被容忍并跳过，而非抛异常");
+        assertTrue("非 Map 元素应被容忍并跳过，而非抛异常", s.entries.isEmpty() && s.steps.isEmpty() && s.ops.isEmpty());
     }
 }

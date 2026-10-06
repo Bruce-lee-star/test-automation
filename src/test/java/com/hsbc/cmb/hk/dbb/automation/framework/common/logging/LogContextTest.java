@@ -1,17 +1,17 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.common.logging;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Assume;
+import org.junit.Test;
 import org.slf4j.MDC;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * D3-1 诊断上下文（MDC）契约测试。
@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class LogContextTest {
 
-    @AfterEach
+    @After
     public void tearDown() {
         // 防止本用例的 MDC 残留影响后续用例（JUnit 线程会被复用）
         LogContext.clear();
@@ -36,11 +36,11 @@ public class LogContextTest {
         LogContext.beginScenario("scenario-1");
         assertEquals("scenario-1", LogContext.currentScenarioId());
         assertEquals("scenario-1", MDC.get(LogContext.KEY_SCENARIO_ID));
-        assertNotNull(MDC.get(LogContext.KEY_THREAD_ID), "threadId 应在首次绑定时补齐");
+        assertNotNull("threadId 应在首次绑定时补齐", MDC.get(LogContext.KEY_THREAD_ID));
 
         LogContext.endScenario();
-        assertNull(LogContext.currentScenarioId(), "endScenario 后 scenarioId 必须移除");
-        assertNotNull(MDC.get(LogContext.KEY_THREAD_ID), "endScenario 不应移除线程级 threadId");
+        assertNull("endScenario 后 scenarioId 必须移除", LogContext.currentScenarioId());
+        assertNotNull("endScenario 不应移除线程级 threadId", MDC.get(LogContext.KEY_THREAD_ID));
     }
 
     /** 空 / null 的 scenario 标识回落 unknown，不抛异常。 */
@@ -77,12 +77,11 @@ public class LogContextTest {
 
         t1.start();
         t2.start();
-        assertTrue(done.await(5, TimeUnit.SECONDS), "子线程应在超时前完成");
+        assertTrue("子线程应在超时前完成", done.await(5, TimeUnit.SECONDS));
 
         assertEquals("scenario-A", seen[0]);
         assertEquals("scenario-B", seen[1]);
-        assertEquals("main-scenario", LogContext.currentScenarioId(),
-                "子线程 clear 不应影响主线程的诊断上下文");
+        assertEquals("子线程 clear 不应影响主线程的诊断上下文", "main-scenario", LogContext.currentScenarioId());
     }
 
     /** clear 清空当前线程全部诊断上下文。 */
@@ -118,11 +117,11 @@ public class LogContextTest {
             String content = capture.content();
             //  环境自校验：捕获不到任何输出说明本次环境的日志管道不可观测（而非 MDC 失效），
             //  此时跳过而非误判失败；只要捕获到内容，就必须含标记与 scenarioId。
-            Assumptions.assumeTrue(content != null && !content.trim().isEmpty(),
-                    "未捕获到任何日志输出（日志上下文不可用），跳过端到端校验");
+            Assume.assumeTrue("未捕获到任何日志输出（日志上下文不可用），跳过端到端校验",
+                    content != null && !content.trim().isEmpty());
 
             int idx = content.indexOf(marker);
-            assertTrue(idx >= 0, "落盘日志中应能找到刚输出的标记行");
+            assertTrue("落盘日志中应能找到刚输出的标记行", idx >= 0);
 
             int lineStart = content.lastIndexOf('\n', idx) + 1;
             int lineEnd = content.indexOf('\n', idx);
@@ -130,7 +129,7 @@ public class LogContextTest {
                 lineEnd = content.length();
             }
             String line = content.substring(lineStart, lineEnd);
-            assertTrue(line.contains("e2e-scenario"), "日志行应携带 scenarioId，实际行：" + line);
+            assertTrue("日志行应携带 scenarioId，实际行：" + line, line.contains("e2e-scenario"));
         }
     }
 }

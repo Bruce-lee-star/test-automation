@@ -5,17 +5,17 @@ import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.concurrent.Concurr
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.concurrent.ContextTaskResult;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.concurrent.ContextTask;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 /**
  * {@link ConcurrentContextExecutor} 单元测试（无需真实浏览器：任务不触碰 Playwright，
@@ -99,12 +99,13 @@ public class ConcurrentContextExecutorTest {
         List<ContextTaskResult<Integer>> r = ConcurrentContextExecutor.runAll(tasks,
                 ConcurrentContextOptions.builder().parallelism(2).perTaskTimeoutMillis(200).build());
         long took = System.currentTimeMillis() - start;
-        assertTrue( took < 5000, "should not hang; took=" + took);
+        assertTrue("should not hang; took=" + took, took < 5000);
         assertFalse(r.get(0).isSuccess());
         assertTrue(r.get(1).isSuccess());
         assertEquals(2, r.get(1).valueOrThrow().intValue());
         assertNotNull(r.get(0).getFailure());
-        assertTrue(r.get(0).getFailure() instanceof java.util.concurrent.TimeoutException);
+        // Class.isInstance 替代 instanceof：语义等价，且满足 SpotBugs JUA_DONT_ASSERT_INSTANCEOF_IN_TESTS
+        assertTrue(java.util.concurrent.TimeoutException.class.isInstance(r.get(0).getFailure()));
     }
 
     @Test
@@ -146,7 +147,7 @@ public class ConcurrentContextExecutorTest {
         for (ContextTaskResult<Integer> res : r) {
             assertTrue(res.isSuccess());
         }
-        assertTrue( maxConcurrent.get() <= parallelism, "maxConcurrent=" + maxConcurrent.get());
+        assertTrue("maxConcurrent=" + maxConcurrent.get(), maxConcurrent.get() <= parallelism);
     }
 
     @Test

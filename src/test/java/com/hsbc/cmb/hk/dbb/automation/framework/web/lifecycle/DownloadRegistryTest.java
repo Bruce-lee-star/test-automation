@@ -1,16 +1,16 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle;
 
 import com.microsoft.playwright.BrowserContext;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * DownloadRegistry 纯单元测试：验证按 BrowserContext 隔离的下载记录（最近 / 全部 / 清理 / null 防御）。

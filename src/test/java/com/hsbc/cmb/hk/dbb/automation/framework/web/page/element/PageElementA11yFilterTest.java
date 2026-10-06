@@ -2,10 +2,10 @@ package com.hsbc.cmb.hk.dbb.automation.framework.web.page.element;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.web.page.engine.BasePage;
 import com.microsoft.playwright.Locator;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;

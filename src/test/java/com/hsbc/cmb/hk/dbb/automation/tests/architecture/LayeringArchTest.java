@@ -4,7 +4,7 @@ import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
@@ -17,8 +17,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
  *       {@code framework.web}/{@code framework.route}/{@code framework.api} 等上层模块。</li>
  *   <li><b>route 不依赖 web</b>：已由 {@code ArchitectureTest#routeMustNotDependOnWeb}（L6）覆盖，本类不复述。</li>
  *   <li><b>无循环依赖</b>：已由 {@code ArchitectureTest#frameworkSlicesMustBeFreeOfCycles}（G1）覆盖，本类不复述。</li>
- *   <li><b>主代码无 JUnit4 依赖</b>（本类 {@link #frameworkCodeMustNotDependOnJunit4}）：主代码只能依赖 JUnit5
- *       （{@code org.junit.jupiter}/{@code org.junit.platform}），不得依赖 JUnit4（{@code org.junit}、{@code org.junit.runner} 等）。</li>
+ *   <li><b>主代码不得依赖 JUnit 5</b>（{@link #frameworkCodeMustNotDependOnJunit5}）：全仓统一 JUnit 4（runner 侧 Serenity CucumberWithSerenity 本就是 JUnit 4），本规则防止主代码误引入 jupiter / platform API。</li>
  *   <li><b>主代码不调用 Thread.sleep</b>（本类 {@link #frameworkCodeMustNotCallThreadSleep}）：框架主代码不得忙等，
  *       一律走 Playwright 原生等待（{@code page.waitFor*}/{@code Locator.waitFor*}）或 {@code PageWaits} 退避。</li>
  * </ul>
@@ -54,21 +53,18 @@ public class LayeringArchTest {
                         .importPackages(BASE_PACKAGE));
     }
 
-    /**
-     * 主代码不耦合 JUnit4（A-3）：框架生产代码只能面向 JUnit5 编程
-     * （{@code org.junit.jupiter.*} / {@code org.junit.platform.*}），不得依赖 JUnit4（{@code org.junit}、{@code org.junit.runner}、
-     * {@code org.junit.rules}、{@code org.junit.experimental} 等）。
-     * <p>JUnit5 升级（doc17）已将测试代码迁移至 jupiter；本规则防止主代码（误）引入 JUnit4 API，
-     * 避免运行时 classpath 同时拖入两套 JUnit、破坏升级一致性。</p>
+        /**
+     * 涓讳唬鐮佷笉寰椾緷璧?JUnit 5锛堝洖褰掑畧鍗紝2026-10 鍙ｅ緞锛夛細鍏ㄤ粨缁熶竴 JUnit 4 鈥斺€?runner 渚?
+     * 锛圫erenity 鐨?{@code CucumberWithSerenity}锛夋湰灏辨槸 JUnit 4锛屽弻寮曟搸骞跺瓨鍙甫鏉?surefire provider
+     * 鎶夋嫨涓?junit-platform 鐗堟湰瀵归綈鎴愭湰銆傛湰瑙勫垯闃叉涓讳唬鐮侊紙璇級閲嶆柊寮曞叆 jupiter / platform API銆?
      */
     @Test
-    public void frameworkCodeMustNotDependOnJunit4() {
+    public void frameworkCodeMustNotDependOnJunit5() {
         noClasses()
                 .that().resideInAPackage("..framework..")
                 .should().dependOnClassesThat(
-                        JavaClass.Predicates.resideInAPackage("..org.junit..")
-                                .and(JavaClass.Predicates.resideOutsideOfPackage("..org.junit.jupiter.."))
-                                .and(JavaClass.Predicates.resideOutsideOfPackage("..org.junit.platform..")))
+                        JavaClass.Predicates.resideInAPackage("..org.junit.jupiter..")
+                                .or(JavaClass.Predicates.resideInAPackage("..org.junit.platform..")))
                 .check(new ClassFileImporter()
                         .withImportOption(new ImportOption.DoNotIncludeTests())
                         .importPackages(BASE_PACKAGE));
@@ -109,18 +105,18 @@ public class LayeringArchTest {
                         .importPackages(TEST_BASE_PACKAGE));
     }
 
-    /**
-     * 步骤层不直连测试框架断言 API（B-5）：{@code tests} 包下以 {@code Steps} 结尾的步骤类不得依赖
-     * {@code org.junit.jupiter.api.Assertions}。
-     * <p>步骤层断言统一经 {@code tests.verify.RouteDemoVerifications} 收口——既能解耦测试框架 API，
-     * 又为「断言下沉到 Service / Verifier」提供唯一替换锚点。本规则必须扫描测试类，故单独以测试根包导入。</p>
+        /**
+     * 姝ラ灞備笉鐩磋繛娴嬭瘯妗嗘灦鏂█ API锛圔-5锛屽彛寰勯殢 2026-10 鐨?JUnit4 缁熶竴鏇存柊锛夛細{@code tests} 鍖呬笅浠?
+     * {@code Steps} 缁撳熬鐨勬楠ょ被涓嶅緱鐩存帴渚濊禆 {@code org.junit.Assert}锛堟棫鍙ｅ緞绂佺殑鏄?jupiter 鐨?Assertions锛夈€?
+     * <p>姝ラ灞傛柇瑷€缁熶竴缁?{@code tests.verify.RouteDemoVerifications} 鏀跺彛鈥斺€旀棦瑙ｈ€︽祴璇曟鏋?API锛?
+     * 鍙堜负銆屾柇瑷€涓嬫矇鍒?Service / Verifier銆嶆彁渚涘敮涓€鏇挎崲閿氱偣銆傛湰瑙勫垯蹇呴』鎵弿娴嬭瘯绫伙紝鏁呭崟鐙互娴嬭瘯鏍瑰寘瀵煎叆銆?/p>
      */
     @Test
     public void stepsMustNotUseJunitAssertionsDirectly() {
         noClasses()
                 .that(JavaClass.Predicates.resideInAPackage("..automation.tests..")
                         .and(JavaClass.Predicates.simpleNameEndingWith("Steps")))
-                .should().dependOnClassesThat().haveFullyQualifiedName("org.junit.jupiter.api.Assertions")
+                .should().dependOnClassesThat().haveFullyQualifiedName("org.junit.Assert")
                 .check(new ClassFileImporter()
                         .importPackages(TEST_BASE_PACKAGE));
     }

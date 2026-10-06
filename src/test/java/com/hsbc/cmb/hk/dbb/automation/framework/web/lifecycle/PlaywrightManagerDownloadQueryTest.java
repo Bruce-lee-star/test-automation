@@ -2,8 +2,8 @@ package com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.web.core.RuntimeProvider;
 import com.microsoft.playwright.BrowserContext;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.nio.file.Path;
@@ -11,9 +11,9 @@ import java.nio.file.Paths;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * 业务层下载查询公开 API 固化测试（走 WEB-P0-2 的 Provider 注入 seam，全程 mock，不启动真实浏览器）：
@@ -24,7 +24,7 @@ public class PlaywrightManagerDownloadQueryTest {
 
     private BrowserContext mockCtx;
 
-    @AfterEach
+    @After
     public void tearDown() {
         if (mockCtx != null) {
             DownloadRegistry.instance().clear(mockCtx);
@@ -111,9 +111,8 @@ public class PlaywrightManagerDownloadQueryTest {
         saver.setDaemon(true);
         saver.start();
 
-        assertEquals(0, PlaywrightManager.getDownloadCount(), "触发前基线应为 0");
-        assertEquals(saved, PlaywrightManager.awaitLastDownloadPath(5000),
-                "应等到异步保存登记完成并返回该路径");
+        assertEquals("触发前基线应为 0", 0, PlaywrightManager.getDownloadCount());
+        assertEquals("应等到异步保存登记完成并返回该路径", saved, PlaywrightManager.awaitLastDownloadPath(5000));
         assertEquals(1, PlaywrightManager.getDownloadCount());
         saver.join(1000);
     }
@@ -126,8 +125,8 @@ public class PlaywrightManagerDownloadQueryTest {
         Mockito.when(mockProvider.getContext()).thenReturn(mockCtx);
         PlaywrightManager.setProvider(mockProvider);
 
-        assertTrue(!PlaywrightManager.awaitDownloadCount(1, 200), "超时应返回 false");
-        assertNull(PlaywrightManager.awaitLastDownloadPath(200), "超时应返回 null");
+        assertTrue("超时应返回 false", !PlaywrightManager.awaitDownloadCount(1, 200));
+        assertNull("超时应返回 null", PlaywrightManager.awaitLastDownloadPath(200));
     }
 
     /** 基线语义：已有 1 条记录时，awaitLastDownloadPath 不会把旧记录当成本次下载返回。 */
@@ -140,8 +139,7 @@ public class PlaywrightManagerDownloadQueryTest {
 
         DownloadRegistry.instance().record(mockCtx, Paths.get("target/downloads/old.xlsx").toAbsolutePath());
 
-        assertNull(PlaywrightManager.awaitLastDownloadPath(200),
-                "本次未触发新下载时应超时返回 null，而不是返回上一次的旧路径");
-        assertTrue(PlaywrightManager.awaitDownloadCount(1, 200), "已登记数应满足 ≥1");
+        assertNull("本次未触发新下载时应超时返回 null，而不是返回上一次的旧路径", PlaywrightManager.awaitLastDownloadPath(200));
+        assertTrue("已登记数应满足 ≥1", PlaywrightManager.awaitDownloadCount(1, 200));
     }
 }

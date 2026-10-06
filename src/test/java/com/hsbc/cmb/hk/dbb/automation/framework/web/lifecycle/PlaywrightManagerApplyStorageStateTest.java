@@ -3,15 +3,15 @@ package com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle;
 import com.hsbc.cmb.hk.dbb.automation.framework.core.context.TestContextHolder;
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
@@ -26,7 +26,7 @@ import static org.mockito.Mockito.when;
  */
 public class PlaywrightManagerApplyStorageStateTest {
 
-    @AfterEach
+    @After
     public void tearDown() {
         TestContextHolder.get().remove(PlaywrightManager.CONTEXT_KEY);
         // 清理 customOptions 的 storageState（null 安全：等价移除，避免跨测试串扰）

@@ -2,18 +2,18 @@ package com.hsbc.cmb.hk.dbb.automation.framework.common.assertion;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.common.async.AsyncPool;
 import com.hsbc.cmb.hk.dbb.automation.framework.common.logging.TestLogCapture;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 /**
  * 评审 F-13 / P1-5 回归：<b>异步任务里的软断言失败必须被判红</b>，不得静默假绿。
@@ -31,13 +31,13 @@ public class SoftAssertionsCrossThreadTest {
 
     private static final long AWAIT_SECONDS = 5;
 
-    @AfterEach
-    void tearDown() {
+    @After
+    public void tearDown() {
         SoftAssertions.clearForCurrentThread();
     }
 
     @Test
-    void asyncTaskFailureIsReportedByParentAssertAll() throws Exception {
+    public void asyncTaskFailureIsReportedByParentAssertAll() throws Exception {
         AtomicReference<Thread> worker = new AtomicReference<>();
         CountDownLatch done = new CountDownLatch(1);
 
@@ -49,17 +49,15 @@ public class SoftAssertionsCrossThreadTest {
                 done.countDown();
             }
         });
-        assertTrue(done.await(AWAIT_SECONDS, TimeUnit.SECONDS), "异步任务应在 5s 内完成");
-        assertNotSame(Thread.currentThread(), worker.get(), "断言必须确实发生在异步线程上（否则本测试失去意义）");
+        assertTrue("异步任务应在 5s 内完成", done.await(AWAIT_SECONDS, TimeUnit.SECONDS));
+        assertNotSame("断言必须确实发生在异步线程上（否则本测试失去意义）", Thread.currentThread(), worker.get());
 
-        FrameworkAssertionError error = assertThrows(FrameworkAssertionError.class, SoftAssertions::assertAll,
-                "F-13：异步任务记录的软断言失败必须由父线程场景末 assertAll() 判红");
-        assertTrue(error.getMessage().contains("async-body-mismatch"),
-                "聚合错误应包含异步任务的失败信息，实际：" + error.getMessage());
+        FrameworkAssertionError error = assertThrows("F-13：异步任务记录的软断言失败必须由父线程场景末 assertAll() 判红", FrameworkAssertionError.class, SoftAssertions::assertAll);
+        assertTrue("聚合错误应包含异步任务的失败信息，实际：" + error.getMessage(), error.getMessage().contains("async-body-mismatch"));
     }
 
     @Test
-    void scheduledTaskFailureIsReportedByParentAssertAll() throws Exception {
+    public void scheduledTaskFailureIsReportedByParentAssertAll() throws Exception {
         CountDownLatch done = new CountDownLatch(1);
         AsyncPool.schedule(() -> {
             try {
@@ -69,13 +67,12 @@ public class SoftAssertionsCrossThreadTest {
             }
         }, 10);
 
-        assertTrue(done.await(AWAIT_SECONDS, TimeUnit.SECONDS), "延迟任务应在 5s 内完成");
-        assertThrows(FrameworkAssertionError.class, SoftAssertions::assertAll,
-                "F-13：延迟任务的软断言失败同样必须被上报");
+        assertTrue("延迟任务应在 5s 内完成", done.await(AWAIT_SECONDS, TimeUnit.SECONDS));
+        assertThrows("F-13：延迟任务的软断言失败同样必须被上报", FrameworkAssertionError.class, SoftAssertions::assertAll);
     }
 
     @Test
-    void handoffApiSharesCollectorAcrossThreadsAndUnbindRestoresBinding() throws Exception {
+    public void handoffApiSharesCollectorAcrossThreadsAndUnbindRestoresBinding() throws Exception {
         SoftAssertions.Collector parentCollector = SoftAssertions.captureCollector();
         AtomicBoolean workerSawFailure = new AtomicBoolean();
         AtomicBoolean workerCleanAfterUnbind = new AtomicBoolean();
@@ -92,18 +89,18 @@ public class SoftAssertionsCrossThreadTest {
         }, "handoff-probe");
         worker.start();
         worker.join(TimeUnit.SECONDS.toMillis(AWAIT_SECONDS));
-        assertFalse(worker.isAlive(), "探测线程应在超时前结束");
+        assertFalse("探测线程应在超时前结束", worker.isAlive());
 
-        assertTrue(workerSawFailure.get(), "工作线程绑定后应能读到（并写入）共享收集器");
-        assertTrue(workerCleanAfterUnbind.get(), "unbind(null) 必须摘除绑定，避免线程池复用时残留上一用例的收集器");
-        assertTrue(SoftAssertions.hasFailures(), "父线程收集器应收到子线程记录的失败（跨线程同源）");
+        assertTrue("工作线程绑定后应能读到（并写入）共享收集器", workerSawFailure.get());
+        assertTrue("unbind(null) 必须摘除绑定，避免线程池复用时残留上一用例的收集器", workerCleanAfterUnbind.get());
+        assertTrue("父线程收集器应收到子线程记录的失败（跨线程同源）", SoftAssertions.hasFailures());
 
         FrameworkAssertionError error = assertThrows(FrameworkAssertionError.class, SoftAssertions::assertAll);
         assertTrue(error.getMessage().contains("from-worker-thread"));
     }
 
     @Test
-    void failuresRecordedAfterScenarioEndAreWarnedNotSilentlyDropped() throws Exception {
+    public void failuresRecordedAfterScenarioEndAreWarnedNotSilentlyDropped() throws Exception {
         String marker = TestLogCapture.newMarker("late-soft-assert-");
         try (TestLogCapture capture = TestLogCapture.of(SoftAssertions.class, "%level %msg%n")) {
             SoftAssertions.Collector shared = SoftAssertions.captureCollector();
@@ -125,15 +122,14 @@ public class SoftAssertionsCrossThreadTest {
             }, "late-soft-assert-worker");
             lateWorker.start();
 
-            assertTrue(bound.await(AWAIT_SECONDS, TimeUnit.SECONDS), "工作线程应先完成绑定");
+            assertTrue("工作线程应先完成绑定", bound.await(AWAIT_SECONDS, TimeUnit.SECONDS));
             SoftAssertions.clearForCurrentThread(); // 场景收尾：关闭并摘除收集器（父线程不再持有）
             scenarioEnded.countDown();
-            assertTrue(recordedLate.await(AWAIT_SECONDS, TimeUnit.SECONDS), "逾期写入应已完成");
+            assertTrue("逾期写入应已完成", recordedLate.await(AWAIT_SECONDS, TimeUnit.SECONDS));
             lateWorker.join(TimeUnit.SECONDS.toMillis(AWAIT_SECONDS));
 
             String content = capture.content();
-            assertTrue(content.contains("NOT be reported"),
-                    "F-13 守卫：逾期写入必须打 WARN 明示「该失败不会被上报」（不得静默丢弃），实际日志：" + content);
+            assertTrue("F-13 守卫：逾期写入必须打 WARN 明示「该失败不会被上报」（不得静默丢弃），实际日志：" + content, content.contains("NOT be reported"));
         }
     }
 
@@ -146,7 +142,7 @@ public class SoftAssertionsCrossThreadTest {
     }
 
     @Test
-    void nextScenarioDoesNotInheritPreviousAsyncFailures() throws Exception {
+    public void nextScenarioDoesNotInheritPreviousAsyncFailures() throws Exception {
         // 场景 1：异步失败 → 场景末聚合抛出（同时清理收集器）
         CountDownLatch first = new CountDownLatch(1);
         AsyncPool.run(() -> {
@@ -158,7 +154,7 @@ public class SoftAssertionsCrossThreadTest {
         });
         assertTrue(first.await(AWAIT_SECONDS, TimeUnit.SECONDS));
         assertThrows(FrameworkAssertionError.class, SoftAssertions::assertAll);
-        assertFalse(SoftAssertions.hasFailures(), "场景末清理后不得残留失败（否则会算到下一用例头上）");
+        assertFalse("场景末清理后不得残留失败（否则会算到下一用例头上）", SoftAssertions.hasFailures());
 
         // 场景 2：工作线程必须看不到上一个场景的失败
         AtomicBoolean sawStale = new AtomicBoolean(true);
@@ -171,6 +167,6 @@ public class SoftAssertionsCrossThreadTest {
             }
         });
         assertTrue(second.await(AWAIT_SECONDS, TimeUnit.SECONDS));
-        assertFalse(sawStale.get(), "线程池线程不得残留上一场景收集器的内容（跨用例串扰）");
+        assertFalse("线程池线程不得残留上一场景收集器的内容（跨用例串扰）", sawStale.get());
     }
 }

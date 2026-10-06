@@ -1,7 +1,7 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.common.config;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.common.async.AsyncPool;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -13,12 +13,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 /**
  * P2-2 回归：把「配置失败快」从 static 初始化块移到<b>首次使用</b>。
@@ -43,8 +43,8 @@ public class LazyInitTest {
         init.ensure();
         init.ensure();
 
-        assertEquals(1, runs.get(), "初始化必须只执行一次（幂等）");
-        assertTrue(init.isInitialized(), "成功后 isInitialized 应为 true");
+        assertEquals("初始化必须只执行一次（幂等）", 1, runs.get());
+        assertTrue("成功后 isInitialized 应为 true", init.isInitialized());
     }
 
     @Test
@@ -58,10 +58,9 @@ public class LazyInitTest {
 
         //  P2-2：无需再断言「不是 ExceptionInInitializerError」—— 二者无继承关系，
         //  `thrown instanceof ExceptionInInitializerError` 会被 javac 判为不可转换类型（编译期即证）。
-        assertTrue(thrown.getMessage().contains("AsyncPool"),
-                "错误消息应含组件名以便定位，实际：" + thrown.getMessage());
-        assertSame(rootCause, thrown.getCause(), "原始 cause 必须保留（否则丢失根因）");
-        assertFalse(init.isInitialized(), "失败后不得视为已初始化");
+        assertTrue("错误消息应含组件名以便定位，实际：" + thrown.getMessage(), thrown.getMessage().contains("AsyncPool"));
+        assertSame("原始 cause 必须保留（否则丢失根因）", rootCause, thrown.getCause());
+        assertFalse("失败后不得视为已初始化", init.isInitialized());
     }
 
     @Test
@@ -75,8 +74,7 @@ public class LazyInitTest {
         assertThrows(IllegalStateException.class, init::ensure);
         assertThrows(IllegalStateException.class, init::ensure);
 
-        assertEquals(1, attempts.get(),
-                "失败不重试：避免失败路径被高频调用反复触发（失败原因通常是配置本身，不会自愈）");
+        assertEquals("失败不重试：避免失败路径被高频调用反复触发（失败原因通常是配置本身，不会自愈）", 1, attempts.get());
     }
 
     @Test
@@ -88,7 +86,7 @@ public class LazyInitTest {
 
         Error thrown = assertThrows(Error.class, init::ensure);
 
-        assertSame(fatal, thrown, "Error（如 OOM）应原样抛出，不做 IllegalStateException 包装");
+        assertSame("Error（如 OOM）应原样抛出，不做 IllegalStateException 包装", fatal, thrown);
     }
 
     @Test
@@ -117,13 +115,13 @@ public class LazyInitTest {
             }
             start.countDown();
             pool.shutdown();
-            assertTrue(pool.awaitTermination(10, TimeUnit.SECONDS), "并发探测线程应正常结束");
+            assertTrue("并发探测线程应正常结束", pool.awaitTermination(10, TimeUnit.SECONDS));
         } finally {
             pool.shutdownNow();
         }
 
-        assertTrue(errors.isEmpty(), "并发 ensure 不应抛异常：" + errors);
-        assertEquals(1, runs.get(), "双重检查锁下并发 ensure 只能初始化一次");
+        assertTrue("并发 ensure 不应抛异常：" + errors, errors.isEmpty());
+        assertEquals("双重检查锁下并发 ensure 只能初始化一次", 1, runs.get());
     }
 
     /**
@@ -137,9 +135,8 @@ public class LazyInitTest {
     public void asyncPoolFieldsAreNotClassInitAssigned() throws Exception {
         for (String name : new String[]{"POOL", "SCHEDULER"}) {
             Field f = AsyncPool.class.getDeclaredField(name);
-            assertFalse(Modifier.isFinal(f.getModifiers()),
-                    "P2-2：" + name + " 不得为 final —— final 意味着它在 static 块里赋值，"
-                            + "配置失败会变成 ExceptionInInitializerError 且类永久不可用");
+            assertFalse("P2-2：" + name + " 不得为 final —— final 意味着它在 static 块里赋值，"
+                            + "配置失败会变成 ExceptionInInitializerError 且类永久不可用", Modifier.isFinal(f.getModifiers()));
         }
         // 访问类本身不得触发任何配置读取（惰性化后类初始化是纯声明）
         assertNotNull(AsyncPool.class.getName());
@@ -147,8 +144,8 @@ public class LazyInitTest {
         // 端到端仍可用：首次真实使用触发惰性初始化，且重复使用不重建
         AsyncPool.run(() -> { });
         String snapshot = AsyncPool.getStatusSnapshot();
-        assertTrue(snapshot.contains("pool="), "首次使用后应能取到池状态（惰性初始化已生效）：" + snapshot);
+        assertTrue("首次使用后应能取到池状态（惰性初始化已生效）：" + snapshot, snapshot.contains("pool="));
         AsyncPool.run(() -> { });
-        assertTrue(AsyncPool.getStatusSnapshot().contains("pool="), "重复使用不得破坏已初始化的池");
+        assertTrue("重复使用不得破坏已初始化的池", AsyncPool.getStatusSnapshot().contains("pool="));
     }
 }

@@ -1,6 +1,6 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.common.security;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,9 +8,9 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * C-7：{@link SensitiveDataSanitizer} 规则集「不可变快照 + volatile 原子发布」的并发回归护盾。
@@ -22,10 +22,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>本用例在「多读线程持续读取 + 主线程反复 reloadRules」下断言：任何一次读取都不得看到规则丢失。
  * 若回退为 clear+addAll 实现，本用例会因读取到空集而失败。
  */
-class SensitiveDataSanitizerReloadConcurrencyTest {
+public class SensitiveDataSanitizerReloadConcurrencyTest {
 
     @Test
-    void concurrentReadsNeverObserveEmptyRuleSetsDuringReload() throws Exception {
+    public void concurrentReadsNeverObserveEmptyRuleSetsDuringReload() throws Exception {
         AtomicBoolean stop = new AtomicBoolean(false);
         AtomicInteger violations = new AtomicInteger();
 
@@ -60,12 +60,11 @@ class SensitiveDataSanitizerReloadConcurrencyTest {
             t.join(2000);
         }
 
-        assertEquals(0, violations.get(),
-                "并发 reload 期间读取不得观察到空/半填充规则集（C-7：共享可变静态集竞态）");
+        assertEquals("并发 reload 期间读取不得观察到空/半填充规则集（C-7：共享可变静态集竞态）", 0, violations.get());
     }
 
     @Test
-    void ruleSetsRemainEffectiveAfterReload() {
+    public void ruleSetsRemainEffectiveAfterReload() {
         SensitiveDataSanitizer.reloadRules();
 
         assertTrue(SensitiveDataSanitizer.isSensitiveBodyKey("password"));

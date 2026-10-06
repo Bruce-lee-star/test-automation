@@ -4,9 +4,9 @@ import com.hsbc.cmb.hk.dbb.automation.framework.web.exceptions.ElementException;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.page.element.PageElement;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.LoadState;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;

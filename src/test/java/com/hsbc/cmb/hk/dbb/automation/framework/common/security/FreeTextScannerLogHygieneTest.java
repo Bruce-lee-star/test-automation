@@ -1,9 +1,9 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.common.security;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * {@code %msg} 出口脱敏的「不破坏日志本身」回归测试（固化评审 F-10 修复）。
@@ -29,9 +29,9 @@ public class FreeTextScannerLogHygieneTest {
         String log = "Caused by: Boom\n\tat app.Foo.bar(Foo.java:1)\n    password=" + SECRET;
         String out = SensitiveDataSanitizer.sanitizeLogMessage(log);
 
-        assertFalse(out.contains(SECRET), "敏感值必须被遮蔽");
-        assertTrue(out.contains("\n\tat app.Foo.bar"), "tab 缩进必须原样保留（不得被抹平为单空格）：" + out);
-        assertTrue(out.contains("\n    password="), "行首空格缩进必须原样保留：" + out);
+        assertFalse("敏感值必须被遮蔽", out.contains(SECRET));
+        assertTrue("tab 缩进必须原样保留（不得被抹平为单空格）：" + out, out.contains("\n\tat app.Foo.bar"));
+        assertTrue("行首空格缩进必须原样保留：" + out, out.contains("\n    password="));
     }
 
     @Test
@@ -39,8 +39,8 @@ public class FreeTextScannerLogHygieneTest {
         String log = "Caused by: java.lang.IllegalStateException at automation.framework.common.security.FreeTextScanner";
         String out = SensitiveDataSanitizer.sanitizeLogMessage(log);
 
-        assertTrue(out.contains("automation.framework.common"), "包名（两段各 ≥8 字符）不得被误判为 JWT 遮蔽：" + out);
-        assertTrue(out.contains("java.lang.IllegalStateException"), "异常类名不得被遮蔽：" + out);
+        assertTrue("包名（两段各 ≥8 字符）不得被误判为 JWT 遮蔽：" + out, out.contains("automation.framework.common"));
+        assertTrue("异常类名不得被遮蔽：" + out, out.contains("java.lang.IllegalStateException"));
     }
 
     @Test
@@ -48,14 +48,12 @@ public class FreeTextScannerLogHygieneTest {
         String jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
         String out = SensitiveDataSanitizer.sanitizeLogMessage("token=" + jwt);
 
-        assertFalse(out.contains("SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"),
-                "真 JWT（header 以 eyJ 起头）的签名段仍必须遮蔽：" + out);
+        assertFalse("真 JWT（header 以 eyJ 起头）的签名段仍必须遮蔽：" + out, out.contains("SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"));
     }
 
     @Test
     public void normalMessageStaysByteIdentical() {
         String plain = "user logged in successfully";
-        assertTrue(plain.equals(SensitiveDataSanitizer.sanitizeLogMessage(plain)),
-                "无敏感内容的消息必须原样通过（脱敏不得引入任何改写）");
+        assertTrue("无敏感内容的消息必须原样通过（脱敏不得引入任何改写）", plain.equals(SensitiveDataSanitizer.sanitizeLogMessage(plain)));
     }
 }

@@ -6,10 +6,8 @@ import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.junit.After;
+import org.junit.Test;
 
 import java.lang.reflect.Proxy;
 import java.util.concurrent.Callable;
@@ -19,7 +17,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 /**
  * N-12（doc 21，跨仓覆盖错位）：<b>竞态敏感</b>的线程归属用例 —— 镜像框架仓的
@@ -41,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * <p>无浏览器依赖：经 WEB-P0-2 DI seam（{@link PlaywrightManager#setProvider}）注入桩，
  * 仅在 JVM 内验证线程归属语义（正是消费者视角对框架 jar 的核验）。</p>
  */
-class BasePageThreadOwnershipRaceTest {
+public class BasePageThreadOwnershipRaceTest {
 
     private static final int ROUNDS = 200;
 
@@ -85,15 +83,14 @@ class BasePageThreadOwnershipRaceTest {
         };
     }
 
-    @AfterEach
-    void tearDown() {
+    @After
+    public void tearDown() {
         PlaywrightManager.resetProvider();
     }
 
-    @Test
-    @Timeout(180)
-    @DisplayName("N-12：两线程【同时首次】访问同一 BasePage → 每轮恰一成功一被拒（竞态敏感）")
-    void simultaneousFirstAccessHasExactlyOneOwner() throws Exception {
+    @Test(timeout = 180_000)
+    // @DisplayName: "N-12：两线程【同时首次】访问同一 BasePage → 每轮恰一成功一被拒（竞态敏感）"
+    public void simultaneousFirstAccessHasExactlyOneOwner() throws Exception {
         Page page = proxy(Page.class);
         BrowserContext ctx = proxy(BrowserContext.class);
         PlaywrightManager.setProvider(provider(page, ctx));
@@ -122,12 +119,10 @@ class BasePageThreadOwnershipRaceTest {
                 int rejected = (t1 instanceof IllegalStateException ? 1 : 0)
                         + (t2 instanceof IllegalStateException ? 1 : 0);
 
-                assertEquals(1, succeeded,
-                        "第 " + round + " 轮：必须恰有一线程取得归属（若为 2，说明两线程双双通过了"
-                                + "「读-判-写」窗口 = CT2-03 根锚点竞态回归）。t1=" + t1 + ", t2=" + t2);
-                assertEquals(1, rejected,
-                        "第 " + round + " 轮：另一线程必须被线程归属守卫以 IllegalStateException 拒绝。"
-                                + "t1=" + t1 + ", t2=" + t2);
+                assertEquals("第 " + round + " 轮：必须恰有一线程取得归属（若为 2，说明两线程双双通过了"
+                                + "「读-判-写」窗口 = CT2-03 根锚点竞态回归）。t1=" + t1 + ", t2=" + t2, 1, succeeded);
+                assertEquals("第 " + round + " 轮：另一线程必须被线程归属守卫以 IllegalStateException 拒绝。"
+                                + "t1=" + t1 + ", t2=" + t2, 1, rejected);
             }
         } finally {
             pool.shutdownNow();

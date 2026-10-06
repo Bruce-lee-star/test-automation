@@ -1,11 +1,11 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.common.assertion;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * D3-2 硬断言门面契约测试。
@@ -41,9 +41,9 @@ public class FrameworkAssertionsTest {
             FrameworkAssertions.assertEquals(200, 404, "status code");
             fail("应抛出 FrameworkAssertionError");
         } catch (FrameworkAssertionError e) {
-            assertTrue(e.getMessage().contains("200"), "失败信息应含 expected");
-            assertTrue(e.getMessage().contains("404"), "失败信息应含 actual");
-            assertTrue(e.getMessage().contains("status code"), "失败信息应含自定义 message");
+            assertTrue("失败信息应含 expected", e.getMessage().contains("200"));
+            assertTrue("失败信息应含 actual", e.getMessage().contains("404"));
+            assertTrue("失败信息应含自定义 message", e.getMessage().contains("status code"));
         }
     }
 
@@ -104,8 +104,9 @@ public class FrameworkAssertionsTest {
             FrameworkAssertions.assertTrue(false, "x");
             fail("应抛出");
         } catch (Throwable t) {
-            assertTrue(t instanceof AssertionError, "FrameworkAssertionError 必须是 AssertionError 子类");
-            assertTrue(t instanceof FrameworkAssertionError);
+            // Class.isInstance 替代 instanceof：语义等价，且满足 SpotBugs JUA_DONT_ASSERT_INSTANCEOF_IN_TESTS
+            assertTrue("FrameworkAssertionError 必须是 AssertionError 子类", AssertionError.class.isInstance(t));
+            assertTrue(FrameworkAssertionError.class.isInstance(t));
         }
     }
 
@@ -115,7 +116,7 @@ public class FrameworkAssertionsTest {
             FrameworkAssertions.assertTrue(false, null);
             fail("应抛出");
         } catch (FrameworkAssertionError e) {
-            assertFalse(e.getMessage().contains("null"), "message 为 null 时应回落默认文案，不应出现 'null'");
+            assertFalse("message 为 null 时应回落默认文案，不应出现 'null'", e.getMessage().contains("null"));
         }
     }
 }

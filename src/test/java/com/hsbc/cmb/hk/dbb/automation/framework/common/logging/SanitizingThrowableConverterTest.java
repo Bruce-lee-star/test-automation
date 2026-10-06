@@ -3,12 +3,12 @@ package com.hsbc.cmb.hk.dbb.automation.framework.common.logging;
 import ch.qos.logback.classic.spi.LoggingEvent;
 import ch.qos.logback.classic.spi.ThrowableProxy;
 import com.hsbc.cmb.hk.dbb.automation.framework.common.security.SensitiveDataSanitizer;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * C-2 / L-1 / L-3 异常栈脱敏契约测试。
@@ -50,7 +50,7 @@ public class SanitizingThrowableConverterTest {
         }
     }
 
-    @AfterEach
+    @After
     public void tearDown() {
         System.clearProperty(SanitizingMessageConverter.ENABLED_KEY);
     }
@@ -60,8 +60,8 @@ public class SanitizingThrowableConverterTest {
     public void masksEmbeddedSecretInExceptionMessage() {
         Throwable ex = new RuntimeException("login failed: password=" + SECRET);
         String out = new Fixture().convert(ex);
-        assertFalse(out.contains(SECRET), "异常栈不得残留明文密钥");
-        assertTrue(out.contains(SensitiveDataSanitizer.maskToken()), "应出现掩码");
+        assertFalse("异常栈不得残留明文密钥", out.contains(SECRET));
+        assertTrue("应出现掩码", out.contains(SensitiveDataSanitizer.maskToken()));
     }
 
     /** caused-by 链的 message 同样被脱敏。 */
@@ -70,7 +70,7 @@ public class SanitizingThrowableConverterTest {
         Throwable root = new IllegalStateException("password=" + SECRET);
         Throwable top = new RuntimeException("outer failure", root);
         String out = new Fixture().convert(top);
-        assertFalse(out.contains(SECRET), "caused-by 链的明文密钥不得残留");
+        assertFalse("caused-by 链的明文密钥不得残留", out.contains(SECRET));
     }
 
     /** 普通异常 message 原样通过（脱敏不得破坏可读性）。 */
@@ -78,10 +78,8 @@ public class SanitizingThrowableConverterTest {
     public void leavesNormalExceptionMessageIntact() {
         Throwable ex = new RuntimeException("connection refused to host:8080");
         String out = new Fixture().convert(ex);
-        assertTrue(out.contains("connection refused to host:8080"),
-                "普通异常 message 应原样保留");
-        assertFalse(out.contains(SensitiveDataSanitizer.maskToken()),
-                "无敏感键时不得出现掩码");
+        assertTrue("普通异常 message 应原样保留", out.contains("connection refused to host:8080"));
+        assertFalse("无敏感键时不得出现掩码", out.contains(SensitiveDataSanitizer.maskToken()));
     }
 
     /** L-3：脱敏失败时输出抑制标记而非原文。 */
@@ -94,9 +92,8 @@ public class SanitizingThrowableConverterTest {
             }
         };
         String out = boom.convert(new RuntimeException("password=" + SECRET));
-        assertTrue(out.contains(SanitizingThrowableConverter.suppressedMarker()),
-                "脱敏失败必须输出 [LOG SUPPRESSED] 而非明文");
-        assertFalse(out.contains(SECRET), "抑制路径不得泄露明文密钥");
+        assertTrue("脱敏失败必须输出 [LOG SUPPRESSED] 而非明文", out.contains(SanitizingThrowableConverter.suppressedMarker()));
+        assertFalse("抑制路径不得泄露明文密钥", out.contains(SECRET));
     }
 
     /** 运维级总开关关闭时原样返回。 */
@@ -104,7 +101,7 @@ public class SanitizingThrowableConverterTest {
     public void killSwitchPassesThrough() {
         System.setProperty(SanitizingMessageConverter.ENABLED_KEY, "false");
         Throwable ex = new RuntimeException("password=" + SECRET);
-        assertTrue(new Fixture().convert(ex).contains(SECRET), "总开关关闭时应原样输出");
+        assertTrue("总开关关闭时应原样输出", new Fixture().convert(ex).contains(SECRET));
     }
 
     /**
@@ -118,8 +115,8 @@ public class SanitizingThrowableConverterTest {
             capture.error(marker, new RuntimeException("auth failed: password=" + SECRET));
             String content = capture.content();
 
-            assertTrue(content.contains(marker), "落盘日志中应能找到标记行；实际内容=" + content);
-            assertFalse(content.contains(SECRET), "落盘异常栈绝不能出现明文密钥（%ex 出口强制脱敏）");
+            assertTrue("落盘日志中应能找到标记行；实际内容=" + content, content.contains(marker));
+            assertFalse("落盘异常栈绝不能出现明文密钥（%ex 出口强制脱敏）", content.contains(SECRET));
         }
     }
 }

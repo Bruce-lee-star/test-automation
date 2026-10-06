@@ -1,12 +1,12 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.common.security;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Assume;
+import org.junit.Before;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
 /**
  * 双格式密文透明解密 + 「绑定本地主密钥」契约测试。
@@ -37,13 +37,13 @@ public class SecretValueBareBase64Test {
     private static final String OTHER_MASTER_KEY =
             "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
 
-    @BeforeEach
+    @Before
     public void setUp() {
         System.setProperty("config.master.key", TEST_MASTER_KEY);
         System.setProperty("security.secret.strict", "true"); // 确定性：默认严格失败快
     }
 
-    @AfterEach
+    @After
     public void tearDown() {
         System.clearProperty(SecretValue.ALLOW_BARE_BASE64_KEY);
         System.clearProperty("config.master.key");
@@ -61,7 +61,7 @@ public class SecretValueBareBase64Test {
     @Test
     public void bareBase64IsDecryptedByDefault() {
         String bare = bareCiphertextOrSkip();
-        assertEquals(PLAIN, SecretValue.decryptIfNeeded(bare), "裸 base64 默认应透明解密");
+        assertEquals("裸 base64 默认应透明解密", PLAIN, SecretValue.decryptIfNeeded(bare));
     }
 
     /** 裸 base64：显式关闭开关（allow-bare-base64=false）后不再解密，原样返回。 */
@@ -69,7 +69,7 @@ public class SecretValueBareBase64Test {
     public void bareBase64OptOutWhenDisabled() {
         String bare = bareCiphertextOrSkip();
         System.setProperty(SecretValue.ALLOW_BARE_BASE64_KEY, "false");
-        assertEquals(bare, SecretValue.decryptIfNeeded(bare), "关闭开关后裸 base64 应原样返回");
+        assertEquals("关闭开关后裸 base64 应原样返回", bare, SecretValue.decryptIfNeeded(bare));
     }
 
     /** key 不匹配：ENC(...) 密文解密失败 → 失败快（抛 IllegalStateException）。 */
@@ -77,8 +77,7 @@ public class SecretValueBareBase64Test {
     public void encCiphertextWithWrongKeyFailsFast() {
         String enc = encryptOrSkip();
         System.setProperty("config.master.key", OTHER_MASTER_KEY);
-        assertThrows(IllegalStateException.class, () -> SecretValue.decryptIfNeeded(enc),
-                "key 变更后 ENC 密文应失败快，而非静默放行");
+        assertThrows("key 变更后 ENC 密文应失败快，而非静默放行", IllegalStateException.class, () -> SecretValue.decryptIfNeeded(enc));
     }
 
     /**
@@ -90,8 +89,7 @@ public class SecretValueBareBase64Test {
     public void bareCiphertextWithWrongKeyDegradesToOriginal() {
         String bare = bareCiphertextOrSkip();
         System.setProperty("config.master.key", OTHER_MASTER_KEY);
-        assertEquals(bare, SecretValue.decryptIfNeeded(bare),
-                "裸密文解密失败应降级保留原串，而非崩溃");
+        assertEquals("裸密文解密失败应降级保留原串，而非崩溃", bare, SecretValue.decryptIfNeeded(bare));
     }
 
     /**
@@ -103,8 +101,7 @@ public class SecretValueBareBase64Test {
         String enc = encryptOrSkip();
         System.clearProperty("security.secret.strict"); // 模拟"未配置"
         System.setProperty("config.master.key", OTHER_MASTER_KEY);
-        assertThrows(IllegalStateException.class, () -> SecretValue.decryptIfNeeded(enc),
-                "不配置 security.secret.strict 时 ENC 密文默认失败快、不降级");
+        assertThrows("不配置 security.secret.strict 时 ENC 密文默认失败快、不降级", IllegalStateException.class, () -> SecretValue.decryptIfNeeded(enc));
     }
 
     /** 非严格模式（-Dsecurity.secret.strict=false）：解密失败降级为保留原串（排障用）。 */
@@ -113,7 +110,7 @@ public class SecretValueBareBase64Test {
         String bare = bareCiphertextOrSkip();
         System.setProperty("config.master.key", OTHER_MASTER_KEY);
         System.setProperty("security.secret.strict", "false");
-        assertEquals(bare, SecretValue.decryptIfNeeded(bare), "非严格模式应保留原串");
+        assertEquals("非严格模式应保留原串", bare, SecretValue.decryptIfNeeded(bare));
     }
 
     /** 明显非密文形态：原样返回，不抛异常（非 base64 / 长度过短）。 */
@@ -121,7 +118,7 @@ public class SecretValueBareBase64Test {
     public void nonCiphertextFormsPassThrough() {
         assertEquals("authorization,password", SecretValue.decryptIfNeeded("authorization,password"));
         assertEquals("open", SecretValue.decryptIfNeeded("open"));
-        assertEquals("YWJj", SecretValue.decryptIfNeeded("YWJj"), "合法 base64 但长度过短应按明文返回");
+        assertEquals("合法 base64 但长度过短应按明文返回", "YWJj", SecretValue.decryptIfNeeded("YWJj"));
     }
 
     /**
@@ -131,8 +128,7 @@ public class SecretValueBareBase64Test {
     @Test
     public void plainLongBase64LookingValueDoesNotCrash() {
         String plainHex = "0123456789abcdef0123456789abcdef"; // 32 hex：合法 base64、解码 24B > IV
-        assertEquals(plainHex, SecretValue.decryptIfNeeded(plainHex),
-                "普通长 base64 值应原样返回，绝不因启发式误命中而抛异常");
+        assertEquals("普通长 base64 值应原样返回，绝不因启发式误命中而抛异常", plainHex, SecretValue.decryptIfNeeded(plainHex));
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -143,7 +139,7 @@ public class SecretValueBareBase64Test {
         try {
             return ConfigCipher.encrypt(PLAIN);
         } catch (Exception e) {
-            Assumptions.assumeTrue(false, "主密钥不可用（无法加解密），跳过本断言");
+            Assume.assumeTrue("主密钥不可用（无法加解密），跳过本断言", false);
             return null;
         }
     }

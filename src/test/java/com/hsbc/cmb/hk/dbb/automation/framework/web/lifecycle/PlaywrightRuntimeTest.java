@@ -6,11 +6,11 @@ import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.browser.BrowserRes
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.browser.BrowserStartup;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.context.ContextRegistry;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.page.PageRegistry;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mock;
 
 /**

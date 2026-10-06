@@ -1,11 +1,11 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.common.config;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * {@link FrameworkFlags} 契约测试。
@@ -23,7 +23,7 @@ public class FrameworkFlagsTest {
     private static final String KEY = "framework.flags.test.key";
     private static final String BOOL_KEY = "framework.flags.test.enabled";
 
-    @AfterEach
+    @After
     public void tearDown() {
         System.clearProperty(KEY);
         System.clearProperty(BOOL_KEY);
@@ -33,7 +33,7 @@ public class FrameworkFlagsTest {
     @Test
     public void fallsBackToDefaultWhenUnset() {
         assertEquals("fallback", FrameworkFlags.resolve(KEY, "fallback"));
-        assertTrue(FrameworkFlags.isEnabled(BOOL_KEY, true), "fallback");
+        assertTrue("fallback", FrameworkFlags.isEnabled(BOOL_KEY, true));
         assertFalse(FrameworkFlags.isEnabled(BOOL_KEY, false));
     }
 
@@ -60,13 +60,13 @@ public class FrameworkFlagsTest {
      */
     @Test
     public void clearingPropertyRestoresDefaultDeterministically() {
-        assertFalse(FrameworkFlags.isEnabled(BOOL_KEY, false), "初始应为默认关闭");
+        assertFalse("初始应为默认关闭", FrameworkFlags.isEnabled(BOOL_KEY, false));
 
         System.setProperty(BOOL_KEY, "true");
-        assertTrue(FrameworkFlags.isEnabled(BOOL_KEY, false), "设置后应开启");
+        assertTrue("设置后应开启", FrameworkFlags.isEnabled(BOOL_KEY, false));
 
         System.clearProperty(BOOL_KEY);
-        assertFalse(FrameworkFlags.isEnabled(BOOL_KEY, false), "clear 后必须回到默认（SPI 缓存回归防护）");
+        assertFalse("clear 后必须回到默认（SPI 缓存回归防护）", FrameworkFlags.isEnabled(BOOL_KEY, false));
     }
 
     /** 空白值视为未配置，回落到默认。 */

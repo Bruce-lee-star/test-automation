@@ -1,14 +1,15 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.web.page.scan;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * 评审 F-07 / P1-7 契约网：区域扫描的「点击多个区域累加 + 按 Esc 收尾」语义必须在
@@ -34,40 +35,38 @@ public class RegionSelectMultiSelectContractTest {
 
     @Test
     public void javaAndJsAgreeOnRegionDoneCommandName() throws IOException {
-        assertNotNull(RolePickerConstants.CMD_REGION_DONE, "Java 侧必须登记 regionDone 命令");
-        assertTrue(RolePickerConstants.CMD_REGION_DONE.equals("regionDone"),
-                "命令线值必须与 JS 严格一致（JS 发 'regionDone'），实际：" + RolePickerConstants.CMD_REGION_DONE);
+        // 原来这里还有一条 assertNotNull(CMD_REGION_DONE)：对**编译期常量**断言非空恒真，
+        // 属 SpotBugs DMI_DOH（无意义的调用）。真实契约由下一条断言覆盖：命令线值必须与 JS 一致。
+        // 不用「常量.equals(字面量)」：对编译期常量调 equals 同样是 DMI_DOH。
+        assertEquals("命令线值必须与 JS 严格一致（JS 发 'regionDone'）",
+                "regionDone", RolePickerConstants.CMD_REGION_DONE);
 
         String js = readResource(REGION_JS);
-        assertTrue(js.contains("__rolePickerCmd('regionDone')"),
-                "F-07：浏览器侧 Esc 收尾（finish）必须回传 regionDone —— 否则 Java 模式停在 scanRegion，"
-                        + "面板按钮永久置灰，且无从收尾");
+        assertTrue("F-07：浏览器侧 Esc 收尾（finish）必须回传 regionDone —— 否则 Java 模式停在 scanRegion，"
+                        + "面板按钮永久置灰，且无从收尾", js.contains("__rolePickerCmd('regionDone')"));
     }
 
     @Test
     public void regionClickStillSendsIncrementalNotificationWithoutFinishingSelection() throws IOException {
         String onClick = regionClickHandler(readResource(REGION_JS));
 
-        assertTrue(onClick.contains("'regionScanned'"),
-                "F-07：每次点击区域都应发增量通知 regionScanned（Java 据此刷新代码），实际片段：\n" + onClick);
-        assertFalse(onClick.contains("finish("),
-                "F-07：点击区域的处理里绝不能调用 finish()（finish 只在 Esc/Java END 时收尾）——"
-                        + "首次点击即收尾正是「多选退化为单选」的根因，实际片段：\n" + onClick);
-        assertTrue(onClick.contains("selected.push(root)"),
-                "F-07：点击区域应把区域累加进已选集合（多选语义）");
+        assertTrue("F-07：每次点击区域都应发增量通知 regionScanned（Java 据此刷新代码），实际片段：\n" + onClick, onClick.contains("'regionScanned'"));
+        assertFalse("F-07：点击区域的处理里绝不能调用 finish()（finish 只在 Esc/Java END 时收尾）——"
+                        + "首次点击即收尾正是「多选退化为单选」的根因，实际片段：\n" + onClick, onClick.contains("finish("));
+        assertTrue("F-07：点击区域应把区域累加进已选集合（多选语义）", onClick.contains("selected.push(root)"));
     }
 
     /** 截取区域点击处理函数体（{@code function onClick(e) {} } 至下一个同级函数声明）。 */
     private static String regionClickHandler(String js) {
         int start = js.indexOf("function onClick(e) {");
-        assertTrue(start >= 0, "未找到区域点击处理函数 onClick（JS 结构变更请同步本契约测试）");
+        assertTrue("未找到区域点击处理函数 onClick（JS 结构变更请同步本契约测试）", start >= 0);
         int end = js.indexOf("\n                function ", start);
         return end > start ? js.substring(start, end) : js.substring(start);
     }
 
     private static String readResource(String path) throws IOException {
         try (InputStream in = RegionSelectMultiSelectContractTest.class.getResourceAsStream(path)) {
-            assertNotNull(in, "类路径未找到资源：" + path + "（core 资源未被打包会让本契约网静默失效）");
+            assertNotNull("类路径未找到资源：" + path + "（core 资源未被打包会让本契约网静默失效）", in);
             return new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }
     }

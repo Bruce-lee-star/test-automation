@@ -3,14 +3,14 @@ package com.hsbc.cmb.hk.dbb.automation.framework.web.page.engine;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.exceptions.TimeoutException;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Page;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;

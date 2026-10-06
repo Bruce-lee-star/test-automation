@@ -1,15 +1,15 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.common.result;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * D4-2 {@link ResultReporters} 契约测试。
@@ -56,8 +56,8 @@ public class ResultReportersTest {
         }
     }
 
-    @BeforeEach
-    @AfterEach
+    @Before
+    @After
     public void resetReporters() {
         // 前后都清空：避免 SerenityReporter 自注册影响断言，也不污染其它用例
         ResultReporters.clear();
@@ -91,8 +91,8 @@ public class ResultReportersTest {
 
         ResultReporters.reportScenario("scenario-2", TestResult.ERROR, 5L); // 不得抛出
 
-        assertTrue(bad.called, "抛错的实现应确实被调用");
-        assertTrue(good.events.contains("scenario:scenario-2:ERROR"), "其它实现仍必须收到结果");
+        assertTrue("抛错的实现应确实被调用", bad.called);
+        assertTrue("其它实现仍必须收到结果", good.events.contains("scenario:scenario-2:ERROR"));
     }
 
     /** 无实现时静默 no-op。 */
@@ -122,6 +122,6 @@ public class ResultReportersTest {
 
         ResultReporters.reportScenario("scenario-3", TestResult.SUCCESS, 1L);
 
-        assertFalse(reporter.events.contains("scenario:scenario-3:SUCCESS"), "注销后不应再收到结果");
+        assertFalse("注销后不应再收到结果", reporter.events.contains("scenario:scenario-3:SUCCESS"));
     }
 }

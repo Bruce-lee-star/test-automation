@@ -11,10 +11,9 @@ import com.microsoft.playwright.Frame;
 import com.microsoft.playwright.Request;
 import com.microsoft.playwright.Response;
 import com.microsoft.playwright.Route;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
@@ -29,12 +28,12 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Route V2 能力全量覆盖 + 资源泄漏体检（mock 驱动，无需浏览器 / 不依赖 DBB 环境）。
@@ -74,12 +73,12 @@ public class RouteCapabilityCoverageTest {
     private APIRequestContext apiCtx;
     private int runtimeBaseline;
 
-    @BeforeEach
+    @Before
     public void setUp() {
         runtimeBaseline = RouteEngine.activeRuntimes();
     }
 
-    @AfterEach
+    @After
     public void tearDown() {
         try {
             if (ctx != null) {
@@ -87,8 +86,7 @@ public class RouteCapabilityCoverageTest {
             }
         } finally {
             // 泄漏体检：每个用例结束，runtime 注册表必须回落基线（否则 context→runtime 映射在被持有）
-            assertEquals(runtimeBaseline, RouteEngine.activeRuntimes(),
-                    "用例结束后 runtime 注册表必须回落基线（无泄漏）");
+            assertEquals("用例结束后 runtime 注册表必须回落基线（无泄漏）", runtimeBaseline, RouteEngine.activeRuntimes());
             ctx = null;
             runtime = null;
             apiCtx = null;
@@ -100,31 +98,28 @@ public class RouteCapabilityCoverageTest {
     // ══════════════════════════════════════════════════════════════
 
     @Test
-    @DisplayName("能力优先级：选择优先级 MOCK < MODIFY_REQUEST < MONITOR < DELAY")
+    // @DisplayName: "能力优先级：选择优先级 MOCK < MODIFY_REQUEST < MONITOR < DELAY"
     public void selectionPriorityOrderIsMockModifyMonitorDelay() {
         List<RouteCapability> sorted = new ArrayList<>(List.of(RouteCapability.values()));
         sorted.sort(RouteCapability.bySelectionPriority());
-        assertEquals(List.of(RouteCapability.MOCK, RouteCapability.MODIFY_REQUEST,
-                RouteCapability.MONITOR, RouteCapability.DELAY), sorted,
-                "选择优先级（同 endpoint 多能力位时谁被选中）：MOCK 最优先，DELAY 最后");
+        assertEquals("选择优先级（同 endpoint 多能力位时谁被选中）：MOCK 最优先，DELAY 最后", List.of(RouteCapability.MOCK, RouteCapability.MODIFY_REQUEST,
+                RouteCapability.MONITOR, RouteCapability.DELAY), sorted);
     }
 
     @Test
-    @DisplayName("能力优先级：执行时序 DELAY → MODIFY_REQUEST → MOCK → MONITOR")
+    // @DisplayName: "能力优先级：执行时序 DELAY → MODIFY_REQUEST → MOCK → MONITOR"
     public void executionOrderIsDelayModifyMockMonitor() {
         List<RouteCapability> sorted = new ArrayList<>(List.of(RouteCapability.values()));
         sorted.sort(RouteCapability.byExecutionOrder());
-        assertEquals(List.of(RouteCapability.DELAY, RouteCapability.MODIFY_REQUEST,
-                RouteCapability.MOCK, RouteCapability.MONITOR), sorted,
-                "执行时序（同一请求上的编排顺序）：先延时，再改请求，再伪造，最后观测");
+        assertEquals("执行时序（同一请求上的编排顺序）：先延时，再改请求，再伪造，最后观测", List.of(RouteCapability.DELAY, RouteCapability.MODIFY_REQUEST,
+                RouteCapability.MOCK, RouteCapability.MONITOR), sorted);
     }
 
     @Test
-    @DisplayName("能力优先级：仅 MOCK 是终结能力（命中即短路 fulfill）")
+    // @DisplayName: "能力优先级：仅 MOCK 是终结能力（命中即短路 fulfill）"
     public void onlyMockIsTerminal() {
         for (RouteCapability capability : RouteCapability.values()) {
-            assertEquals(capability == RouteCapability.MOCK, capability.isTerminal(),
-                    capability + " 的 terminal 标记必须为 " + (capability == RouteCapability.MOCK));
+            assertEquals(capability + " 的 terminal 标记必须为 " + (capability == RouteCapability.MOCK), capability == RouteCapability.MOCK, capability.isTerminal());
         }
     }
 
@@ -133,7 +128,7 @@ public class RouteCapabilityCoverageTest {
     // ══════════════════════════════════════════════════════════════
 
     @Test
-    @DisplayName("MOCK：夹具静态体 + 字段替换（pinned-account 真实响应）")
+    // @DisplayName: "MOCK：夹具静态体 + 字段替换（pinned-account 真实响应）"
     public void mockStaticBodyFromFixtureReplacesField() {
         newMockContext();
         RouteDsl.on(ctx)
@@ -148,15 +143,13 @@ public class RouteCapabilityCoverageTest {
         handler.accept(route);
 
         Route.FulfillOptions options = captureFulfill(route);
-        assertEquals(200, options.status, "MOCK 状态码");
-        assertTrue(find(options.body, "\"maxPinnedAccount\"\\s*:\\s*20"),
-                "真实夹具的 maxPinnedAccount 必须被替换为 20，实际: " + options.body);
-        assertTrue(find(options.body, "\"maxPinnedAccount\"\\s*:\\s*10") == false,
-                "原始值 10 不应残留");
+        assertEquals("MOCK 状态码", 200L, (long) options.status);
+        assertTrue("真实夹具的 maxPinnedAccount 必须被替换为 20，实际: " + options.body, find(options.body, "\"maxPinnedAccount\"\\s*:\\s*20"));
+        assertTrue("原始值 10 不应残留", find(options.body, "\"maxPinnedAccount\"\\s*:\\s*10") == false);
     }
 
     @Test
-    @DisplayName("MOCK：when(...).thenSet(...) 条件命中时写入新值")
+    // @DisplayName: "MOCK：when(...).thenSet(...) 条件命中时写入新值"
     public void conditionalWhenThenSetAppliesWhenMatched() {
         newMockContext();
         RouteDsl.on(ctx)
@@ -172,12 +165,11 @@ public class RouteCapabilityCoverageTest {
         handler.accept(route);
 
         Route.FulfillOptions options = captureFulfill(route);
-        assertTrue(find(options.body, "\"isDefault\"\\s*:\\s*false"),
-                "条件命中时必须写入 false，实际: " + options.body);
+        assertTrue("条件命中时必须写入 false，实际: " + options.body, find(options.body, "\"isDefault\"\\s*:\\s*false"));
     }
 
     @Test
-    @DisplayName("MOCK：when(...).thenSet(...) 条件不命中时保留原值")
+    // @DisplayName: "MOCK：when(...).thenSet(...) 条件不命中时保留原值"
     public void conditionalWhenThenSetKeepsValueWhenNotMatched() {
         newMockContext();
         RouteDsl.on(ctx)
@@ -193,12 +185,11 @@ public class RouteCapabilityCoverageTest {
         handler.accept(route);
 
         Route.FulfillOptions options = captureFulfill(route);
-        assertTrue(find(options.body, "\"isDefault\"\\s*:\\s*true"),
-                "条件不命中时必须保留原值 true，实际: " + options.body);
+        assertTrue("条件不命中时必须保留原值 true，实际: " + options.body, find(options.body, "\"isDefault\"\\s*:\\s*true"));
     }
 
     @Test
-    @DisplayName("MOCK：interceptResponse 取真实响应 + 字段替换（insight/retrieve 真实响应）")
+    // @DisplayName: "MOCK：interceptResponse 取真实响应 + 字段替换（insight/retrieve 真实响应）"
     public void mockInterceptReturnsRealResponseWithReplacement() {
         newMockContext();
         APIResponse apiResponse = Mockito.mock(APIResponse.class);
@@ -220,13 +211,12 @@ public class RouteCapabilityCoverageTest {
         handler.accept(route);
 
         Route.FulfillOptions options = captureFulfill(route);
-        assertEquals(200, options.status, "intercept 必须沿用真实响应状态");
-        assertTrue(find(options.body, "\"message\"\\s*:\\s*\"MOCKED\""),
-                "真实响应的 message 必须被替换，实际: " + options.body);
+        assertEquals("intercept 必须沿用真实响应状态", 200L, (long) options.status);
+        assertTrue("真实响应的 message 必须被替换，实际: " + options.body, find(options.body, "\"message\"\\s*:\\s*\"MOCKED\""));
     }
 
     @Test
-    @DisplayName("MOCK：status / contentType / 自定义 header 全部落到终结点")
+    // @DisplayName: "MOCK：status / contentType / 自定义 header 全部落到终结点"
     public void mockStatusHeadersContentTypeApplied() {
         newMockContext();
         RouteDsl.on(ctx)
@@ -242,15 +232,13 @@ public class RouteCapabilityCoverageTest {
         handler.accept(route);
 
         Route.FulfillOptions options = captureFulfill(route);
-        assertEquals(201, options.status, "MOCK 状态码必须是 201");
-        assertTrue(hasHeader(options, "content-type", "application/json"),
-                "content-type 必须下发，实际 headers=" + options.headers + ", contentType=" + options.contentType);
-        assertTrue(hasHeader(options, "x-mock", "1"),
-                "自定义 header 必须下发，实际 headers=" + options.headers);
+        assertEquals("MOCK 状态码必须是 201", 201L, (long) options.status);
+        assertTrue("content-type 必须下发，实际 headers=" + options.headers + ", contentType=" + options.contentType, hasHeader(options, "content-type", "application/json"));
+        assertTrue("自定义 header 必须下发，实际 headers=" + options.headers, hasHeader(options, "x-mock", "1"));
     }
 
     @Test
-    @DisplayName("MOCK：mockBodyFromFile 资源缺失时注册即快速失败")
+    // @DisplayName: "MOCK：mockBodyFromFile 资源缺失时注册即快速失败"
     public void mockBodyFromFileMissingResourceFailsFast() {
         newMockContext();
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
@@ -258,12 +246,11 @@ public class RouteCapabilityCoverageTest {
                         .api("/dbb/nope")
                         .mock().mockBodyFromFile("mocks/dbb/does-not-exist.json")
                         .register());
-        assertTrue(ex.getMessage() != null && ex.getMessage().contains("classpath resource not found"),
-                "必须是明确的资源缺失错误，实际: " + ex.getMessage());
+        assertTrue("必须是明确的资源缺失错误，实际: " + ex.getMessage(), ex.getMessage() != null && ex.getMessage().contains("classpath resource not found"));
     }
 
     @Test
-    @DisplayName("MOCK：interceptResponse 与静态 body 互斥（build 期快速失败）")
+    // @DisplayName: "MOCK：interceptResponse 与静态 body 互斥（build 期快速失败）"
     public void mockInterceptConflictsWithStaticBody() {
         newMockContext();
         assertThrows(IllegalArgumentException.class, () ->
@@ -278,7 +265,7 @@ public class RouteCapabilityCoverageTest {
     // ══════════════════════════════════════════════════════════════
 
     @Test
-    @DisplayName("MODIFY：header 新增 + method 改写 + body 字段改写，一次 resume 携带全部改动")
+    // @DisplayName: "MODIFY：header 新增 + method 改写 + body 字段改写，一次 resume 携带全部改动"
     public void modifyRequestHeaderMethodAndBody() {
         newMockContext();
         RouteDsl.on(ctx)
@@ -295,14 +282,13 @@ public class RouteCapabilityCoverageTest {
         handler.accept(route);
 
         Route.ResumeOptions options = captureResume(route);
-        assertEquals("PUT", options.method, "method 必须被改写");
-        assertEquals("mock", options.headers.get("X-Env"), "新增 header 必须生效");
-        assertTrue(find(options.postData, "\"password\"\\s*:\\s*\"changed\""),
-                "body 字段必须被改写，实际: " + options.postData);
+        assertEquals("method 必须被改写", "PUT", options.method);
+        assertEquals("新增 header 必须生效", "mock", options.headers.get("X-Env"));
+        assertTrue("body 字段必须被改写，实际: " + options.postData, find(options.postData, "\"password\"\\s*:\\s*\"changed\""));
     }
 
     @Test
-    @DisplayName("MODIFY：removeRequestHeader 删除指定头且保留其它头")
+    // @DisplayName: "MODIFY：removeRequestHeader 删除指定头且保留其它头"
     public void modifyRemoveRequestHeaderDropsIt() {
         newMockContext();
         RouteDsl.on(ctx)
@@ -319,12 +305,12 @@ public class RouteCapabilityCoverageTest {
         handler.accept(route);
 
         Route.ResumeOptions options = captureResume(route);
-        assertFalse(options.headers.containsKey("x-drop"), "被删除的头不得出现");
-        assertEquals("application/json", options.headers.get("content-type"), "其它头必须保留");
+        assertFalse("被删除的头不得出现", options.headers.containsKey("x-drop"));
+        assertEquals("其它头必须保留", "application/json", options.headers.get("content-type"));
     }
 
     @Test
-    @DisplayName("MODIFY：body 字段 改（SET）/ 数组追加（ADD）/ 删（REMOVE）三个操作并存")
+    // @DisplayName: "MODIFY：body 字段 改（SET）/ 数组追加（ADD）/ 删（REMOVE）三个操作并存"
     public void modifyRequestBodyAddSetRemoveField() {
         newMockContext();
         RouteDsl.on(ctx)
@@ -342,14 +328,13 @@ public class RouteCapabilityCoverageTest {
 
         Route.ResumeOptions options = captureResume(route);
         String postData = options.postData == null ? null : String.valueOf(options.postData);
-        assertTrue(find(postData, "\"user\"\\s*:\\s*\"u2\""), "字段改写生效，实际: " + postData);
-        assertTrue(find(postData, "\"roles\"\\s*:\\s*\\[\\s*\"a\"\\s*,\\s*\"b\"\\s*\\]"),
-                "数组追加（ADD 语义）生效，实际: " + postData);
-        assertFalse(find(postData, "\"temp\""), "字段删除生效，实际: " + postData);
+        assertTrue("字段改写生效，实际: " + postData, find(postData, "\"user\"\\s*:\\s*\"u2\""));
+        assertTrue("数组追加（ADD 语义）生效，实际: " + postData, find(postData, "\"roles\"\\s*:\\s*\\[\\s*\"a\"\\s*,\\s*\"b\"\\s*\\]"));
+        assertFalse("字段删除生效，实际: " + postData, find(postData, "\"temp\""));
     }
 
     @Test
-    @DisplayName("MODIFY：表单（urlencoded）字段改写")
+    // @DisplayName: "MODIFY：表单（urlencoded）字段改写"
     public void modifyFormFieldOnUrlEncodedBody() {
         newMockContext();
         RouteDsl.on(ctx)
@@ -365,13 +350,13 @@ public class RouteCapabilityCoverageTest {
 
         Route.ResumeOptions options = captureResume(route);
         String postData = options.postData == null ? null : String.valueOf(options.postData);
-        assertNotNull(postData, "表单改写后必须携带 body");
-        assertTrue(postData.contains("password=new"), "表单字段必须被改写，实际: " + postData);
-        assertTrue(postData.contains("user=u"), "其它表单字段必须保留，实际: " + postData);
+        assertNotNull("表单改写后必须携带 body", postData);
+        assertTrue("表单字段必须被改写，实际: " + postData, postData.contains("password=new"));
+        assertTrue("其它表单字段必须保留，实际: " + postData, postData.contains("user=u"));
     }
 
     @Test
-    @DisplayName("MODIFY：非适用 content-type 明确拒绝修改，fail-open 原样放行")
+    // @DisplayName: "MODIFY：非适用 content-type 明确拒绝修改，fail-open 原样放行"
     public void modifyNonApplicableContentTypeFailsOpen() {
         newMockContext();
         RouteDsl.on(ctx)
@@ -386,7 +371,7 @@ public class RouteCapabilityCoverageTest {
         handler.accept(route);
 
         Route.ResumeOptions options = captureResume(route);
-        assertEquals("binary-data", options.postData, "非适用类型必须原样 resume（绝不丢 body）");
+        assertEquals("非适用类型必须原样 resume（绝不丢 body）", "binary-data", options.postData);
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -394,7 +379,7 @@ public class RouteCapabilityCoverageTest {
     // ══════════════════════════════════════════════════════════════
 
     @Test
-    @DisplayName("DELAY：delay(0) 无有效延时 → 立即放行（链式裁决 fallback）")
+    // @DisplayName: "DELAY：delay(0) 无有效延时 → 立即放行（链式裁决 fallback）"
     public void delayZeroReleasesImmediately() {
         newMockContext();
         RouteDsl.on(ctx).api("/dbb/delay-zero").delay(0).done().start();
@@ -405,11 +390,11 @@ public class RouteCapabilityCoverageTest {
         handler.accept(route);
         awaitTerminal(route, 5_000L, "resume", "fallback");
         long elapsedMs = (System.nanoTime() - start) / 1_000_000L;
-        assertTrue(elapsedMs < 1_000L, "delay(0) 必须近乎立即放行，实际 " + elapsedMs + "ms");
+        assertTrue("delay(0) 必须近乎立即放行，实际 " + elapsedMs + "ms", elapsedMs < 1_000L);
     }
 
     @Test
-    @DisplayName("DELAY：delay(1) 真延时后才放行（对齐到点必 resume 契约）")
+    // @DisplayName: "DELAY：delay(1) 真延时后才放行（对齐到点必 resume 契约）"
     public void delayOneSecondResumesAfterDelay() {
         newMockContext();
         RouteDsl.on(ctx).api("/dbb/delay-one").delay(1).done().start();
@@ -420,7 +405,7 @@ public class RouteCapabilityCoverageTest {
         handler.accept(route);
         awaitTerminal(route, 5_000L, "resume");
         long elapsedMs = (System.nanoTime() - start) / 1_000_000L;
-        assertTrue(elapsedMs >= 900L, "delay(1) 必须真延时 ≥900ms 才放行，实际 " + elapsedMs + "ms");
+        assertTrue("delay(1) 必须真延时 ≥900ms 才放行，实际 " + elapsedMs + "ms", elapsedMs >= 900L);
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -428,7 +413,7 @@ public class RouteCapabilityCoverageTest {
     // ══════════════════════════════════════════════════════════════
 
     @Test
-    @DisplayName("MONITOR：expectStatus 命中 → 不定案失败")
+    // @DisplayName: "MONITOR：expectStatus 命中 → 不定案失败"
     public void monitorExpectStatusPasses() {
         newMockContext();
         RouteDsl.on(ctx).api("/dbb/monitor-status").monitor().expectStatus(200).register();
@@ -438,12 +423,11 @@ public class RouteCapabilityCoverageTest {
         Route route = mockRoute(mockRequest("https://host/dbb/monitor-status", "GET", null, null, response));
         handler.accept(route);
 
-        assertTrue(runtime.drainSettledAssertionFailures().isEmpty(),
-                "期望与响应一致时不得上报断言失败");
+        assertTrue("期望与响应一致时不得上报断言失败", runtime.drainSettledAssertionFailures().isEmpty());
     }
 
     @Test
-    @DisplayName("MONITOR：expectStatus 不符 → 定案为断言失败")
+    // @DisplayName: "MONITOR：expectStatus 不符 → 定案为断言失败"
     public void monitorExpectStatusMismatchSettlesAsFailure() {
         newMockContext();
         RouteDsl.on(ctx).api("/dbb/monitor-status-fail").monitor().expectStatus(200).register();
@@ -453,12 +437,11 @@ public class RouteCapabilityCoverageTest {
         Route route = mockRoute(mockRequest("https://host/dbb/monitor-status-fail", "GET", null, null, response));
         handler.accept(route);
 
-        assertEquals(1, runtime.drainSettledAssertionFailures().size(),
-                "期望 200 实际 500 必须定案为一条断言失败");
+        assertEquals("期望 200 实际 500 必须定案为一条断言失败", 1, runtime.drainSettledAssertionFailures().size());
     }
 
     @Test
-    @DisplayName("MONITOR：expectJsonPath 对 leftmenu 真实响应命中（enableAdminTools=Y）")
+    // @DisplayName: "MONITOR：expectJsonPath 对 leftmenu 真实响应命中（enableAdminTools=Y）"
     public void monitorExpectJsonPathAgainstLeftmenuFixturePasses() {
         newMockContext();
         RouteDsl.on(ctx)
@@ -476,12 +459,11 @@ public class RouteCapabilityCoverageTest {
 
         // body 断言在 IO 线程执行：关闭 IO 池（有界等待）以确保断言任务落定
         runtime.io().close();
-        assertTrue(runtime.drainSettledAssertionFailures().isEmpty(),
-                "真实夹具的两条 jsonPath 断言必须全部通过");
+        assertTrue("真实夹具的两条 jsonPath 断言必须全部通过", runtime.drainSettledAssertionFailures().isEmpty());
     }
 
     @Test
-    @DisplayName("MONITOR：expectJsonPath 值不符 → 定案失败")
+    // @DisplayName: "MONITOR：expectJsonPath 值不符 → 定案失败"
     public void monitorExpectJsonPathMismatchSettlesAsFailure() {
         newMockContext();
         RouteDsl.on(ctx)
@@ -497,12 +479,11 @@ public class RouteCapabilityCoverageTest {
         handler.accept(route);
 
         runtime.io().close();
-        assertEquals(1, runtime.drainSettledAssertionFailures().size(),
-                "期望 N 实际 Y 必须定案为一条断言失败");
+        assertEquals("期望 N 实际 Y 必须定案为一条断言失败", 1, runtime.drainSettledAssertionFailures().size());
     }
 
     @Test
-    @DisplayName("MONITOR：expectJsonPath 路径不存在 → 定案失败（与值不符区分）")
+    // @DisplayName: "MONITOR：expectJsonPath 路径不存在 → 定案失败（与值不符区分）"
     public void monitorExpectJsonPathMissingPathSettlesAsFailure() {
         newMockContext();
         RouteDsl.on(ctx)
@@ -518,12 +499,11 @@ public class RouteCapabilityCoverageTest {
         handler.accept(route);
 
         runtime.io().close();
-        assertEquals(1, runtime.drainSettledAssertionFailures().size(),
-                "路径不存在必须定案为一条断言失败");
+        assertEquals("路径不存在必须定案为一条断言失败", 1, runtime.drainSettledAssertionFailures().size());
     }
 
     @Test
-    @DisplayName("MONITOR：expectBodyContains + expectBodyRegex 命中 → 不定案")
+    // @DisplayName: "MONITOR：expectBodyContains + expectBodyRegex 命中 → 不定案"
     public void monitorExpectBodyContainsAndRegexPass() {
         newMockContext();
         RouteDsl.on(ctx)
@@ -539,12 +519,11 @@ public class RouteCapabilityCoverageTest {
         handler.accept(route);
 
         runtime.io().close();
-        assertTrue(runtime.drainSettledAssertionFailures().isEmpty(),
-                "contains/regex 均命中时不得上报失败");
+        assertTrue("contains/regex 均命中时不得上报失败", runtime.drainSettledAssertionFailures().isEmpty());
     }
 
     @Test
-    @DisplayName("MONITOR：expectFormField 对 urlencoded 响应命中")
+    // @DisplayName: "MONITOR：expectFormField 对 urlencoded 响应命中"
     public void monitorExpectFormFieldPasses() {
         newMockContext();
         RouteDsl.on(ctx)
@@ -565,12 +544,11 @@ public class RouteCapabilityCoverageTest {
         handler.accept(route);
 
         runtime.io().close();
-        assertTrue(runtime.drainSettledAssertionFailures().isEmpty(),
-                "表单字段命中时不得上报失败");
+        assertTrue("表单字段命中时不得上报失败", runtime.drainSettledAssertionFailures().isEmpty());
     }
 
     @Test
-    @DisplayName("MONITOR：响应始终未到达 + 超时窗口 → 定案为超时失败")
+    // @DisplayName: "MONITOR：响应始终未到达 + 超时窗口 → 定案为超时失败"
     public void monitorTimeoutWithoutResponseSettlesAsFailure() {
         newMockContext();
         RouteDsl.on(ctx)
@@ -584,8 +562,7 @@ public class RouteCapabilityCoverageTest {
         handler.accept(route);
 
         sleep(400L);
-        assertEquals(1, runtime.drainSettledAssertionFailures().size(),
-                "超过监控窗口仍未收到响应，必须定案为一条（超时）失败");
+        assertEquals("超过监控窗口仍未收到响应，必须定案为一条（超时）失败", 1, runtime.drainSettledAssertionFailures().size());
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -593,7 +570,7 @@ public class RouteCapabilityCoverageTest {
     // ══════════════════════════════════════════════════════════════
 
     @Test
-    @DisplayName("编排：同 pattern 多能力合并 —— MODIFY 改 body 与 MONITOR 观测同时生效")
+    // @DisplayName: "编排：同 pattern 多能力合并 —— MODIFY 改 body 与 MONITOR 观测同时生效"
     public void mergedCapabilitiesOnSamePatternBothApply() {
         newMockContext();
         RouteDsl.on(ctx)
@@ -608,16 +585,14 @@ public class RouteCapabilityCoverageTest {
         handler.accept(route);
 
         Route.ResumeOptions options = captureResume(route);
-        assertTrue(find(options.postData, "\"user\"\\s*:\\s*\"merged\""),
-                "合并规则里的 MODIFY 必须生效，实际: " + options.postData);
+        assertTrue("合并规则里的 MODIFY 必须生效，实际: " + options.postData, find(options.postData, "\"user\"\\s*:\\s*\"merged\""));
 
         runtime.io().close();
-        assertTrue(runtime.drainSettledAssertionFailures().isEmpty(),
-                "同一合并规则里的 MONITOR 期望 200 且响应 200，不得上报失败");
+        assertTrue("同一合并规则里的 MONITOR 期望 200 且响应 200，不得上报失败", runtime.drainSettledAssertionFailures().isEmpty());
     }
 
     @Test
-    @DisplayName("泄漏：dispatch 后无残留 claim、无未确证撤销、IO 无拒绝")
+    // @DisplayName: "泄漏：dispatch 后无残留 claim、无未确证撤销、IO 无拒绝"
     public void dispatchLeavesNoResidualClaimsAndCountsHit() {
         newMockContext();
         RouteDsl.on(ctx).api("/dbb/leak-check").monitor().expectStatus(200).register();
@@ -627,12 +602,12 @@ public class RouteCapabilityCoverageTest {
         Route route = mockRoute(mockRequest("https://host/dbb/leak-check", "GET", null, null, response));
         handler.accept(route);
 
-        assertEquals(1L, runtime.metrics().dispatches(), "本用例应恰好分发 1 次");
-        assertEquals(1L, runtime.metrics().hits(), "匹配成功的次数应为 1");
-        assertEquals(0, runtime.claims().size(), "终结后不得残留 claim（悬挂额度 = 泄漏）");
-        assertEquals(0L, runtime.io().rejectedCount(), "IO 池不得因队满拒绝任务");
-        assertEquals(0, runtime.unconfirmedRetirements(), "不得存在未确证的撤销");
-        assertTrue(runtime.isClean(), "路由状态必须确证干净（可安全复用该 Context）");
+        assertEquals("本用例应恰好分发 1 次", 1L, runtime.metrics().dispatches());
+        assertEquals("匹配成功的次数应为 1", 1L, runtime.metrics().hits());
+        assertEquals("终结后不得残留 claim（悬挂额度 = 泄漏）", 0, runtime.claims().size());
+        assertEquals("IO 池不得因队满拒绝任务", 0L, runtime.io().rejectedCount());
+        assertEquals("不得存在未确证的撤销", 0, runtime.unconfirmedRetirements());
+        assertTrue("路由状态必须确证干净（可安全复用该 Context）", runtime.isClean());
 
         // 泄漏体检数值读出（每轮跑完可直接比对基线/差值）
         System.out.println("[LEAK-REPORT] activeRuntimes(baseline/now)=" + runtimeBaseline + "/"
@@ -647,7 +622,7 @@ public class RouteCapabilityCoverageTest {
     }
 
     @Test
-    @DisplayName("泄漏：runtime 关闭后 IO / 撤销 / 巡检线程全部退出，注册表回落")
+    // @DisplayName: "泄漏：runtime 关闭后 IO / 撤销 / 巡检线程全部退出，注册表回落"
     public void shutdownReleasesRuntimeThreadsAndRegistryEntry() {
         BrowserContext local = newMockContext();
         RouteDsl.on(local)
@@ -661,17 +636,15 @@ public class RouteCapabilityCoverageTest {
         Route route = mockRoute(mockRequest("https://host/dbb/thread-leak", "GET", null, null, response));
         handler.accept(route);
         sleep(200L);
-        assertEquals(runtimeBaseline + 1, RouteEngine.activeRuntimes(),
-                "注册后应新增 1 个 runtime 条目");
+        assertEquals("注册后应新增 1 个 runtime 条目", runtimeBaseline + 1, RouteEngine.activeRuntimes());
 
         RouteEngine.shutdown(local);
-        assertEquals(runtimeBaseline, RouteEngine.activeRuntimes(),
-                "关闭后 runtime 注册表必须回落基线");
+        assertEquals("关闭后 runtime 注册表必须回落基线", runtimeBaseline, RouteEngine.activeRuntimes());
 
         List<String> residual = awaitNoAliveRuntimeThreads(5_000L);
         System.out.println("[LEAK-REPORT] afterShutdown activeRuntimes(baseline/now)=" + runtimeBaseline + "/"
                 + RouteEngine.activeRuntimes() + ", residualRuntimeThreads=" + residual);
-        assertTrue(residual.isEmpty(), "runtime 关闭后不得残留线程: " + residual);
+        assertTrue("runtime 关闭后不得残留线程: " + residual, residual.isEmpty());
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -730,7 +703,7 @@ public class RouteCapabilityCoverageTest {
         Mockito.verify(ctx, Mockito.atLeastOnce())
                 .route(Mockito.anyString(), captor.capture(), Mockito.any());
         List<Consumer<Route>> all = captor.getAllValues();
-        assertFalse(all.isEmpty(), "必须已注册 at least 1 条规则");
+        assertFalse("必须已注册 at least 1 条规则", all.isEmpty());
         return all.get(all.size() - 1);
     }
 
@@ -809,7 +782,7 @@ public class RouteCapabilityCoverageTest {
     private static String fixture(String classpathResource) {
         try (InputStream in = Thread.currentThread().getContextClassLoader()
                 .getResourceAsStream(classpathResource)) {
-            assertNotNull(in, "测试夹具必须存在: " + classpathResource);
+            assertNotNull("测试夹具必须存在: " + classpathResource, in);
             return new String(in.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new UncheckedIOException(e);

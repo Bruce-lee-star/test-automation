@@ -4,17 +4,17 @@ import com.hsbc.cmb.hk.dbb.automation.framework.web.core.RuntimeProvider;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.PlaywrightManager;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Page;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -73,9 +73,10 @@ public class BasePageThreadOwnershipConcurrencyTest {
             Throwable thrown = fut.get(5, TimeUnit.SECONDS);
             ex.shutdown();
 
-            assertNotNull( thrown, "跨线程访问 BasePage 必须被拒绝（抛 IllegalStateException）");
-            assertTrue(
-                    thrown instanceof IllegalStateException, "应为线程归属 IllegalStateException，实际: " + thrown);
+            assertNotNull("跨线程访问 BasePage 必须被拒绝（抛 IllegalStateException）", thrown);
+            // Class.isInstance 替代 instanceof：语义等价，且满足 SpotBugs JUA_DONT_ASSERT_INSTANCEOF_IN_TESTS
+            assertTrue("应为线程归属 IllegalStateException，实际: " + thrown,
+                    IllegalStateException.class.isInstance(thrown));
         } finally {
             PlaywrightManager.resetProvider();
         }
@@ -108,8 +109,8 @@ public class BasePageThreadOwnershipConcurrencyTest {
                     return t;
                 }
             });
-            assertNull( fa.get(5, TimeUnit.SECONDS), "实例 A 在其线程内使用应成功");
-            assertNull( fb.get(5, TimeUnit.SECONDS), "实例 B 在其线程内使用应成功");
+            assertNull("实例 A 在其线程内使用应成功", fa.get(5, TimeUnit.SECONDS));
+            assertNull("实例 B 在其线程内使用应成功", fb.get(5, TimeUnit.SECONDS));
             ex.shutdown();
         } finally {
             PlaywrightManager.resetProvider();

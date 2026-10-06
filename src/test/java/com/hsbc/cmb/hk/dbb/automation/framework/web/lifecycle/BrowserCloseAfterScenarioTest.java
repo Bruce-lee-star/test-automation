@@ -9,10 +9,10 @@ import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.LifecycleState;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.context.ContextRegistry;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.page.PageRegistry;
 import com.microsoft.playwright.Browser;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -29,7 +29,7 @@ public class BrowserCloseAfterScenarioTest {
     private static final String CONFIG_ID = "chromium_headless_";
     private static final String KEY = "42:" + CONFIG_ID;
 
-    @AfterEach
+    @After
     public void tearDown() {
         // 复位组合根 + 当前线程 configId，避免污染其它测试
         PlaywrightRuntime.resetInstance();

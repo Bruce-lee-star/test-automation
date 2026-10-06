@@ -2,7 +2,7 @@ package com.hsbc.cmb.hk.dbb.automation.framework.common.reporting;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.io.InputStream;
 import java.io.StringReader;
@@ -15,9 +15,9 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * 评审 F-14 / P1-8 回归：报告模板必须<b>对 null / 缺失字段免疫</b>。
@@ -59,9 +59,8 @@ public class ReportTemplateRobustnessTest {
                 }
             }
         }
-        assertTrue(unguarded.isEmpty(),
-                "F-14：以下插值缺 !/? 兜底 —— 字段为 null 时会让整份报告不产出，必须补兜底：\n"
-                        + String.join("\n", unguarded));
+        assertTrue("F-14：以下插值缺 !/? 兜底 —— 字段为 null 时会让整份报告不产出，必须补兜底：\n"
+                        + String.join("\n", unguarded), unguarded.isEmpty());
     }
 
     @Test
@@ -73,8 +72,9 @@ public class ReportTemplateRobustnessTest {
 
         String html = render(tpl, nullHeavyModel());
 
-        assertFalse(html.isBlank(), "字段全为 null 时模板仍必须产出内容（不得抛异常）");
-        assertTrue(html.contains("FLAKY"), "布尔兜底应生效（flaky=true 仍渲染 FLAKY 标记）");
+        assertFalse("字段全为 null 时模板仍必须产出内容（不得抛异常）", html.isBlank());
+        assertTrue("布尔兜底应生效（hasError=true 时仍渲染错误块容器，即使 error 字段为 null）", html.contains("margin-top:4px"));
+        assertTrue("缺 currentSec 时必须落到模板默认值（—），而不是抛异常", html.contains("&#8212;"));
     }
 
     /** 字段全为 null / 缺失的模型：模拟「SPI 数据不齐 / 用例无失败详情」的最坏输入。 */
@@ -87,12 +87,9 @@ public class ReportTemplateRobustnessTest {
         row.put("color", null);
         row.put("error", null);
         row.put("traceLink", null);
-        row.put("flaky", true);
         row.put("hasError", true);
         row.put("hasTrace", true);
-        row.put("currentMs", null);
-        row.put("previousMs", null);
-        row.put("deltaPct", null);
+        row.put("currentSec", null);
 
         Map<String, Object> group = new HashMap<>();
         group.put("feature", null);
@@ -105,7 +102,6 @@ public class ReportTemplateRobustnessTest {
         Map<String, Object> model = new HashMap<>();
         model.put("hasFailures", true);
         model.put("hasTraces", true);
-        model.put("hasTrend", true);
         model.put("csvLink", null);
         model.put("failureGroups", List.of(group));
         model.put("resultGroups", List.of(group));
@@ -120,7 +116,7 @@ public class ReportTemplateRobustnessTest {
 
     private static String read(String path) throws Exception {
         try (InputStream in = ReportTemplateRobustnessTest.class.getResourceAsStream(path)) {
-            assertNotNull(in, "类路径未找到报告模板：" + path + "（资源未打包会让本网静默失效）");
+            assertNotNull("类路径未找到报告模板：" + path + "（资源未打包会让本网静默失效）", in);
             return new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }
     }

@@ -1,16 +1,16 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.common.assertion;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Test;
 
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * D3-2 软断言门面契约测试。
@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  */
 public class SoftAssertionsTest {
 
-    @AfterEach
+    @After
     public void tearDown() {
         SoftAssertions.clearForCurrentThread();
     }
@@ -42,7 +42,7 @@ public class SoftAssertionsTest {
 
         List<AssertionFailure> failures = SoftAssertions.failuresForCurrentThread();
         assertEquals(4, failures.size());
-        assertEquals(200, failures.get(0).getExpected(), "应收集到全部 4 条失败");
+        assertEquals("应收集到全部 4 条失败", 200, failures.get(0).getExpected());
         assertEquals(404, failures.get(0).getActual());
     }
 
@@ -57,9 +57,9 @@ public class SoftAssertionsTest {
             fail("assertAll 应抛出 FrameworkAssertionError");
         } catch (FrameworkAssertionError e) {
             String msg = e.getMessage();
-            assertTrue(msg.contains("first"), "聚合信息应含第 1 条失败");
-            assertTrue(msg.contains("second"), "聚合信息应含第 2 条失败");
-            assertTrue(msg.contains("2"), "聚合信息应含失败总数");
+            assertTrue("聚合信息应含第 1 条失败", msg.contains("first"));
+            assertTrue("聚合信息应含第 2 条失败", msg.contains("second"));
+            assertTrue("聚合信息应含失败总数", msg.contains("2"));
         }
     }
 
@@ -74,7 +74,7 @@ public class SoftAssertionsTest {
             // 预期
         }
 
-        assertFalse(SoftAssertions.hasFailures(), "assertAll 抛错后仍必须清空收集器");
+        assertFalse("assertAll 抛错后仍必须清空收集器", SoftAssertions.hasFailures());
         // 无失败时 assertAll 不抛
         SoftAssertions.assertAll();
     }
@@ -92,10 +92,10 @@ public class SoftAssertionsTest {
         SoftAssertions.assertTrue(false, "render-me");
         String rendered = SoftAssertions.renderFailures();
         assertTrue(rendered.contains("render-me"));
-        assertTrue(SoftAssertions.hasFailures(), "渲染不应清空收集器");
+        assertTrue("渲染不应清空收集器", SoftAssertions.hasFailures());
 
         SoftAssertions.clearForCurrentThread();
-        assertEquals("", SoftAssertions.renderFailures(), "无失败时应渲染空串");
+        assertEquals("无失败时应渲染空串", "", SoftAssertions.renderFailures());
     }
 
     /** 线程隔离：子线程看不到主线程的失败，主线程也不受子线程影响。 */
@@ -112,9 +112,9 @@ public class SoftAssertionsTest {
             done.countDown();
         }, "soft-assert-child");
         child.start();
-        assertTrue(done.await(5, TimeUnit.SECONDS), "子线程应在超时前完成");
+        assertTrue("子线程应在超时前完成", done.await(5, TimeUnit.SECONDS));
 
-        assertFalse(childSawFailure[0], "子线程不应看到主线程收集的失败");
-        assertTrue(SoftAssertions.hasFailures(), "主线程的失败不应被子线程清理影响");
+        assertFalse("子线程不应看到主线程收集的失败", childSawFailure[0]);
+        assertTrue("主线程的失败不应被子线程清理影响", SoftAssertions.hasFailures());
     }
 }

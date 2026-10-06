@@ -1,17 +1,17 @@
 package com.hsbc.cmb.hk.dbb.automation.tests.route;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.web.utils.NLSUtils;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * 验证语言状态的并发隔离（CORE-LANG 修复，2026-09-20）。
@@ -26,8 +26,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class NlsUtilsCrossThreadTest {
 
-    @BeforeEach
-    @AfterEach
+    @Before
+    @After
     public void clear() {
         NLSUtils.reset();
     }
@@ -96,11 +96,10 @@ public class NlsUtilsCrossThreadTest {
         start.countDown();
         //  消费 await 返回值并断言：超时被静默吞掉会让下面的隔离性断言读到「尚未写入」的期望值，
         //  从而以假绿形式掩盖真实缺陷（SpotBugs RV_RETURN_VALUE_IGNORED）。
-        assertTrue(end.await(5, TimeUnit.SECONDS),
-                "两个场景线程应在 5s 内结束（否则隔离性断言可能读到未写入的期望值）");
+        assertTrue("两个场景线程应在 5s 内结束（否则隔离性断言可能读到未写入的期望值）", end.await(5, TimeUnit.SECONDS));
 
-        assertEquals("zh", seenByThread1.get(), "场景1 应只读到自身设置的语言");
-        assertEquals("en", seenByThread2.get(), "场景2 应只读到自身设置的语言");
+        assertEquals("场景1 应只读到自身设置的语言", "zh", seenByThread1.get());
+        assertEquals("场景2 应只读到自身设置的语言", "en", seenByThread2.get());
     }
 
     /**
@@ -114,8 +113,7 @@ public class NlsUtilsCrossThreadTest {
 
         runOnOtherThread(() -> NLSUtils.setLanguage("zh")); // 工作线程改为 zh
 
-        assertEquals("en", NLSUtils.getLanguage(),
-                "主线程应只读到自身语言，不被其它线程的写入串扰");
+        assertEquals("主线程应只读到自身语言，不被其它线程的写入串扰", "en", NLSUtils.getLanguage());
     }
 
     /** 从未设置过的线程不继承任何语言态（无进程级残留）。 */
@@ -129,7 +127,7 @@ public class NlsUtilsCrossThreadTest {
         reader.start();
         reader.join(5000);
 
-        assertNull(seen.get(), "从未设置语言的线程不应读到任何残留值");
+        assertNull("从未设置语言的线程不应读到任何残留值", seen.get());
     }
 
     /** reset 清当前上下文，避免污染后续用例。 */
@@ -137,6 +135,6 @@ public class NlsUtilsCrossThreadTest {
     public void resetClearsCurrentContext() {
         NLSUtils.setLanguage("zh");
         NLSUtils.reset();
-        assertNull(NLSUtils.getLanguage(), "reset 后当前上下文不应再读到值");
+        assertNull("reset 后当前上下文不应再读到值", NLSUtils.getLanguage());
     }
 }

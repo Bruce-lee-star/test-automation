@@ -2,7 +2,7 @@ package com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.lock;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.lock.LifecycleLockMediator;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -16,10 +16,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.hsbc.cmb.hk.dbb.automation.tests.utils.JUnit4Assertions.assertTimeoutPreemptively;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * doc16 §9.4 / §11.2 偏差 A 收口：锁顺序 + 锁隐藏守护（纯并发单测，零浏览器依赖）。
@@ -95,7 +95,7 @@ public class LifecycleLockMediatorTest {
                 });
             }
             start.countDown();
-            assertTrue(done.await(DEADLOCK_TIMEOUT_MS, TimeUnit.MILLISECONDS), "锁竞争发生死锁（规范序亦应无 ABBA）");
+            assertTrue("锁竞争发生死锁（规范序亦应无 ABBA）", done.await(DEADLOCK_TIMEOUT_MS, TimeUnit.MILLISECONDS));
             assertEquals(THREADS, counter.get());
             pool.shutdownNow();
         });
@@ -112,8 +112,7 @@ public class LifecycleLockMediatorTest {
         for (String name : new String[]{
                 "CONTEXT_LOCK_KEY", "PAGE_LOCK_KEY", "BROWSER_LOCK_KEY"}) {
             Field f = LifecycleLockMediator.class.getDeclaredField(name);
-            assertTrue(Modifier.isPrivate(f.getModifiers()),
-                    name + " 必须为 private（否则外部可 synchronized 引用 → 锁劫持/逆序死锁）");
+            assertTrue(name + " 必须为 private（否则外部可 synchronized 引用 → 锁劫持/逆序死锁）", Modifier.isPrivate(f.getModifiers()));
         }
     }
 
@@ -128,8 +127,7 @@ public class LifecycleLockMediatorTest {
             if (m.getGenericReturnType() instanceof TypeVariable) {
                 continue; // 泛型 <T> 擦除为 Object，非锁对象
             }
-            assertFalse(
-                    m.getReturnType() == Object.class, "公开 API 不得返回锁对象（" + m.getName() + "）");
+            assertFalse("公开 API 不得返回锁对象（" + m.getName() + "）", m.getReturnType() == Object.class);
         }
     }
 
@@ -185,15 +183,14 @@ public class LifecycleLockMediatorTest {
         holder.setDaemon(true);
         holder.start();
         try {
-            assertTrue(holding.await(5, TimeUnit.SECONDS), label + " 锁持有线程未按时进入临界区");
+            assertTrue(label + " 锁持有线程未按时进入临界区", holding.await(5, TimeUnit.SECONDS));
 
             long start = System.nanoTime();
             executor.accept(() -> { });
             long waitedMs = (System.nanoTime() - start) / 1_000_000;
 
-            assertTrue(waitedMs < NEIGHBOR_MAX_WAIT_MS,
-                    label + " 锁必须 per-thread：邻居线程不应被持锁线程阻塞，实测等待 " + waitedMs
-                            + "ms（阈值 " + NEIGHBOR_MAX_WAIT_MS + "ms，持锁 " + HOLD_MS + "ms）");
+            assertTrue(label + " 锁必须 per-thread：邻居线程不应被持锁线程阻塞，实测等待 " + waitedMs
+                            + "ms（阈值 " + NEIGHBOR_MAX_WAIT_MS + "ms，持锁 " + HOLD_MS + "ms）", waitedMs < NEIGHBOR_MAX_WAIT_MS);
         } finally {
             release.countDown();
             holder.join(5000);

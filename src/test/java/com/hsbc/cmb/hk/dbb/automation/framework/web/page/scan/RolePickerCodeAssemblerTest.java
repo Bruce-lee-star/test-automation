@@ -1,14 +1,14 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.web.page.scan;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Characterization tests for {@link RolePickerCodeAssembler}: the source-generation orchestration

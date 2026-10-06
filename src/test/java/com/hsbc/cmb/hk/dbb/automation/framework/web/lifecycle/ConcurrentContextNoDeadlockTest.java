@@ -9,18 +9,18 @@ import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.bootstrap.Playwrig
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Download;
 import com.microsoft.playwright.Page;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.hsbc.cmb.hk.dbb.automation.tests.utils.JUnit4Assertions.assertTimeoutPreemptively;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * 回归测试：固化 2026-09-08 并发卡死根因修复 —— 连接读线程自死锁（设计文档第九节 / README 第九节）。
@@ -62,14 +62,14 @@ public class ConcurrentContextNoDeadlockTest {
         System.setProperty("playwright.browser.headless", "true");
     }
 
-    @BeforeAll
+    @BeforeClass
     public static void launch() {
         // 经生产路径启动真实本地 Chromium；createContext/createPage 将注册修复后的监听器。
         PlaywrightManager.initialize();
         PlaywrightManager.getBrowser();
     }
 
-    @AfterAll
+    @AfterClass
     public static void shutdown() {
         // best-effort 关闭，避免浏览器进程泄漏影响后续测试。
         try {
@@ -103,12 +103,12 @@ public class ConcurrentContextNoDeadlockTest {
                         // waitForDownload 在下载事件派发后立即返回，证明 onDownload 监听器已注册且未阻塞。
                         // 修复点：onDownload 内 saveAs 已卸载到 DOWNLOAD_EXECUTOR，故连接读线程不被阻塞。
                         Download download = page.waitForDownload(() -> page.click("#dl"));
-                        assertNotNull(download, "Download 事件应被派发（onDownload 监听器已注册）");
-                        assertNotNull(download.suggestedFilename(), "suggestedFilename 应非空");
+                        assertNotNull("Download 事件应被派发（onDownload 监听器已注册）", download);
+                        assertNotNull("suggestedFilename 应非空", download.suggestedFilename());
                         // 关键防回归：onDownload 派发后连接读线程仍应立即响应 page.title()；
                         // 若 saveAs 同步阻塞连接读线程（旧 bug），此处将自死锁 → 任务在 perTaskTimeout 内失败。
                         String title = page.title();
-                        assertNotNull(title, "onDownload 派发后连接读线程应可响应 title()（未自死锁）");
+                        assertNotNull("onDownload 派发后连接读线程应可响应 title()（未自死锁）", title);
                         return "ok-" + idx;
                     } finally {
                         safeClose(page, ctx);
@@ -126,9 +126,9 @@ public class ConcurrentContextNoDeadlockTest {
 
             assertEquals(PARALLELISM, results.size());
             for (int i = 0; i < PARALLELISM; i++) {
-                assertTrue( results.get(i).isSuccess(), "任务 " + i + " 应成功（未死锁）：" + results.get(i));
+                assertTrue("任务 " + i + " 应成功（未死锁）：" + results.get(i), results.get(i).isSuccess());
             }
-            assertTrue( took < 60_000, "并发下载应在合理时间内完成（无死锁），took=" + took);
+            assertTrue("并发下载应在合理时间内完成（无死锁），took=" + took, took < 60_000);
         });
     }
 
@@ -153,7 +153,7 @@ public class ConcurrentContextNoDeadlockTest {
                         // 断言连接读线程仍响应（未卡死）：页面操作可正常返回。
                         page.setContent("<html><body><h1>guard" + idx + "</h1></body></html>");
                         String title = page.title();
-                        assertNotNull(title, "页面应可响应 title()（连接读线程未死锁）");
+                        assertNotNull("页面应可响应 title()（连接读线程未死锁）", title);
                         return "ok-" + idx;
                     } finally {
                         safeClose(second, null);
@@ -172,9 +172,9 @@ public class ConcurrentContextNoDeadlockTest {
 
             assertEquals(PARALLELISM, results.size());
             for (int i = 0; i < PARALLELISM; i++) {
-                assertTrue( results.get(i).isSuccess(), "任务 " + i + " 应成功（未死锁）：" + results.get(i));
+                assertTrue("任务 " + i + " 应成功（未死锁）：" + results.get(i), results.get(i).isSuccess());
             }
-            assertTrue( took < 60_000, "并发建页应在合理时间内完成（无死锁），took=" + took);
+            assertTrue("并发建页应在合理时间内完成（无死锁），took=" + took, took < 60_000);
         });
     }
 
@@ -187,7 +187,7 @@ public class ConcurrentContextNoDeadlockTest {
      *       {@link PlaywrightContextManager#closeContext(BrowserContext)}，而非直接 {@code page.close()/ctx.close()}。
      *       生产路径额外执行 {@code RouteLifecycleRegistry.clearContext(...)} 释放路由层对 context 的引用，
      *       并受保护地关闭（避免 close 异常吞掉清理），否则调度器线程池可能长期持有已销毁 context → 内存泄漏。</li>
-     *   <li>{@code @AfterAll#shutdown()} 调用 {@link PlaywrightManager#cleanupAll()}，其遍历
+     *   <li>{@code @AfterClass#shutdown()} 调用 {@link PlaywrightManager#cleanupAll()}，其遍历
      *       {@code browserInstances} 关闭<b>所有</b>浏览器实例（含并发 worker 线程各自 per-thread 启动的 Chromium）
      *       及其全部 context，并 clear 两个实例 Map + 清理 ThreadLocal，故浏览器进程 / 上下文不会泄漏。</li>
      *   <li>{@code onDownload} 的 {@code saveAs} 卸载到 {@link PlaywrightContextManager} 的

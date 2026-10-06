@@ -1,17 +1,17 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.web.page.engine;
 
 import com.microsoft.playwright.Page;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -30,7 +30,7 @@ public class PageWaitsRetryTest {
 
     private BasePage bp;
 
-    @BeforeEach
+    @Before
     public void setUp() {
         bp = mock(BasePage.class);
         Page page = mock(Page.class);
@@ -52,14 +52,14 @@ public class PageWaitsRetryTest {
             }, 2, 0, "always-fails");
             fail("应抛出重试失败异常");
         } catch (RuntimeException e) {
-            assertEquals(3, calls.get(), "尝试次数应为 retries+1");
-            assertSame(last, e.getCause(), "最后一次异常应为 cause");
+            assertEquals("尝试次数应为 retries+1", 3, calls.get());
+            assertSame("最后一次异常应为 cause", last, e.getCause());
 
             Throwable[] suppressed = e.getSuppressed();
-            assertEquals(2, suppressed.length, "首次与中间异常都应作为 suppressed 保留");
-            assertSame(root, suppressed[0], "首次（根因）异常必须保留");
-            assertSame(middle, suppressed[1], "中间异常应保留");
-            assertTrue(e.getMessage().contains("attempts=3"), "异常信息应提示尝试次数");
+            assertEquals("首次与中间异常都应作为 suppressed 保留", 2, suppressed.length);
+            assertSame("首次（根因）异常必须保留", root, suppressed[0]);
+            assertSame("中间异常应保留", middle, suppressed[1]);
+            assertTrue("异常信息应提示尝试次数", e.getMessage().contains("attempts=3"));
         }
     }
 
@@ -100,7 +100,7 @@ public class PageWaitsRetryTest {
         boolean ok = PageWaits.retryWithValidation(bp, calls::incrementAndGet,
                 () -> false, 2, 0, "never-valid");
         assertFalse(ok);
-        assertEquals(3, calls.get(), "应尝试 maxRetries+1 次");
+        assertEquals("应尝试 maxRetries+1 次", 3, calls.get());
     }
 
     /** 校验条件在等待中成立时应提前继续（条件驱动，不盲等）。 */

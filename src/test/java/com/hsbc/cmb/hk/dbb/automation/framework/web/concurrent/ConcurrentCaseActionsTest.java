@@ -1,12 +1,12 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.web.concurrent;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 
 /**
  * {@link ConcurrentCaseActions} 注册中心护盾：显式注册覆盖、未提供时抛语义化异常。
@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  */
 public class ConcurrentCaseActionsTest {
 
-    @AfterEach
+    @After
     public void tearDown() {
         ConcurrentCaseActions.reset();
     }
@@ -46,7 +46,6 @@ public class ConcurrentCaseActionsTest {
     public void registerRejectsNull() {
         // 用 assertThrows 而非「try + catch NPE」：后者被判为 DCN_NULLPOINTER_EXCEPTION（异常控制流），
         // 且一旦 register 未抛异常，fail(...) 抛出的 AssertionError 也不会被误当成"预期"。
-        assertThrows(NullPointerException.class, () -> ConcurrentCaseActions.register(null),
-                "register(null) must throw");
+        assertThrows("register(null) must throw", NullPointerException.class, () -> ConcurrentCaseActions.register(null));
     }
 }

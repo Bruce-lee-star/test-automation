@@ -1,14 +1,14 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.web.page.factory;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
 
 /**
  * T3-1 收拢验证：{@link PageObjectFactory} 的线程隔离实例存储（原静态
@@ -31,7 +31,7 @@ public class PageObjectFactoryConcurrencyTest {
                     PageObjectFactory.getPage(DummyPage.class, PageObjectFactory.LifecycleStrategy.THREAD_ISOLATED));
             Object poolInst = other.get(5, TimeUnit.SECONDS);
             assertNotNull(poolInst);
-            assertNotSame( mainInst,  poolInst, "其他线程应拿到独立的 THREAD_ISOLATED 实例");
+            assertNotSame("其他线程应拿到独立的 THREAD_ISOLATED 实例", mainInst, poolInst);
         } finally {
             PageObjectFactory.clearAll();
             pool.shutdown();
@@ -47,7 +47,7 @@ public class PageObjectFactoryConcurrencyTest {
             Future<Object> other = pool.submit(() -> PageObjectFactory.getPage(DummyPage.class));
             Object poolInst = other.get(5, TimeUnit.SECONDS);
             assertNotNull(poolInst);
-            assertNotSame(mainInst, poolInst, "默认策略应为 THREAD_ISOLATED：不同线程不得共享同一实例");
+            assertNotSame("默认策略应为 THREAD_ISOLATED：不同线程不得共享同一实例", mainInst, poolInst);
         } finally {
             PageObjectFactory.clearAll();
             pool.shutdown();

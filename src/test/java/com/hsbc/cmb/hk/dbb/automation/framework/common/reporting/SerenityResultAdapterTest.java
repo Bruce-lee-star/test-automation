@@ -1,10 +1,10 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.common.reporting;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.common.result.TestResult;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * D4-2 {@link SerenityResultAdapter} 契约测试。
@@ -54,11 +54,11 @@ public class SerenityResultAdapterTest {
     /** 引擎特有状态必须收敛，不能渗进框架。 */
     @Test
     public void engineSpecificStatesAreNormalized() {
-        assertEquals(TestResult.PENDING, SerenityResultAdapter.toFramework(S_UNDEFINED), "UNDEFINED 应收敛为 PENDING");
-        assertEquals(TestResult.SKIPPED, SerenityResultAdapter.toFramework(S_IGNORED), "IGNORED 应收敛为 SKIPPED");
-        assertEquals(TestResult.SKIPPED, SerenityResultAdapter.toFramework(S_ABORTED), "ABORTED 应收敛为 SKIPPED");
-        assertEquals(TestResult.FAILURE, SerenityResultAdapter.toFramework(S_COMPROMISED), "COMPROMISED 应收敛为 FAILURE");
-        assertEquals(TestResult.FAILURE, SerenityResultAdapter.toFramework(S_UNSUCCESSFUL), "UNSUCCESSFUL 应收敛为 FAILURE");
+        assertEquals("UNDEFINED 应收敛为 PENDING", TestResult.PENDING, SerenityResultAdapter.toFramework(S_UNDEFINED));
+        assertEquals("IGNORED 应收敛为 SKIPPED", TestResult.SKIPPED, SerenityResultAdapter.toFramework(S_IGNORED));
+        assertEquals("ABORTED 应收敛为 SKIPPED", TestResult.SKIPPED, SerenityResultAdapter.toFramework(S_ABORTED));
+        assertEquals("COMPROMISED 应收敛为 FAILURE", TestResult.FAILURE, SerenityResultAdapter.toFramework(S_COMPROMISED));
+        assertEquals("UNSUCCESSFUL 应收敛为 FAILURE", TestResult.FAILURE, SerenityResultAdapter.toFramework(S_UNSUCCESSFUL));
     }
 
     /** 框架语义可回写为引擎结果。 */

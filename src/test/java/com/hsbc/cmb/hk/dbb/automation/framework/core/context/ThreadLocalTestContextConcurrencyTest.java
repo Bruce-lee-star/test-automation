@@ -1,6 +1,6 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.core.context;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,10 +14,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 /**
  * D5-2：{@link ThreadLocalTestContext#computeIfAbsent} 原子性契约测试。
@@ -70,8 +70,8 @@ public class ThreadLocalTestContextConcurrencyTest {
                 seen.add(value);
             }
 
-            assertEquals(1, supplierCalls.get(), "并发下 supplier 必须只执行一次（惰性单例不得重复创建）");
-            assertEquals(1, seen.size(), "所有调用方必须拿到同一个实例（否则状态更新会静默丢失）");
+            assertEquals("并发下 supplier 必须只执行一次（惰性单例不得重复创建）", 1, supplierCalls.get());
+            assertEquals("所有调用方必须拿到同一个实例（否则状态更新会静默丢失）", 1, seen.size());
         } finally {
             pool.shutdownNow();
         }
@@ -90,8 +90,8 @@ public class ThreadLocalTestContextConcurrencyTest {
             return new Object();
         });
 
-        assertSame(existing, result, "应返回既有实例");
-        assertEquals(0, calls.get(), "已存在时不得执行 supplier");
+        assertSame("应返回既有实例", existing, result);
+        assertEquals("已存在时不得执行 supplier", 0, calls.get());
     }
 
     /** 顺序重复调用也应复用同一实例（回归防护）。 */

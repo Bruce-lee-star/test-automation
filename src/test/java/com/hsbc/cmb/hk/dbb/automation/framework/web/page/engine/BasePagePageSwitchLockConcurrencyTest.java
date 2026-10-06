@@ -1,16 +1,16 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.web.page.engine;
 
 import com.microsoft.playwright.BrowserContext;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -55,24 +55,21 @@ public class BasePagePageSwitchLockConcurrencyTest {
     public void distinctContextsGetDistinctLocks() {
         BrowserContext a = mock(BrowserContext.class);
         BrowserContext b = mock(BrowserContext.class);
-        assertNotSame(
-                BasePage.pageSwitchLockFor(a),  BasePage.pageSwitchLockFor(b), "不同 Context 必须映射不同锁实例（否则并行场景仍被串行化）");
+        assertNotSame("不同 Context 必须映射不同锁实例（否则并行场景仍被串行化）", BasePage.pageSwitchLockFor(a), BasePage.pageSwitchLockFor(b));
     }
 
     @Test
     public void sameContextReturnsStableLock() {
         BrowserContext a = mock(BrowserContext.class);
-        assertSame(
-                BasePage.pageSwitchLockFor(a),  BasePage.pageSwitchLockFor(a), "同一 Context 必须始终映射同一锁实例（保证上下文内串行）");
+        assertSame("同一 Context 必须始终映射同一锁实例（保证上下文内串行）", BasePage.pageSwitchLockFor(a), BasePage.pageSwitchLockFor(a));
     }
 
     @Test
     public void nullContextFallsBackToSharedGlobalLock() {
         Object nullLock1 = BasePage.pageSwitchLockFor(null);
         Object nullLock2 = BasePage.pageSwitchLockFor(null);
-        assertSame( nullLock1,  nullLock2, "null Context 应稳定回退到同一全局兜底锁");
-        assertNotSame(
-                nullLock1,  BasePage.pageSwitchLockFor(mock(BrowserContext.class)), "全局兜底锁必须与任意 per-context 锁区分（证明 per-context 路径被采用）");
+        assertSame("null Context 应稳定回退到同一全局兜底锁", nullLock1, nullLock2);
+        assertNotSame("全局兜底锁必须与任意 per-context 锁区分（证明 per-context 路径被采用）", nullLock1, BasePage.pageSwitchLockFor(mock(BrowserContext.class)));
     }
 
     /**
@@ -95,8 +92,7 @@ public class BasePagePageSwitchLockConcurrencyTest {
             }
         }, "page-switch-holder-A");
         tA.start();
-        assertTrue(aHolding.await(HANDSHAKE_TIMEOUT_MS, TimeUnit.MILLISECONDS),
-                "线程 A 应在超时前取得 Context A 的页面切换锁");
+        assertTrue("线程 A 应在超时前取得 Context A 的页面切换锁", aHolding.await(HANDSHAKE_TIMEOUT_MS, TimeUnit.MILLISECONDS));
 
         Thread tB = new Thread(() -> {
             synchronized (lockB) {
@@ -105,8 +101,7 @@ public class BasePagePageSwitchLockConcurrencyTest {
         }, "page-switch-holder-B");
         tB.start();
         try {
-            assertTrue(awaitTrue(bAcquired, PROMPT_TIMEOUT_MS),
-                    "不同 Context 的页面切换锁应互不阻塞（A 持锁期间 B 仍应立即进入自己的临界区）");
+            assertTrue("不同 Context 的页面切换锁应互不阻塞（A 持锁期间 B 仍应立即进入自己的临界区）", awaitTrue(bAcquired, PROMPT_TIMEOUT_MS));
         } finally {
             releaseA.countDown();
             tA.join(HANDSHAKE_TIMEOUT_MS);
@@ -135,8 +130,7 @@ public class BasePagePageSwitchLockConcurrencyTest {
             }
         }, "page-switch-holder");
         t1.start();
-        assertTrue(t1Holding.await(HANDSHAKE_TIMEOUT_MS, TimeUnit.MILLISECONDS),
-                "t1 应在超时前取得同一 Context 的页面切换锁");
+        assertTrue("t1 应在超时前取得同一 Context 的页面切换锁", t1Holding.await(HANDSHAKE_TIMEOUT_MS, TimeUnit.MILLISECONDS));
 
         Thread t2 = new Thread(() -> {
             t2Ready.countDown();          // 即将尝试进入临界区（使后续观测窗口有意义）
@@ -146,16 +140,14 @@ public class BasePagePageSwitchLockConcurrencyTest {
         }, "page-switch-waiter");
         t2.start();
         try {
-            assertTrue(t2Ready.await(HANDSHAKE_TIMEOUT_MS, TimeUnit.MILLISECONDS),
-                    "t2 应在超时前就绪（即将尝试进入临界区）");
+            assertTrue("t2 应在超时前就绪（即将尝试进入临界区）", t2Ready.await(HANDSHAKE_TIMEOUT_MS, TimeUnit.MILLISECONDS));
 
-            assertFalse(awaitTrue(t2Acquired, NON_ENTRY_OBSERVE_MS),
-                    "t1 持锁期间 t2 不得进入同一 Context 的页面切换临界区（同 Context 必须串行化）");
+            assertFalse("t1 持锁期间 t2 不得进入同一 Context 的页面切换临界区（同 Context 必须串行化）", awaitTrue(t2Acquired, NON_ENTRY_OBSERVE_MS));
 
             releaseT1.countDown();
             t2.join(HANDSHAKE_TIMEOUT_MS);
-            assertTrue(t2Acquired.get(), "t1 释放后 t2 应立即获得锁（不得被永久阻塞）");
-            assertFalse(t2.isAlive(), "t2 应在 t1 释放后结束");
+            assertTrue("t1 释放后 t2 应立即获得锁（不得被永久阻塞）", t2Acquired.get());
+            assertFalse("t2 应在 t1 释放后结束", t2.isAlive());
         } finally {
             releaseT1.countDown();
             t1.join(HANDSHAKE_TIMEOUT_MS);

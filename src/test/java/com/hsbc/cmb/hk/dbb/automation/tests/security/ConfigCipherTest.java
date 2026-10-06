@@ -6,17 +6,17 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Base64;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * {@link ConfigCipher} / {@link SecretValue} 加解密往返与透明解密回归测试。
@@ -34,14 +34,14 @@ public class ConfigCipherTest {
             "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
     private String savedProp;
 
-    @BeforeEach
+    @Before
     public void setUp() {
         savedProp = System.getProperty("config.master.key");
         System.setProperty("config.master.key", TEST_MASTER_KEY);
         System.setProperty("security.secret.strict", "true"); // 确定性：默认严格失败快
     }
 
-    @AfterEach
+    @After
     public void tearDown() {
         if (savedProp == null) {
             System.clearProperty("config.master.key");
@@ -55,7 +55,7 @@ public class ConfigCipherTest {
     public void encryptDecryptRoundTrip() {
         String plain = "b2g3ifd";
         String enc = ConfigCipher.encrypt(plain);
-        assertTrue( ConfigCipher.isEncrypted(enc), "应为 ENC(...) 形态");
+        assertTrue("应为 ENC(...) 形态", ConfigCipher.isEncrypted(enc));
         assertEquals(plain, ConfigCipher.decrypt(enc));
     }
 
@@ -110,11 +110,9 @@ public class ConfigCipherTest {
         String enc = ConfigCipher.encrypt("real-secret");
         String bare = enc.substring("ENC(".length(), enc.length() - ")".length());
         System.setProperty("config.master.key", OTHER_MASTER_KEY);
-        assertThrows(IllegalStateException.class, () -> SecretValue.decryptIfNeeded(enc),
-                "key 变更后 ENC 密文应失败快");
+        assertThrows("key 变更后 ENC 密文应失败快", IllegalStateException.class, () -> SecretValue.decryptIfNeeded(enc));
         // CORE-C5：裸 base64 为启发式，无法与普通值区分，失败即降级保留原串（不再失败快）
-        assertEquals(bare, SecretValue.decryptIfNeeded(bare),
-                "key 变更后裸密文应降级保留原串，而非崩溃");
+        assertEquals("key 变更后裸密文应降级保留原串，而非崩溃", bare, SecretValue.decryptIfNeeded(bare));
     }
 
     @Test
@@ -123,7 +121,7 @@ public class ConfigCipherTest {
         String bare = enc.substring("ENC(".length(), enc.length() - ")".length());
         System.setProperty("config.master.key", OTHER_MASTER_KEY);
         System.setProperty("security.secret.strict", "false");
-        assertEquals(bare, SecretValue.decryptIfNeeded(bare), "非严格模式应保留原串（排障用）");
+        assertEquals("非严格模式应保留原串（排障用）", bare, SecretValue.decryptIfNeeded(bare));
     }
 
     @Test

@@ -1,10 +1,10 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.common.config;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.common.security.ConfigCipher;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 /**
  * {@link ConfigSource#resolve(String, String)} 解析链固化（2026-09-07）：
@@ -20,7 +20,7 @@ public class ConfigSourceTest {
     private static final String TEST_MASTER_KEY =
             "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
-    @AfterEach
+    @After
     public void cleanup() {
         System.clearProperty(KEY);
     }
@@ -53,8 +53,7 @@ public class ConfigSourceTest {
         try {
             String enc = ConfigCipher.encrypt("secret-default");
             String bare = enc.substring("ENC(".length(), enc.length() - 1);
-            assertEquals(bare, ConfigSource.resolve("config.source.test.bare.default", bare),
-                    "C-9：兜底默认值应原样返回，不尝试裸密文解密");
+            assertEquals("C-9：兜底默认值应原样返回，不尝试裸密文解密", bare, ConfigSource.resolve("config.source.test.bare.default", bare));
         } finally {
             if (saved == null) {
                 System.clearProperty("config.master.key");

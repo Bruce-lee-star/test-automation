@@ -1,6 +1,6 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -19,10 +19,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * {@link DownloadReportAttacher} 单元验证：
@@ -32,10 +32,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * </ul>
  * 测试放在与本类同包（{@code framework.web.lifecycle}）以访问包级私有实现，符合框架"测试移入同包而非提升可见性"铁律。
  */
-class DownloadReportAttacherTest {
+public class DownloadReportAttacherTest {
 
     @Test
-    void attachResolved_copiesToReportAttachmentsDirAndReturnsTrue() throws IOException {
+    public void attachResolved_copiesToReportAttachmentsDirAndReturnsTrue() throws IOException {
         Path src = Files.createTempFile("export-", ".csv");
         Files.writeString(src, "col1,col2\n1,2\n");
         //  取一次并断言非空：getFileName() 返回 null 时下方的 toString() 会 NPE
@@ -43,12 +43,12 @@ class DownloadReportAttacherTest {
         String srcName = requireFileName(src);
         try {
             boolean ok = DownloadReportAttacher.attachResolved(src, "导出文件");
-            assertTrue(ok, "attachResolved should return true for an existing source");
+            assertTrue("attachResolved should return true for an existing source", ok);
 
             Path archive = Paths.get(DownloadReportAttacher.REPORT_ATTACHMENTS_DIR,
                     "thread-" + Thread.currentThread().threadId(), srcName);
-            assertTrue(Files.exists(archive), "file must be archived under site/report-attachments/thread-<id>");
-            assertEquals("col1,col2\n1,2\n", Files.readString(archive), "archived content must match source");
+            assertTrue("file must be archived under site/report-attachments/thread-<id>", Files.exists(archive));
+            assertEquals("archived content must match source", "col1,col2\n1,2\n", Files.readString(archive));
         } finally {
             Files.deleteIfExists(src);
             Path archive = Paths.get(DownloadReportAttacher.REPORT_ATTACHMENTS_DIR,
@@ -60,7 +60,7 @@ class DownloadReportAttacherTest {
     /** 取文件名并断言非空（消除 {@code getFileName()} 可能返回 null 的静态告警）。 */
     private static String requireFileName(Path p) {
         Path name = p.getFileName();
-        assertNotNull(name, "路径应含文件名：" + p);
+        assertNotNull("路径应含文件名：" + p, name);
         return name.toString();
     }
 
@@ -74,23 +74,22 @@ class DownloadReportAttacherTest {
     }
 
     @Test
-    void attachResolved_returnsFalseWhenSourceMissing() {
+    public void attachResolved_returnsFalseWhenSourceMissing() {
         Path missing = Paths.get("target/downloads/thread-999/does-not-exist.csv");
-        assertFalse(DownloadReportAttacher.attachResolved(missing, "x"),
-                "should return false when source does not exist");
+        assertFalse("should return false when source does not exist", DownloadReportAttacher.attachResolved(missing, "x"));
     }
 
     // ===== #2 文件名清洗（包级私有方法直接验证） =====
 
     @Test
-    void sanitizeFileName_replacesWindowsIllegalChars() {
+    public void sanitizeFileName_replacesWindowsIllegalChars() {
         String got = DownloadReportAttacher.sanitizeFileName("report*:?a|b<c>.csv");
-        assertEquals("report___a_b_c_.csv", got, "illegal chars must be replaced by underscore");
-        assertFalse(got.matches(".*[\\\\/:*?\"<>|].*"), "archived name must not contain illegal chars: " + got);
+        assertEquals("illegal chars must be replaced by underscore", "report___a_b_c_.csv", got);
+        assertFalse("archived name must not contain illegal chars: " + got, got.matches(".*[\\\\/:*?\"<>|].*"));
     }
 
     @Test
-    void sanitizeFileName_fallsBackForEmptyAndDotOnlyAndNull() {
+    public void sanitizeFileName_fallsBackForEmptyAndDotOnlyAndNull() {
         assertEquals("download", DownloadReportAttacher.sanitizeFileName(""));
         assertEquals("download", DownloadReportAttacher.sanitizeFileName("   "));
         assertEquals("download", DownloadReportAttacher.sanitizeFileName("..."));
@@ -98,14 +97,14 @@ class DownloadReportAttacherTest {
     }
 
     @Test
-    void sanitizeFileName_keepsLegalNameUnchanged() {
+    public void sanitizeFileName_keepsLegalNameUnchanged() {
         assertEquals("export-123.csv", DownloadReportAttacher.sanitizeFileName("export-123.csv"));
     }
 
     // ===== #3 过期归档清理 =====
 
     @Test
-    void cleanupStaleArchives_removesOnlyFilesOlderThanRetention() throws Exception {
+    public void cleanupStaleArchives_removesOnlyFilesOlderThanRetention() throws Exception {
         Path threadDir = Paths.get(DownloadReportAttacher.REPORT_ATTACHMENTS_DIR, "thread-cleantest");
         Files.createDirectories(threadDir);
         Path oldFile = threadDir.resolve("stale-old.csv");
@@ -116,8 +115,8 @@ class DownloadReportAttacherTest {
         Files.setLastModifiedTime(oldFile, FileTime.from(Instant.now().minus(Duration.ofDays(2))));
         try {
             DownloadReportAttacher.cleanupStaleArchives();
-            assertFalse(Files.exists(oldFile), "超过保留期的历史 run 归档应被清理");
-            assertTrue(Files.exists(freshFile), "保留期内的归档必须保留（报告生成时仍被引用）");
+            assertFalse("超过保留期的历史 run 归档应被清理", Files.exists(oldFile));
+            assertTrue("保留期内的归档必须保留（报告生成时仍被引用）", Files.exists(freshFile));
         } finally {
             Files.deleteIfExists(freshFile);
             Files.deleteIfExists(threadDir);
@@ -127,7 +126,7 @@ class DownloadReportAttacherTest {
     // ===== #4 并发反例：同名文件跨线程 attach 互不串扰（固化 thread-<id> 隔离模型） =====
 
     @Test
-    void attachResolved_concurrentSameNameFilesDoNotInterfere() throws Exception {
+    public void attachResolved_concurrentSameNameFilesDoNotInterfere() throws Exception {
         int workers = 4;
         String sameName = "data.csv";
         ExecutorService pool = Executors.newFixedThreadPool(workers);
@@ -154,12 +153,11 @@ class DownloadReportAttacherTest {
             for (Future<String[]> f : futures) {
                 String[] out = f.get(30, TimeUnit.SECONDS);
                 long tid = Long.parseLong(out[0]);
-                assertTrue(Boolean.parseBoolean(out[1]), "worker attach should succeed");
+                assertTrue("worker attach should succeed", Boolean.parseBoolean(out[1]));
                 Path archive = Paths.get(DownloadReportAttacher.REPORT_ATTACHMENTS_DIR,
                         "thread-" + tid, sameName);
-                assertTrue(Files.exists(archive), "each worker must archive under its own thread-<id> dir");
-                assertEquals(out[2], Files.readString(archive),
-                        "同名文件并发 attach 不得互相覆盖（跨线程串扰回归反例）");
+                assertTrue("each worker must archive under its own thread-<id> dir", Files.exists(archive));
+                assertEquals("同名文件并发 attach 不得互相覆盖（跨线程串扰回归反例）", out[2], Files.readString(archive));
             }
         } finally {
             pool.shutdownNow();

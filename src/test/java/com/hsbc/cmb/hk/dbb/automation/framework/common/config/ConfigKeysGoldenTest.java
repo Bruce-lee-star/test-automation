@@ -1,6 +1,6 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.common.config;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -11,10 +11,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * {@link ConfigKeys} 收敛 <b>golden 快照</b>测试 —— 默认值不漂移的守卫。
@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p><b>更新方式</b>：若确认要变更某键的默认值，必须<b>同时</b>修改 {@code ConfigKeys} 与该基线文件，
  * 使变更在评审中显式可见（而不是被这条测试静默放行）。
  */
-class ConfigKeysGoldenTest {
+public class ConfigKeysGoldenTest {
 
     /** 迁移前基线的类路径位置（test-automation/src/test/resources）。 */
     private static final String GOLDEN_RESOURCE = "/config-keys-golden.txt";
@@ -44,13 +44,12 @@ class ConfigKeysGoldenTest {
     private static final String ADAPTIVE_MARKER = "<adaptive>";
 
     @Test
-    void registryMatchesGoldenSnapshot() throws Exception {
+    public void registryMatchesGoldenSnapshot() throws Exception {
         Map<String, String> golden = loadGolden();
 
         // 非空性断言：采集失效（读到空基线 / 空注册表）会让本测试静默通过——那是最危险的失败模式。
-        assertFalse(golden.isEmpty(), "golden 基线不应为空（资源未被打包会静默放行本测试）");
-        assertTrue(ConfigKeys.values().length > 100,
-                "注册表条目数异常偏少（实际 " + ConfigKeys.values().length + "），疑似采集/迁移不完整");
+        assertFalse("golden 基线不应为空（资源未被打包会静默放行本测试）", golden.isEmpty());
+        assertTrue("注册表条目数异常偏少（实际 " + ConfigKeys.values().length + "），疑似采集/迁移不完整", ConfigKeys.values().length > 100);
 
         Map<String, String> current = new LinkedHashMap<>();
         for (ConfigKeys c : ConfigKeys.values()) {
@@ -80,18 +79,17 @@ class ConfigKeysGoldenTest {
             }
         }
 
-        assertTrue(problems.isEmpty(),
-                "ConfigKeys 注册表必须与迁移前基线逐键、逐字一致（收敛的机械搬运不得改变任何配置行为）：\n"
-                        + String.join("\n", problems));
+        assertTrue("ConfigKeys 注册表必须与迁移前基线逐键、逐字一致（收敛的机械搬运不得改变任何配置行为）：\n"
+                        + String.join("\n", problems), problems.isEmpty());
 
-        assertEquals(golden.size(), current.size(), "注册表键数应与基线一致");
+        assertEquals("注册表键数应与基线一致", golden.size(), current.size());
     }
 
     /** 读取 {@code key=default} 基线（按首个 '=' 切分，默认值本身可含 '='）。 */
     private static Map<String, String> loadGolden() throws Exception {
         Map<String, String> golden = new LinkedHashMap<>();
         try (InputStream in = ConfigKeysGoldenTest.class.getResourceAsStream(GOLDEN_RESOURCE)) {
-            assertNotNull(in, "未找到 golden 基线资源: " + GOLDEN_RESOURCE);
+            assertNotNull("未找到 golden 基线资源: " + GOLDEN_RESOURCE, in);
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
@@ -100,7 +98,7 @@ class ConfigKeysGoldenTest {
                         continue;
                     }
                     int idx = trimmed.indexOf('=');
-                    assertTrue(idx > 0, "基线行格式应为 key=default: " + trimmed);
+                    assertTrue("基线行格式应为 key=default: " + trimmed, idx > 0);
                     golden.put(trimmed.substring(0, idx), trimmed.substring(idx + 1));
                 }
             }

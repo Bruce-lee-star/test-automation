@@ -4,7 +4,7 @@ import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.DownloadRegistry;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.PlaywrightManager;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Download;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -14,10 +14,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -50,7 +50,7 @@ public class DownloadSaveOffloadTest {
         //  显式消费 await 的返回值：SpotBugs RV_RETURN_VALUE_IGNORED 要求不得忽略「可能被误当作成功」的布尔结果；
         //  该 latch 从不 countDown，故等满 ms 后必返回 false —— 断言它同时表达了「这里就是要等满」的意图。
         boolean countedDown = new CountDownLatch(1).await(ms, TimeUnit.MILLISECONDS);
-        assertFalse(countedDown, "delay latch is never counted down; the wait should time out");
+        assertFalse("delay latch is never counted down; the wait should time out", countedDown);
     }
 
     @Test
@@ -77,15 +77,14 @@ public class DownloadSaveOffloadTest {
         PlaywrightContextManager.saveDownloadAsync(context, download, dir, 30_000);
         long dispatchMs = (System.nanoTime() - start) / 1_000_000;
 
-        assertTrue(dispatchMs < DISPATCH_MAX_MS,
-                "下载保存必须卸载出调用（连接读）线程：派发耗时应 ≪ " + SLOW_SAVE_MS + "ms，实测 " + dispatchMs
-                        + "ms（阈值 " + DISPATCH_MAX_MS + "ms）—— 若失败，说明 saveAs 又被放回监听器内同步执行");
+        assertTrue("下载保存必须卸载出调用（连接读）线程：派发耗时应 ≪ " + SLOW_SAVE_MS + "ms，实测 " + dispatchMs
+                        + "ms（阈值 " + DISPATCH_MAX_MS + "ms）—— 若失败，说明 saveAs 又被放回监听器内同步执行", dispatchMs < DISPATCH_MAX_MS);
 
         // 卸载后仍必须真的保存 + 登记（防止"为了不阻塞而不保存"）
-        assertTrue(saveStarted.await(10, TimeUnit.SECONDS), "卸载任务应实际开始执行 saveAs");
-        assertTrue(saveDone.await(10, TimeUnit.SECONDS), "卸载任务应在池线程内完成落盘");
+        assertTrue("卸载任务应实际开始执行 saveAs", saveStarted.await(10, TimeUnit.SECONDS));
+        assertTrue("卸载任务应在池线程内完成落盘", saveDone.await(10, TimeUnit.SECONDS));
         assertNotNull(savedPath.get());
-        assertTrue(savedPath.get().startsWith(dir), "保存路径应落在配置的下载目录内：" + savedPath.get());
+        assertTrue("保存路径应落在配置的下载目录内：" + savedPath.get(), savedPath.get().startsWith(dir));
 
         // 登记发生在 saveAs 返回之后（同一池任务内），故此处有界轮询等待，避免测试自身竞态
         List<Path> recorded = DownloadRegistry.instance().all(context);
@@ -94,7 +93,7 @@ public class DownloadSaveOffloadTest {
             slowDelay(50);
             recorded = DownloadRegistry.instance().all(context);
         }
-        assertEquals(1, recorded.size(), "保存成功后应登记到 DownloadRegistry（供 getLastDownloadPath 等查询）");
+        assertEquals("保存成功后应登记到 DownloadRegistry（供 getLastDownloadPath 等查询）", 1, recorded.size());
         assertEquals(savedPath.get(), recorded.get(0));
 
         // 清理：登记簿 + 临时目录
@@ -129,9 +128,9 @@ public class DownloadSaveOffloadTest {
             }
             slowDelay(50);
         }
-        assertNotNull(reserved.get(), "应已尝试占位（saveAs 被调用）");
-        assertTrue(!Files.exists(reserved.get()), "保存失败应回滚删除占位文件：" + reserved.get());
-        assertTrue(DownloadRegistry.instance().all(context).isEmpty(), "失败不应登记到 DownloadRegistry");
+        assertNotNull("应已尝试占位（saveAs 被调用）", reserved.get());
+        assertTrue("保存失败应回滚删除占位文件：" + reserved.get(), !Files.exists(reserved.get()));
+        assertTrue("失败不应登记到 DownloadRegistry", DownloadRegistry.instance().all(context).isEmpty());
 
         DownloadRegistry.instance().clear(context);
         Files.deleteIfExists(dir);
@@ -151,13 +150,11 @@ public class DownloadSaveOffloadTest {
 
         assertNotNull(dirA.get());
         assertNotNull(dirB.get());
-        assertTrue(!dirA.get().equals(dirB.get()),
-                "不同线程的下载目录必须不同（否则一个用例收尾会清掉邻居的下载文件）："
-                        + dirA.get() + " vs " + dirB.get());
+        assertTrue("不同线程的下载目录必须不同（否则一个用例收尾会清掉邻居的下载文件）："
+                        + dirA.get() + " vs " + dirB.get(), !dirA.get().equals(dirB.get()));
         Path nameA = dirA.get().getFileName();
-        assertNotNull(nameA, "下载目录应含文件名（thread-<id>）：" + dirA.get());
-        assertTrue(nameA.toString().startsWith("thread-"),
-                "目录名应含线程标识： " + dirA.get());
+        assertNotNull("下载目录应含文件名（thread-<id>）：" + dirA.get(), nameA);
+        assertTrue("目录名应含线程标识： " + dirA.get(), nameA.toString().startsWith("thread-"));
     }
 
     /**
@@ -182,8 +179,8 @@ public class DownloadSaveOffloadTest {
         BrowserContext context = mock(BrowserContext.class);
         PlaywrightContextManager.saveDownloadAsync(context, download, dir, 10_000);
 
-        assertTrue(done.await(10, TimeUnit.SECONDS), "卸载保存应在池线程内完成");
-        assertEquals(dir.resolve("a (1).xlsx"), savedPath.get(), "同名冲突应加序号后缀（与既有语义一致）");
+        assertTrue("卸载保存应在池线程内完成", done.await(10, TimeUnit.SECONDS));
+        assertEquals("同名冲突应加序号后缀（与既有语义一致）", dir.resolve("a (1).xlsx"), savedPath.get());
 
         DownloadRegistry.instance().clear(context);
         Files.deleteIfExists(savedPath.get());

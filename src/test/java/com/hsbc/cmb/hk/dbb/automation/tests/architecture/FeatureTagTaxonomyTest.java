@@ -1,6 +1,6 @@
 package com.hsbc.cmb.hk.dbb.automation.tests.architecture;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -14,7 +14,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertTrue;
 
 /**
  * B-7：Gherkin 标签体系门禁（三维标签 + 状态标签）。
@@ -43,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * @see com.hsbc.cmb.hk.dbb.automation.tests.architecture.LayeringArchTest
  */
-class FeatureTagTaxonomyTest {
+public class FeatureTagTaxonomyTest {
 
     /** Gherkin 资源根目录（surefire 工作目录 = 模块根）。 */
     private static final Path FEATURES = Path.of("src/test/resources/features");
@@ -90,7 +90,7 @@ class FeatureTagTaxonomyTest {
     }
 
     @Test
-    void allTagsMustBeRegistered() throws IOException {
+    public void allTagsMustBeRegistered() throws IOException {
         List<String> violations = new ArrayList<>();
         for (Feature feature : parseAll()) {
             for (String tag : new LinkedHashSet<>(feature.allTags)) {
@@ -99,12 +99,11 @@ class FeatureTagTaxonomyTest {
                 }
             }
         }
-        assertTrue(violations.isEmpty(),
-                "存在未注册的 Gherkin 标签（B-7 三维标签体系）：\n" + String.join("\n", violations));
+        assertTrue("存在未注册的 Gherkin 标签（B-7 三维标签体系）：\n" + String.join("\n", violations), violations.isEmpty());
     }
 
     @Test
-    void everyFeatureDeclaresExactlyOneTierAndOneSubsystem() throws IOException {
+    public void everyFeatureDeclaresExactlyOneTierAndOneSubsystem() throws IOException {
         List<String> violations = new ArrayList<>();
         for (Feature feature : parseAll()) {
             List<String> tiers = distinct(feature.featureTags, TIER);
@@ -116,8 +115,7 @@ class FeatureTagTaxonomyTest {
                 violations.add(feature.file + " -> feature 级需恰好 1 个子系统标签（@web/@api/@route），实际=" + subsystems);
             }
         }
-        assertTrue(violations.isEmpty(),
-                "feature 级三维标签不完整（B-7 标签体系）：\n" + String.join("\n", violations));
+        assertTrue("feature 级三维标签不完整（B-7 标签体系）：\n" + String.join("\n", violations), violations.isEmpty());
     }
 
     private static List<String> distinct(List<String> tags, Set<String> dimension) {

@@ -1,12 +1,12 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.web.page.scan;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 /**
  * 评审 F-15 / P1-6 回归：codegen 生成物必须<b>可编译</b>，且再生成时<b>不覆盖手写代码</b>。
@@ -58,10 +58,9 @@ public class CodegenGeneratedSourceTest {
     public void unresolvedDragEmitsCommentInsteadOfZeroArgCall() {
         String stmt = RoleElementStepGenerator.dragToStatement("page.dragSrc", null);
 
-        assertTrue(stmt.startsWith("//"), "未定位时应退化为注释行，实际：" + stmt);
-        assertFalse(stmt.contains("dragTo("),
-                "F-15：不得产出 dragTo(/* 注释 */) 这类括号内零实参的非法 Java，实际：" + stmt);
-        assertTrue(stmt.contains("page.dragSrc"), "注释应指明源元素，便于人工补目标：" + stmt);
+        assertTrue("未定位时应退化为注释行，实际：" + stmt, stmt.startsWith("//"));
+        assertFalse("F-15：不得产出 dragTo(/* 注释 */) 这类括号内零实参的非法 Java，实际：" + stmt, stmt.contains("dragTo("));
+        assertTrue("注释应指明源元素，便于人工补目标：" + stmt, stmt.contains("page.dragSrc"));
     }
 
     @Test
@@ -77,11 +76,9 @@ public class CodegenGeneratedSourceTest {
         String op = "page.userIpt.fill(\"x\");\n        page.userIpt.press(\"Enter\")";
         String body = RoleElementStepGenerator.lambdaBody(op);
 
-        assertTrue(body.startsWith("{") && body.endsWith("}"),
-                "多语句必须包成块体 lambda，否则 `() -> a(); b()` 非法 Java，实际：" + body);
+        assertTrue("多语句必须包成块体 lambda，否则 `() -> a(); b()` 非法 Java，实际：" + body, body.startsWith("{") && body.endsWith("}"));
         String flat = body.replaceAll("\\s+", " ").trim();
-        assertEquals("{ page.userIpt.fill(\"x\"); page.userIpt.press(\"Enter\"); }", flat,
-                "块体应保留全部语句且末条以 ';' 收尾（块内语句缺分号同样非法）");
+        assertEquals("块体应保留全部语句且末条以 ';' 收尾（块内语句缺分号同样非法）", "{ page.userIpt.fill(\"x\"); page.userIpt.press(\"Enter\"); }", flat);
     }
 
     @Test
@@ -120,12 +117,12 @@ public class CodegenGeneratedSourceTest {
 
         String merged = RoleElementPageGenerator.mergeGeneratedBlocks(existing, fresh);
 
-        assertTrue(merged.contains("newFld"), "生成块内应替换为新字段");
-        assertFalse(merged.contains("oldFld"), "旧字段应被块内替换移除");
-        assertTrue(merged.contains("myHelper"), "F-15：块外手写方法必须原样保留（不再整文件覆盖）");
-        assertTrue(merged.contains("import b.B;"), "新生成的 import 应补齐（保证新字段可编译）");
-        assertTrue(merged.contains("import a.A;"), "既有 import 不得丢失");
-        assertTrue(merged.contains("package com.demo;"), "包声明等块外内容应保留");
+        assertTrue("生成块内应替换为新字段", merged.contains("newFld"));
+        assertFalse("旧字段应被块内替换移除", merged.contains("oldFld"));
+        assertTrue("F-15：块外手写方法必须原样保留（不再整文件覆盖）", merged.contains("myHelper"));
+        assertTrue("新生成的 import 应补齐（保证新字段可编译）", merged.contains("import b.B;"));
+        assertTrue("既有 import 不得丢失", merged.contains("import a.A;"));
+        assertTrue("包声明等块外内容应保留", merged.contains("package com.demo;"));
     }
 
     @Test
@@ -135,16 +132,14 @@ public class CodegenGeneratedSourceTest {
 
         String merged = RoleElementPageGenerator.mergeGeneratedBlocks(existing, fresh);
 
-        assertTrue(merged.contains("import hand.Custom;"),
-                "手写方法可能依赖的既有 import 不得被新产物头部覆盖掉");
-        assertEquals(1, countOccurrences(merged, "import a.A;"), "重复 import 不应被重复插入");
+        assertTrue("手写方法可能依赖的既有 import 不得被新产物头部覆盖掉", merged.contains("import hand.Custom;"));
+        assertEquals("重复 import 不应被重复插入", 1, countOccurrences(merged, "import a.A;"));
     }
 
     @Test
     public void withMergedImportsIsNoOpWhenNothingMissing() {
         String existing = generated("    public PageElement fld;\n", "a.A");
-        assertSame(existing, RoleElementPageGenerator.withMergedImports(existing, generated("x", "a.A")),
-                "无缺失 import 时应原样返回（避免无谓改写）");
+        assertSame("无缺失 import 时应原样返回（避免无谓改写）", existing, RoleElementPageGenerator.withMergedImports(existing, generated("x", "a.A")));
     }
 
     @Test
@@ -156,8 +151,7 @@ public class CodegenGeneratedSourceTest {
                 + "}\n";
         String fresh = generated("    public PageElement newFld;\n", "a.A");
 
-        assertEquals(fresh, RoleElementPageGenerator.mergeGeneratedBlocks(legacy, fresh),
-                "历史产物无标记块 → 回落整文件覆盖（调用方已先备份 .bak），保持向后兼容");
+        assertEquals("历史产物无标记块 → 回落整文件覆盖（调用方已先备份 .bak），保持向后兼容", fresh, RoleElementPageGenerator.mergeGeneratedBlocks(legacy, fresh));
     }
 
     private static int countOccurrences(String haystack, String needle) {

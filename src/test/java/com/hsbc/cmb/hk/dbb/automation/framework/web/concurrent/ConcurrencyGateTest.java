@@ -1,18 +1,18 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.web.concurrent;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * {@link ConcurrencyGate} 单测（固化设计文档附录 A.8）：
@@ -27,12 +27,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class ConcurrencyGateTest {
 
-    @BeforeAll
+    @BeforeClass
     public static void enableGate() {
         System.setProperty("serenity.playwright.concurrent.partition.enabled", "true");
     }
 
-    @AfterAll
+    @AfterClass
     public static void restore() {
         System.clearProperty("serenity.playwright.concurrent.partition.enabled");
         System.clearProperty("serenity.playwright.concurrent.partition.per.key.permits");
@@ -67,7 +67,7 @@ public class ConcurrencyGateTest {
 
     @Test
     public void nullKeyIsNoOpAndDoesNotThrow() {
-        assertTrue( ConcurrencyGate.isEnabled(), "闸门应经 @BeforeAll 启用");
+        assertTrue("闸门应经 @BeforeClass 启用", ConcurrencyGate.isEnabled());
         ConcurrencyGate.acquire(null);
         ConcurrencyGate.release(null);
     }
@@ -103,15 +103,14 @@ public class ConcurrencyGateTest {
         });
         t1.start();
         t2.start();
-        assertTrue( held.await(3, TimeUnit.SECONDS), "t1 应已持锁");
-        assertTrue( t2Ready.await(3, TimeUnit.SECONDS), "t2 应在超时前就绪");
-        assertFalse( awaitTrue(secondAcquired, NON_ENTRY_OBSERVE_MS),
-                "t2 在 t1 释放前应被阻塞（不得违规进入）");
+        assertTrue("t1 应已持锁", held.await(3, TimeUnit.SECONDS));
+        assertTrue("t2 应在超时前就绪", t2Ready.await(3, TimeUnit.SECONDS));
+        assertFalse("t2 在 t1 释放前应被阻塞（不得违规进入）", awaitTrue(secondAcquired, NON_ENTRY_OBSERVE_MS));
         proceed.countDown();
         t1.join(3_000);
         t2.join(3_000);
-        assertTrue( secondAcquired.get(), "t2 应在 t1 释放后获得锁");
-        assertTrue( ConcurrencyGate.stats().serializedIdentityCount >= 1, "应记录到一次串行化");
+        assertTrue("t2 应在 t1 释放后获得锁", secondAcquired.get());
+        assertTrue("应记录到一次串行化", ConcurrencyGate.stats().serializedIdentityCount >= 1);
     }
 
     @Test
@@ -166,7 +165,7 @@ public class ConcurrencyGateTest {
             });
             t1.start();
             t2.start();
-            assertTrue( bothAcquired.await(3, TimeUnit.SECONDS), "两路应同时获得（permits=2）");
+            assertTrue("两路应同时获得（permits=2）", bothAcquired.await(3, TimeUnit.SECONDS));
             t1.join(3_000);
             t2.join(3_000);
             assertTrue(t1done.get());

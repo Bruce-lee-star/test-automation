@@ -1,15 +1,15 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.common.async;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Test;
 import org.slf4j.MDC;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * C-5 回归：异步任务必须传播提交线程的 MDC（日志诊断上下文）。
@@ -20,13 +20,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class AsyncPoolMdcPropagationTest {
 
-    @AfterEach
-    void tearDown() {
+    @After
+    public void tearDown() {
         MDC.clear();
     }
 
     @Test
-    void runPropagatesMdcToWorkerThread() throws Exception {
+    public void runPropagatesMdcToWorkerThread() throws Exception {
         MDC.put("scenarioId", "S-C5-1");
         AtomicReference<String> seen = new AtomicReference<>();
         CountDownLatch done = new CountDownLatch(1);
@@ -39,7 +39,7 @@ public class AsyncPoolMdcPropagationTest {
             }
         });
 
-        assertTrue(done.await(5, TimeUnit.SECONDS), "异步任务应在 5s 内完成");
-        assertEquals("S-C5-1", seen.get(), "MDC scenarioId 必须传播到异步 worker 线程");
+        assertTrue("异步任务应在 5s 内完成", done.await(5, TimeUnit.SECONDS));
+        assertEquals("MDC scenarioId 必须传播到异步 worker 线程", "S-C5-1", seen.get());
     }
 }

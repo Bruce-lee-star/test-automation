@@ -4,10 +4,10 @@ import com.hsbc.cmb.hk.dbb.automation.framework.core.context.TestContextHolder;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.PlaywrightManager;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.context.CustomOptionsManager;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.scenario.ScenarioLifecycle;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.Assert.assertNull;
 
 /**
  * 偏差 B-2 表征测试（浏览器选项治理专项，doc18 §4.2）：固化自定义选项在 scenario 级清理下的<b>当前</b>契约，不改行为。
@@ -24,7 +24,7 @@ public class OptionModeParityTest {
 
     private final CustomOptionsManager customOptions = CustomOptionsManager.getInstance();
 
-    @AfterEach
+    @After
     public void tearDown() {
         TestContextHolder.get().remove(PlaywrightManager.CONTEXT_KEY);
         TestContextHolder.get().remove(PlaywrightManager.PAGE_KEY);
@@ -38,9 +38,9 @@ public class OptionModeParityTest {
 
         ScenarioLifecycle.cleanupForScenario();
 
-        assertNull( customOptions.getStorageState(), "Scenario 模式不应保留 storageState");
-        assertNull( customOptions.getLocale(), "Scenario 模式应清除 locale");
+        assertNull("Scenario 模式不应保留 storageState", customOptions.getStorageState());
+        assertNull("Scenario 模式应清除 locale", customOptions.getLocale());
         // cleanupForScenario → removeAllThreadLocals 清除 flag；消费者 customFlag!=null&&customFlag 安全处理 null
-        assertNull( customOptions.isCustomContextOptionsFlag(), "Scenario 模式 flag 应被清除（返回 null）");
+        assertNull("Scenario 模式 flag 应被清除（返回 null）", customOptions.isCustomContextOptionsFlag());
     }
 }

@@ -14,16 +14,16 @@ import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.page.PageRegistryI
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.state.PlaywrightRuntimeState;
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
@@ -62,7 +62,7 @@ public class ContextRegistryS1BrowserOverrideTest {
     private volatile boolean priorInitialized;
     private BrowserStartup mockStartup;
 
-    @BeforeEach
+    @Before
     public void setUp() {
         priorInitialized = FrameworkState.getInstance().isInitialized();
         FrameworkState.getInstance().markInitialized();
@@ -91,7 +91,7 @@ public class ContextRegistryS1BrowserOverrideTest {
                 PlaywrightRuntimeState.INSTANCE));
     }
 
-    @AfterEach
+    @After
     public void tearDown() throws Exception {
         // 复位顺序：先恢复默认组合根与覆盖，再清理状态根，最后复位 frameworkState 到进入前的值。
         PlaywrightRuntime.resetInstance();
@@ -122,14 +122,13 @@ public class ContextRegistryS1BrowserOverrideTest {
         BrowserContext result = PlaywrightManager.getContext();
 
         // 断言：旧 Context 因浏览器切换被 closeContext 失效，getContext 重建出「不同于旧」的新 Context。
-        org.junit.jupiter.api.Assertions.assertNotSame(oldContext, result,
-                "S1 失效：类型变化后旧 Context 应被重建，而非被复用");
+        org.junit.Assert.assertNotSame("S1 失效：类型变化后旧 Context 应被重建，而非被复用",
+                oldContext, result);
         // PlaywrightContextManager.closeContext 调用的是带 CloseOptions 的 close(CloseOptions)。
         verify(oldContext, atLeastOnce()).close(any());
         // 佐证切换确由 getBrowser() 触发：configId 已从 chromium 变为 firefox。
         String afterConfig = TestContextHolder.get().get(PlaywrightManager.CURRENT_CONFIG_ID_KEY);
-        assertTrue(afterConfig != null && afterConfig.startsWith("firefox"),
-                "S1 失效：getBrowser() 应触发浏览器类型切换，configId 应变为 firefox 前缀，实际=" + afterConfig);
+        assertTrue("S1 失效：getBrowser() 应触发浏览器类型切换，configId 应变为 firefox 前缀，实际=" + afterConfig, afterConfig != null && afterConfig.startsWith("firefox"));
     }
 
     // ====================== 测试 2：S1 不破坏正常复用 —— 类型一致时仍复用旧 Context ======================
@@ -150,7 +149,7 @@ public class ContextRegistryS1BrowserOverrideTest {
         BrowserContext result = PlaywrightManager.getContext();
 
         // 断言：旧 Context 被原样复用，且从未被 close（S1 不引入误失效）。
-        assertSame(oldContext, result, "S1 回归：类型一致时应保持 feature 模式复用，不应重建");
+        assertSame("S1 回归：类型一致时应保持 feature 模式复用，不应重建", oldContext, result);
         verify(oldContext, never()).close();
     }
 
@@ -174,12 +173,11 @@ public class ContextRegistryS1BrowserOverrideTest {
         BrowserContext result = PlaywrightManager.getContext();
 
         // 断言：路径与修复前一致——复用旧 Context，旧 Context 未被 close。
-        assertSame(oldContext, result, "S1 守卫回归：configId 为 null 时应复用旧 Context");
+        assertSame("S1 守卫回归：configId 为 null 时应复用旧 Context", oldContext, result);
         verify(oldContext, never()).close();
         // 类型切换未被触发：configId 不应被 S1 改写为 firefox。
         String afterConfig = TestContextHolder.get().get(PlaywrightManager.CURRENT_CONFIG_ID_KEY);
-        assertTrue(afterConfig == null || !afterConfig.startsWith("firefox"),
-                "S1 守卫回归：configId 为 null 时不应触发浏览器类型切换");
+        assertTrue("S1 守卫回归：configId 为 null 时不应触发浏览器类型切换", afterConfig == null || !afterConfig.startsWith("firefox"));
     }
 
     // ====================== 辅助 ======================

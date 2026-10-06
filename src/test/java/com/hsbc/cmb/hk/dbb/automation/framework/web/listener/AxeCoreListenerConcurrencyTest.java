@@ -1,14 +1,14 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.web.listener;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.core.context.TestContextHolder;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.Assert.assertFalse;
 
 /**
  * T3-1 收拢验证：{@link AxeCoreListener} 的 axeEnabled / reportGenerated
@@ -31,9 +31,9 @@ public class AxeCoreListenerConcurrencyTest {
         TestContextHolder.resetForCurrentThread();
         ExecutorService pool = Executors.newFixedThreadPool(2);
         try {
-            assertFalse( AxeCoreListener.isEnabled(), "默认应为未启用，且不得因 null 拆箱抛 NPE");
+            assertFalse("默认应为未启用，且不得因 null 拆箱抛 NPE", AxeCoreListener.isEnabled());
             Future<Boolean> other = pool.submit(AxeCoreListener::isEnabled);
-            assertFalse( other.get(5, TimeUnit.SECONDS), "其他线程默认亦为未启用");
+            assertFalse("其他线程默认亦为未启用", other.get(5, TimeUnit.SECONDS));
         } finally {
             pool.shutdown();
         }

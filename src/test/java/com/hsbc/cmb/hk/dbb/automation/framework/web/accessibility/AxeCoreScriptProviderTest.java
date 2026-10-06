@@ -1,14 +1,14 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.web.accessibility;
 
 import com.microsoft.playwright.Page;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -50,31 +50,31 @@ public class AxeCoreScriptProviderTest {
     }
 
     @Test
-    void runAxeMapsJsonToOwnModel() {
+    public void runAxeMapsJsonToOwnModel() {
         Page page = mockPageReturning(SAMPLE_JSON);
         AxeCoreScanner.AxeScanConfig config = new AxeCoreScanner.AxeScanConfig();
 
         AxeCoreScriptProvider.AxeRunResult result = AxeCoreScriptProvider.runAxe(page, config, null);
 
-        assertEquals(1, result.violations().size(), "violations 数量应映射正确");
+        assertEquals("violations 数量应映射正确", 1, result.violations().size());
         AxeRule violation = result.violations().get(0);
         assertEquals("color-contrast", violation.getId());
         assertEquals("serious", violation.getImpact());
         assertEquals("Elements must have sufficient color contrast", violation.getDescription());
-        assertEquals(1, violation.getNodes().size(), "violation 节点应映射");
+        assertEquals("violation 节点应映射", 1, violation.getNodes().size());
         List<String> target = violation.getNodes().get(0).getTarget();
-        assertEquals(2, target.size(), "target 选择器数组应映射");
+        assertEquals("target 选择器数组应映射", 2, target.size());
         assertEquals("#main", target.get(0));
         assertEquals("div.banner", target.get(1));
         assertEquals("Fix the contrast", violation.getNodes().get(0).getFailureSummary());
 
-        assertTrue(result.incomplete().isEmpty(), "incomplete 应为空");
-        assertEquals(1, result.passes().size(), "passes 数量应映射正确");
+        assertTrue("incomplete 应为空", result.incomplete().isEmpty());
+        assertEquals("passes 数量应映射正确", 1, result.passes().size());
         assertEquals("document-title", result.passes().get(0).getId());
     }
 
     @Test
-    void runAxeInjectsScriptWhenNotPresent() {
+    public void runAxeInjectsScriptWhenNotPresent() {
         Page page = mock(Page.class);
         when(page.evaluate(anyString(), any())).thenAnswer(inv -> {
             String script = inv.getArgument(0);
@@ -91,21 +91,21 @@ public class AxeCoreScriptProviderTest {
     }
 
     @Test
-    void runAxeRejectsNullPage() {
+    public void runAxeRejectsNullPage() {
         assertThrows(AxeCoreException.class,
                 () -> AxeCoreScriptProvider.runAxe(null, new AxeCoreScanner.AxeScanConfig(), null));
     }
 
     @Test
-    void runAxeRejectsNullConfig() {
+    public void runAxeRejectsNullConfig() {
         Page page = mock(Page.class);
         assertThrows(AxeCoreException.class, () -> AxeCoreScriptProvider.runAxe(page, null, null));
     }
 
     @Test
-    void loadScriptReadsBundledResource() {
+    public void loadScriptReadsBundledResource() {
         // 资源加载成功（自带 axe.min.js 已置于 web 模块 resources），缺失会抛 AxeCoreException
         String script = AxeCoreScriptProvider.loadScript();
-        assertFalse(script.isEmpty(), "自带 axe.min.js 应从 classpath 成功加载且非空");
+        assertFalse("自带 axe.min.js 应从 classpath 成功加载且非空", script.isEmpty());
     }
 }

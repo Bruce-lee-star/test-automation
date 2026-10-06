@@ -3,9 +3,9 @@ package com.hsbc.cmb.hk.dbb.automation.framework.web.page.element;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.page.engine.BasePage;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.Assert.assertSame;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -43,8 +43,7 @@ public class PageElementChildLocatorTest {
         PageElement child = parent.child("span.name");
 
         // 子元素底层 Locator == 父级真实 Locator 的作用域内下钻结果
-        assertSame(childLocator, child.locatorInternal(),
-                "child() 必须基于父级真实 Locator 下钻（Locator.locator 嵌套定位）");
+        assertSame("child() 必须基于父级真实 Locator 下钻（Locator.locator 嵌套定位）", childLocator, child.locatorInternal());
 
         // 父级用「真实选择器」解析（而非展示串）
         verify(bp).locatorInternal("div.card");
@@ -67,6 +66,6 @@ public class PageElementChildLocatorTest {
         PageElement root = new PageElement("div.card", bp);
         PageElement grandChild = root.child("ul").child("li");
 
-        assertSame(l3, grandChild.locatorInternal(), "多级 child 必须逐级在父级作用域内下钻");
+        assertSame("多级 child 必须逐级在父级作用域内下钻", l3, grandChild.locatorInternal());
     }
 }

@@ -1,12 +1,12 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.common.config;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * {@link ConfigKeys} 统一配置键注册表契约测试（C-6 / M-2）。
@@ -16,22 +16,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@link #keysFollowStructuralNamingConvention()}）。
  * 新增配置键时若重复或格式违规，本测试与 {@link ConfigKeys#validateUniqueKeys()} 均会暴露。
  */
-class ConfigKeysRegistryTest {
+public class ConfigKeysRegistryTest {
 
     @Test
-    void registryIsNonEmpty() {
-        assertFalse(ConfigKeys.all().isEmpty(), "注册表不应为空");
+    public void registryIsNonEmpty() {
+        assertFalse("注册表不应为空", ConfigKeys.all().isEmpty());
     }
 
     @Test
-    void allKeysAreUniqueAndWellFormed() {
+    public void allKeysAreUniqueAndWellFormed() {
         Set<String> seen = new HashSet<>();
         for (ConfigKeys c : ConfigKeys.all()) {
             String key = c.key();
-            assertTrue(key != null && !key.isBlank(), "键名不可为空: " + c);
-            assertTrue(seen.add(key), "注册表存在重复配置键: " + key);
-            assertTrue(c.defaultValue() != null, "默认值不可为 null: " + key);
-            assertTrue(c.description() != null && !c.description().isBlank(), "描述不可为空: " + key);
+            assertTrue("键名不可为空: " + c, key != null && !key.isBlank());
+            assertTrue("注册表存在重复配置键: " + key, seen.add(key));
+            assertTrue("默认值不可为 null: " + key, c.defaultValue() != null);
+            assertTrue("描述不可为空: " + key, c.description() != null && !c.description().isBlank());
         }
     }
 
@@ -49,10 +49,9 @@ class ConfigKeysRegistryTest {
      * 新增键应尽量遵循全小写点分（{@code a-z0-9.}）。
      */
     @Test
-    void keysFollowStructuralNamingConvention() {
+    public void keysFollowStructuralNamingConvention() {
         for (ConfigKeys c : ConfigKeys.all()) {
-            assertTrue(c.key().matches("^[a-z][A-Za-z0-9.-]*$"),
-                    "键名应以小写字母开头、仅含 [A-Za-z0-9.-] : " + c.key());
+            assertTrue("键名应以小写字母开头、仅含 [A-Za-z0-9.-] : " + c.key(), c.key().matches("^[a-z][A-Za-z0-9.-]*$"));
         }
     }
 }

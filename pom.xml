@@ -17,8 +17,6 @@
 
     <properties>
         <framework.version>1.0.1</framework.version>
-        <!-- 2026-09-27 JUnit4 执行器回退：junit.platform.version 从根 pom 的 1.14.0（JUnit5 时代为 cucumber-junit-platform-engine 升的）降回 1.11.4，与 junit-jupiter/junit-vintage 5.11.4 官方配对（1.14.0 + vintage 5.11.4 触发 JUnitPlatformProvider NoClassDefFoundError，failsafe E2E 0 tests） -->
-        <junit.platform.version>1.11.4</junit.platform.version>
         <!-- Cucumber 标签过滤：默认只跑 @test 场景（对齐 master 的 CucumberTestRunnerIT 注解 @test）。
              本属性经 failsafe 的 systemPropertyVariables 注入为 cucumber.filter.tags，是主运行器
              【CucumberTestRunnerIT】的单一事实来源（覆盖其 @CucumberOptions(tags) 注解）。
@@ -54,7 +52,7 @@
         </dependency>
         <dependency>
             <groupId>com.hsbc.cmb.dbb.hk.automation</groupId>
-            <artifactId>rest-assured-core</artifactId>
+            <artifactId>pw-api-core</artifactId>
             <version>${framework.version}</version>
         </dependency>
         <dependency>
@@ -101,6 +99,16 @@
             <artifactId>htmlunit3-driver</artifactId>
             <version>${htmlunit3.driver.version}</version>
             <scope>test</scope>
+            <exclusions>
+                <!-- 依赖治理（内网隔离清单）：本框架从不实例化 HtmlUnitDriver（Playwright 驱动），
+                     对它的唯一需求是「类可加载」（上方说明的 SupportedWebDriver 静态 ldc）。而
+                     htmlunit-websocket-client 仅 HtmlUnit 真正跑 WebSocket 时才会用到，本框架用不到，
+                     且该构件命中内网隔离清单，故在此断开（htmlunit 本体经 htmlunit3-driver 传递保留）。 -->
+                <exclusion>
+                    <groupId>org.htmlunit</groupId>
+                    <artifactId>htmlunit-websocket-client</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.appium</groupId>
@@ -128,17 +136,6 @@
             <artifactId>serenity-junit</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- JUnit 5（Jupiter）：测试基座（2026-09-11 JUnit5 升级，替代 junit:junit 4.13.2） -->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
-            <scope>test</scope>
-        </dependency>
         <!-- JUnit 4：执行器回退 master 方案（2026-09-27，P0）——CucumberWithSerenity runner（Serenity 主体接管，scenario tags 天然写入 TestOutcome，根治 JUnit5 旁挂下 @firefox/@edge 覆盖失效）。 -->
         <dependency>
             <groupId>junit</groupId>
@@ -151,6 +148,24 @@
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- 依赖治理（内网隔离清单）：Cucumber 已从 serenity-model 的传递链路排除，改由使用方显式声明。
+             本模块**确实使用**下列三者（Cucumber 运行器 + step 定义 + DataTable 断言），
+             故必须显式拉入；版本统一由根 DM 钉 ${cucumber.version}（7.31.0），避免随 Serenity 传递漂移。 -->
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-java</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>datatable</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -220,12 +235,45 @@
 
     <build>
         <plugins>
+            <!-- 报告目录清理（口径统一：报告只呈现【本次运行】的场景）。
+                 背景：Serenity 每次都往同一目录追加场景 JSON/HTML，不清理时汇总报告会把历史运行的行一起算进去
+                 （实测同一目录累积 14 个 JSON、同名场景出现两份），"This run" 因此不可信。
+                 做法：把 maven-clean-plugin 绑到 pre-integration-test（failsafe 跑 IT 之前），**整个清空**
+                 ${project.build.directory}/site/serenity —— 本地跑 verify 无需 mvn clean，口径与 CI 完全一致。
+                 与 CI 的等价性：CI 每次运行都是全新工作区（checkout 后 target/ 为空），本就无历史可留；
+                 保留历史只在本地连续跑时才有差别，而"报告只代表本次运行"是更重要的一致性要求，故一律全清。
+                 副作用（已确认接受）：trend-history/** 也一并清掉，故跨场 FLAKY 徽标（近 5 场失败 ≥3 次）
+                 在真实运行中不再可能触发 —— 它是 trend 数据的唯一消费方；若日后要恢复，应把趋势快照移出
+                 报告目录（例如 target/trend-history），而不是把历史留在报告目录里与"本次运行"口径打架。
+                 另：excludeDefaultDirectories=true 必须保留 —— 否则 clean 目标会连带删掉整个 target/，
+                 把已编译产物在 pre-integration-test 阶段清空，直接毁掉本次运行。 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.2.0</version>
+                <executions>
+                    <execution>
+                        <id>clean-serenity-report</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                        <configuration>
+                            <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                            <filesets>
+                                <fileset>
+                                    <directory>${project.build.directory}/site/serenity</directory>
+                                </fileset>
+                            </filesets>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>${maven-failsafe-plugin.version}</version>
                 <dependencies>
-                    <!-- 2026-09-27 JUnit4 执行器回退：显式挂 surefire-junit47 provider + classpath 排除 junit-platform/jupiter（JUnit5 单测走 surefire 的 JUnitPlatformProvider），自动检测才能落到 JUnit47Provider，@RunWith(CucumberWithSerenity) runner 才会被 -Dit.test 发现 -->
                     <dependency>
                         <groupId>org.apache.maven.surefire</groupId>
                         <artifactId>surefire-junit47</artifactId>
@@ -235,10 +283,6 @@
                 <configuration>
                     <useFile>false</useFile>
                     <rerunFailingTestsCount>${rerunFailingTestsCount}</rerunFailingTestsCount>
-                    <classpathDependencyExcludes>
-                        <classpathDependencyExclude>org.junit.platform:*</classpathDependencyExclude>
-                        <classpathDependencyExclude>org.junit.jupiter:*</classpathDependencyExclude>
-                    </classpathDependencyExcludes>
                     <forkCount>1</forkCount>
                     <!-- Cucumber 主流程整体超时兜底（防 Playwright 导航/采集阻塞拖垮整轮）
                          X-9：提为可配置属性（默认 1800s），CI 可 -DforkedProcessTimeoutInSeconds=N 覆盖 -->
@@ -301,11 +345,78 @@
                 <version>${serenity.version}</version>
                 <dependencies>
                     <!-- plexus-archiver 上界钉：serenity-maven-plugin 的插件级传递依赖，
-                         dependencyManagement 无法覆盖插件依赖，故在此显式钉到 4.9.2 修复安全漏洞 -->
+                         dependencyManagement 无法覆盖插件依赖，故在此显式钉版（修复安全漏洞 + 满足内网治理）。
+                         版本与根 pom 的 ${plexus.archiver.version} 共用同一属性口径（同一份父 POM 提供），
+                         避免框架打包插件（maven-jar-plugin）与本插件两处版本漂移。 -->
                     <dependency>
                         <groupId>org.codehaus.plexus</groupId>
                         <artifactId>plexus-archiver</artifactId>
-                        <version>4.9.2</version>
+                        <version>${plexus.archiver.version}</version>
+                    </dependency>
+                    <!-- 依赖治理（内网隔离清单）——**插件类路径**是项目级 exclusion 覆盖不到的第二条链路。
+                         实测证据：mvn -X 的 "Populating class realm plugin>serenity-maven-plugin" 段此前含
+                         org.htmlunit:htmlunit-websocket-client(4.7.0，命中隔离清单)、
+                         org.seleniumhq.selenium:htmlunit3-driver(4.38.0，与项目侧 4.23.0 版本偏斜)
+                         以及整条 io.cucumber:* 栈。
+                         ① 不用的排除：serenity:aggregate 只读 test-outcome JSON 出汇总报告、不驱动浏览器，
+                           故对 serenity-core 排除 htmlunit 栈（含 websocket-client）与 htmlunit3-driver。
+                         ② 要用的显式声明：Cucumber 是聚合阶段的**运行期必需**（实测：一并排除后报
+                           NoClassDefFoundError: io/cucumber/core/resource/Resource），故不排除，改为按项目
+                           统一版本显式声明 —— 使插件 realm 用 ${cucumber.version}，而不是由 Serenity 传递的版本。
+                         手法同 plexus-archiver：在插件 <dependencies> 内声明同名 GA，就近优先覆盖传递版本。 -->
+                    <dependency>
+                        <groupId>net.serenity-bdd</groupId>
+                        <artifactId>serenity-core</artifactId>
+                        <version>${serenity.version}</version>
+                        <exclusions>
+                            <exclusion>
+                                <groupId>org.htmlunit</groupId>
+                                <artifactId>htmlunit</artifactId>
+                            </exclusion>
+                            <exclusion>
+                                <groupId>org.seleniumhq.selenium</groupId>
+                                <artifactId>htmlunit3-driver</artifactId>
+                            </exclusion>
+                            <!-- 同上：聚合阶段不驱动浏览器，driver 栈（含 devtools 传递依赖）无用；
+                                 且插件 realm 里它们是 4.38.0，与项目侧钉定的 4.23.1 版本偏斜。
+                                 selenium-api / selenium-support 刻意保留：serenity 公开 API 签名引用它们
+                                 （org.openqa.selenium.support.ui.*），排除会导致聚合阶段类加载失败。 -->
+                            <exclusion>
+                                <groupId>org.seleniumhq.selenium</groupId>
+                                <artifactId>selenium-java</artifactId>
+                            </exclusion>
+                            <exclusion>
+                                <groupId>org.seleniumhq.selenium</groupId>
+                                <artifactId>selenium-chrome-driver</artifactId>
+                            </exclusion>
+                            <exclusion>
+                                <groupId>org.seleniumhq.selenium</groupId>
+                                <artifactId>selenium-firefox-driver</artifactId>
+                            </exclusion>
+                            <exclusion>
+                                <groupId>org.seleniumhq.selenium</groupId>
+                                <artifactId>selenium-edge-driver</artifactId>
+                            </exclusion>
+                            <exclusion>
+                                <groupId>org.seleniumhq.selenium</groupId>
+                                <artifactId>selenium-ie-driver</artifactId>
+                            </exclusion>
+                        </exclusions>
+                    </dependency>
+                    <dependency>
+                        <groupId>io.cucumber</groupId>
+                        <artifactId>cucumber-core</artifactId>
+                        <version>${cucumber.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>io.cucumber</groupId>
+                        <artifactId>cucumber-java</artifactId>
+                        <version>${cucumber.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>io.cucumber</groupId>
+                        <artifactId>datatable</artifactId>
+                        <version>${cucumber.version}</version>
                     </dependency>
                 </dependencies>
                 <executions>
@@ -402,10 +513,6 @@
                                 <cucumber.execution.parallel.enabled>true</cucumber.execution.parallel.enabled>
                                 <cucumber.execution.parallel.config.fixed.parallelism>${parallelism}</cucumber.execution.parallel.config.fixed.parallelism>
                                 <cucumber.execution.parallel.config.fixed.max-pool-size>${maxPoolSize}</cucumber.execution.parallel.config.fixed.max-pool-size>
-                                <!-- JUnit5 用例内并行（与 Cucumber 引擎并行互补，仅影响纯 JUnit 测试） -->
-                                <junit.jupiter.execution.parallel.enabled>true</junit.jupiter.execution.parallel.enabled>
-                                <junit.jupiter.execution.parallel.config.strategy>dynamic</junit.jupiter.execution.parallel.config.strategy>
-                                <junit.jupiter.execution.parallel.config.dynamic.factor>2</junit.jupiter.execution.parallel.config.dynamic.factor>
                             </systemPropertyVariables>
                         </configuration>
                     </plugin>

@@ -5,15 +5,15 @@ import com.hsbc.cmb.hk.dbb.automation.framework.core.context.TestContextHolder;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.PlaywrightManager;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Page;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -42,7 +42,7 @@ import static org.mockito.Mockito.when;
 public class PlaywrightContextManagerNewPageClassificationTest {
 
     /** 判定与日志为纯静态能力，但归属清单读用例级 PAGE_KEY，故本用例结束须复位，避免污染其它测试。 */
-    @AfterEach
+    @After
     public void clearRegisteredPage() {
         TestContextHolder.get().remove(PlaywrightManager.PAGE_KEY);
     }
@@ -75,9 +75,9 @@ public class PlaywrightContextManagerNewPageClassificationTest {
         PlaywrightContextManager.NewPageEvent event =
                 PlaywrightContextManager.classifyNewPageEvent(ctx, p, true);
 
-        assertTrue(event.frameworkManaged, "createPage() 执行期间触发 ⇒ 应判为框架受管页");
-        assertEquals(1, event.pageCount, "新 Context 首个受管页 ⇒ 页数应为 1");
-        assertTrue(event.aboutBlank, "尚未 navigate ⇒ about:blank");
+        assertTrue("createPage() 执行期间触发 ⇒ 应判为框架受管页", event.frameworkManaged);
+        assertEquals("新 Context 首个受管页 ⇒ 页数应为 1", 1, event.pageCount);
+        assertTrue("尚未 navigate ⇒ about:blank", event.aboutBlank);
     }
 
     @Test
@@ -89,9 +89,9 @@ public class PlaywrightContextManagerNewPageClassificationTest {
         PlaywrightContextManager.NewPageEvent event =
                 PlaywrightContextManager.classifyNewPageEvent(ctx, second, false);
 
-        assertFalse(event.frameworkManaged, "非 createPage() 触发 ⇒ 应判为额外页（弹窗 / 泄漏）");
-        assertEquals(2, event.pageCount, "同一 Context 已存在受管页 ⇒ 页数应为 2");
-        assertTrue(event.aboutBlank, "额外页同样可能仍处于 about:blank（尚未导航）");
+        assertFalse("非 createPage() 触发 ⇒ 应判为额外页（弹窗 / 泄漏）", event.frameworkManaged);
+        assertEquals("同一 Context 已存在受管页 ⇒ 页数应为 2", 2, event.pageCount);
+        assertTrue("额外页同样可能仍处于 about:blank（尚未导航）", event.aboutBlank);
     }
 
     @Test
@@ -104,13 +104,10 @@ public class PlaywrightContextManagerNewPageClassificationTest {
 
         String captured = captureLog(ctx, second, event);
 
-        assertTrue(captured.contains("INFO [multi-page] Extra page (not framework-managed)"),
-                "额外页应恒记 INFO 并明确标注非框架受管：" + captured);
-        assertTrue(captured.contains("aboutBlank=true"), "应输出 aboutBlank 标记供现场判定：" + captured);
-        assertTrue(captured.contains("WARN [multi-page] Context=#") && captured.contains("now holds 2 pages (expected 1 managed)"),
-                "页数 >1 应追加 WARN 与页数：" + captured);
-        assertTrue(captured.contains("[extra] (new) about:blank"),
-                "未登记受管页时两页均 [extra]，且新页标 (new)：" + captured);
+        assertTrue("额外页应恒记 INFO 并明确标注非框架受管：" + captured, captured.contains("INFO [multi-page] Extra page (not framework-managed)"));
+        assertTrue("应输出 aboutBlank 标记供现场判定：" + captured, captured.contains("aboutBlank=true"));
+        assertTrue("页数 >1 应追加 WARN 与页数：" + captured, captured.contains("WARN [multi-page] Context=#") && captured.contains("now holds 2 pages (expected 1 managed)"));
+        assertTrue("未登记受管页时两页均 [extra]，且新页标 (new)：" + captured, captured.contains("[extra] (new) about:blank"));
     }
 
     @Test
@@ -124,10 +121,8 @@ public class PlaywrightContextManagerNewPageClassificationTest {
 
         String captured = captureLog(ctx, extra, event);
 
-        assertTrue(captured.contains("[managed] https://app.local/home"),
-                "用例级 PAGE_KEY 登记的页应标 [managed]：" + captured);
-        assertTrue(captured.contains("[extra] (new) about:blank"),
-                "新出现的额外页应标 [extra] (new)：" + captured);
+        assertTrue("用例级 PAGE_KEY 登记的页应标 [managed]：" + captured, captured.contains("[managed] https://app.local/home"));
+        assertTrue("新出现的额外页应标 [extra] (new)：" + captured, captured.contains("[extra] (new) about:blank"));
     }
 
     @Test
@@ -139,10 +134,8 @@ public class PlaywrightContextManagerNewPageClassificationTest {
 
         String captured = captureLog(ctx, only, event);
 
-        assertTrue(captured.contains("INFO [multi-page] Extra page (not framework-managed)"),
-                "额外页仍应记 INFO：" + captured);
-        assertFalse(captured.contains("now holds"),
-                "页数=1 不构成「同 Context 多页」，不应触发 WARN：" + captured);
+        assertTrue("额外页仍应记 INFO：" + captured, captured.contains("INFO [multi-page] Extra page (not framework-managed)"));
+        assertFalse("页数=1 不构成「同 Context 多页」，不应触发 WARN：" + captured, captured.contains("now holds"));
     }
 
     @Test
@@ -154,7 +147,7 @@ public class PlaywrightContextManagerNewPageClassificationTest {
         PlaywrightContextManager.NewPageEvent event =
                 PlaywrightContextManager.classifyNewPageEvent(ctx, p, false);
 
-        assertEquals(0, event.pageCount, "Context 已失效时页数应降级为 0（不抛异常），保证收尾期日志不反噬");
+        assertEquals("Context 已失效时页数应降级为 0（不抛异常），保证收尾期日志不反噬", 0, event.pageCount);
         assertEquals("about:blank", event.url);
     }
 }

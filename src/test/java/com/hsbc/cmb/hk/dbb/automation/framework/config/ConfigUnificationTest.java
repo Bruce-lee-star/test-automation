@@ -6,7 +6,7 @@ import com.hsbc.cmb.hk.dbb.automation.framework.common.config.ConfigKeys;
 import com.hsbc.cmb.hk.dbb.automation.framework.common.config.MonitorConfig;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.config.WebFrameworkConfig;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -15,11 +15,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * WEB-P1-7「配置体系收敛」验收固化：
@@ -46,19 +46,18 @@ public class ConfigUnificationTest {
     public void noSameNamedFrameworkConfigClass() {
         assertNotEquals("WEB-P1-7 验收①：两侧配置类名不得相同",
                 WebFrameworkConfig.class.getName(), ApiFrameworkConfig.class.getName());
-        assertFalse(
-                WebFrameworkConfig.class.getSimpleName().equals(ApiFrameworkConfig.class.getSimpleName()), "WEB-P1-7 验收①：简单类名不得相同");
+        assertFalse("WEB-P1-7 验收①：简单类名不得相同", WebFrameworkConfig.class.getSimpleName().equals(ApiFrameworkConfig.class.getSimpleName()));
     }
 
     @Test
     public void webConfigKeysCarryTriples() {
-        assertTrue( WebFrameworkConfig.values().length > 0, "Web 侧配置项不应为空");
+        assertTrue("Web 侧配置项不应为空", WebFrameworkConfig.values().length > 0);
         for (WebFrameworkConfig c : WebFrameworkConfig.values()) {
             ConfigKey k = c.configKey();
-            assertNotNull( k, "configKey 不得为 null：" + c.name());
-            assertFalse( k.key().isBlank(), "key 不得为空：" + c.name());
-            assertNotNull( k.defaultValue(), "defaultValue 不得为 null：" + c.name());
-            assertFalse( k.description().isBlank(), "description 不得为空：" + c.name());
+            assertNotNull("configKey 不得为 null：" + c.name(), k);
+            assertFalse("key 不得为空：" + c.name(), k.key().isBlank());
+            assertNotNull("defaultValue 不得为 null：" + c.name(), k.defaultValue());
+            assertFalse("description 不得为空：" + c.name(), k.description().isBlank());
         }
     }
 
@@ -71,11 +70,11 @@ public class ConfigUnificationTest {
                 keys.add((ConfigKey) f.get(null));
             }
         }
-        assertFalse( keys.isEmpty(), "API 侧应声明 ConfigKey 三元组常量");
+        assertFalse("API 侧应声明 ConfigKey 三元组常量", keys.isEmpty());
         for (ConfigKey k : keys) {
-            assertFalse( k.key().isBlank(), "key 不得为空：" + k);
-            assertNotNull( k.defaultValue(), "defaultValue 不得为 null：" + k.key());
-            assertFalse( k.description().isBlank(), "description 不得为空：" + k.key());
+            assertFalse("key 不得为空：" + k, k.key().isBlank());
+            assertNotNull("defaultValue 不得为 null：" + k.key(), k.defaultValue());
+            assertFalse("description 不得为空：" + k.key(), k.description().isBlank());
         }
     }
 
@@ -104,8 +103,7 @@ public class ConfigUnificationTest {
         }
 
         // 非空性断言：唯一性校验若「采集到空集合」会静默通过——那是最危险的失败模式，故先锁死采集规模
-        assertTrue(owners.size() > 50,
-                "应采集到全部 Web/API 配置键（实际仅 " + owners.size() + " 个）：采集失效会让本校验静默通过");
+        assertTrue("应采集到全部 Web/API 配置键（实际仅 " + owners.size() + " 个）：采集失效会让本校验静默通过", owners.size() > 50);
 
         List<String> duplicates = new ArrayList<>();
         for (Map.Entry<String, List<String>> e : owners.entrySet()) {
@@ -114,9 +112,8 @@ public class ConfigUnificationTest {
             }
         }
 
-        assertTrue(duplicates.isEmpty(),
-                "配置键必须全局唯一（G-5：跨枚举/枚举内重复键会被静默吞掉——同一键出现两个默认值时，"
-                        + "实际生效值取决于读取路径，属难以定位的配置缺陷）：\n" + String.join("\n", duplicates));
+        assertTrue("配置键必须全局唯一（G-5：跨枚举/枚举内重复键会被静默吞掉——同一键出现两个默认值时，"
+                        + "实际生效值取决于读取路径，属难以定位的配置缺陷）：\n" + String.join("\n", duplicates), duplicates.isEmpty());
     }
 
     /**
@@ -170,9 +167,8 @@ public class ConfigUnificationTest {
             }
         }
 
-        assertTrue(problems.isEmpty(),
-                "门面必须逐字委托注册表（不得重新持有本地定义；否则同一键再次出现两处定义）：\n"
-                        + String.join("\n", problems));
+        assertTrue("门面必须逐字委托注册表（不得重新持有本地定义；否则同一键再次出现两处定义）：\n"
+                        + String.join("\n", problems), problems.isEmpty());
     }
 
     /** 按名查找注册表条目；找不到则记入 problems 并返回 null。 */

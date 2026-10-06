@@ -1,14 +1,14 @@
 package com.hsbc.cmb.hk.dbb.automation.framework.web.page.scan;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Java↔JS「拾取模式串」契约测试（固化评审 F-06 修复）。
@@ -34,7 +34,7 @@ public class RolePickerModeContractTest {
 
     private static String readScript(String resource) throws Exception {
         try (InputStream in = RolePickerModeContractTest.class.getClassLoader().getResourceAsStream(resource)) {
-            assertNotNull(in, "classpath 缺少浏览器脚本资源: " + resource);
+            assertNotNull("classpath 缺少浏览器脚本资源: " + resource, in);
             return new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }
     }
@@ -56,9 +56,8 @@ public class RolePickerModeContractTest {
                 RolePickerConstants.MODE_SCAN_PAGE,
                 RolePickerConstants.MODE_SCAN_REGION);
         for (String mode : modes) {
-            assertTrue(combined.contains("'" + mode + "'") || combined.contains("\"" + mode + "\""),
-                    "模式串 '" + mode + "' 未在浏览器脚本中原样出现 → Java 下发的 __roleMode 与 JS 比对值错位，"
-                            + "该模式判定将恒不成立且静默失效");
+            assertTrue("模式串 '" + mode + "' 未在浏览器脚本中原样出现 → Java 下发的 __roleMode 与 JS 比对值错位，"
+                            + "该模式判定将恒不成立且静默失效", combined.contains("'" + mode + "'") || combined.contains("\"" + mode + "\""));
         }
     }
 
@@ -67,9 +66,7 @@ public class RolePickerModeContractTest {
      */
     @Test
     public void scanModesUseCamelCaseContractValues() {
-        assertEquals("scanPage", RolePickerConstants.MODE_SCAN_PAGE,
-                "MODE_SCAN_PAGE 必须与 panel-core-a.js / picker-core-b2.js 的 'scanPage' 一致");
-        assertEquals("scanRegion", RolePickerConstants.MODE_SCAN_REGION,
-                "MODE_SCAN_REGION 必须与 panel-core-a.js / picker-core-b2.js 的 'scanRegion' 一致");
+        assertEquals("MODE_SCAN_PAGE 必须与 panel-core-a.js / picker-core-b2.js 的 'scanPage' 一致", "scanPage", RolePickerConstants.MODE_SCAN_PAGE);
+        assertEquals("MODE_SCAN_REGION 必须与 panel-core-a.js / picker-core-b2.js 的 'scanRegion' 一致", "scanRegion", RolePickerConstants.MODE_SCAN_REGION);
     }
 }

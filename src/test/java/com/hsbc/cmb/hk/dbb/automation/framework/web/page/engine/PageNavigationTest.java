@@ -6,10 +6,11 @@ import com.hsbc.cmb.hk.dbb.automation.framework.web.exceptions.NavigationExcepti
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.config.PlaywrightConfigManager;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.TimeoutError;
-import org.junit.jupiter.api.Test;
+import com.microsoft.playwright.options.LoadState;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -85,25 +86,32 @@ public class PageNavigationTest {
 
     @Test
     public void refresh_resetsFrameContext() {
-        BasePage bp = mockBp(config("load", 1));
+        // 预算不再是 1ms：历史类导航已改「两步走」（COMMIT 提交 → 等配置的加载状态），
+        // 两步共享同一个 navigationTimeout，1ms 会被整数取整成 0 而直接判「提交阶段预算耗尽」。
+        BasePage bp = mockBp(config("load", 30000));
         PageNavigation.refresh(bp);
-        verify(bp.getPage()).reload();
+        verify(bp.getPage()).reload(any(Page.ReloadOptions.class));
+        // 第二步必须用【配置的】加载状态（原先直调 reload() 走 Playwright 默认 load，
+        // 在不触发 load 事件的门户上稳定超时 —— 这正是改两步走的原因，故断言它）。
+        verify(bp.getPage()).waitForLoadState(eq(LoadState.LOAD), any(Page.WaitForLoadStateOptions.class));
         verify(bp).resetFrameContextAfterNavigation();
     }
 
     @Test
     public void back_resetsFrameContext() {
-        BasePage bp = mockBp(config("load", 1));
+        BasePage bp = mockBp(config("load", 30000));
         PageNavigation.back(bp);
-        verify(bp.getPage()).goBack();
+        verify(bp.getPage()).goBack(any(Page.GoBackOptions.class));
+        verify(bp.getPage()).waitForLoadState(eq(LoadState.LOAD), any(Page.WaitForLoadStateOptions.class));
         verify(bp).resetFrameContextAfterNavigation();
     }
 
     @Test
     public void forward_resetsFrameContext() {
-        BasePage bp = mockBp(config("load", 1));
+        BasePage bp = mockBp(config("load", 30000));
         PageNavigation.forward(bp);
-        verify(bp.getPage()).goForward();
+        verify(bp.getPage()).goForward(any(Page.GoForwardOptions.class));
+        verify(bp.getPage()).waitForLoadState(eq(LoadState.LOAD), any(Page.WaitForLoadStateOptions.class));
         verify(bp).resetFrameContextAfterNavigation();
     }
 
