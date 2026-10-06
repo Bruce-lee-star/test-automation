@@ -16,10 +16,9 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Locale;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+// 断言不走 JUnit5 静态导入：本 Glue 在 JUnit4（CucumberWithSerenity）运行器下执行，而 failsafe
+// 明确 <classpathDependencyExclude>org.junit.jupiter:*</classpathDependencyExclude> —— IT 运行期
+// classpath 无 org.junit.jupiter.api.Assertions（实测 NoClassDefFoundError），统一用文件内本地断言助手。
 
 /**
  * Route 边角用例 Glue —— 以 login_dbb.feature 为 sample，从不同角度验证 Route V2 框架健壮性。
@@ -40,6 +39,32 @@ import static org.junit.jupiter.api.Assertions.fail;
  */
 @AutoBrowser(verbose = true)
 public class RouteEdgeCaseGlue {
+
+    // ── 断言助手（本地实现，参数序与 JUnit5 一致：message 在最后，故调用点无需改动）──
+    // 为什么不用 org.junit.jupiter：IT 运行器是 JUnit4，且 failsafe 排除了 org.junit.jupiter:*，
+    // 运行期该 API 不在 classpath（NoClassDefFoundError）。JUnit4 的 Assert 参数序是 message 在前，
+    // 直接换会改所有调用点，故此处自实现同名同参序断言，失败即抛 AssertionError。
+    private static void assertTrue(boolean condition, String message) {
+        if (!condition) {
+            throw new AssertionError(message);
+        }
+    }
+
+    private static void assertFalse(boolean condition, String message) {
+        if (condition) {
+            throw new AssertionError(message);
+        }
+    }
+
+    private static void assertNotNull(Object value, String message) {
+        if (value == null) {
+            throw new AssertionError(message);
+        }
+    }
+
+    private static void fail(String message) {
+        throw new AssertionError(message);
+    }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RouteEdgeCaseGlue.class);
 

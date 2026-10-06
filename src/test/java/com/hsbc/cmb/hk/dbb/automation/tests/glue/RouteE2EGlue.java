@@ -35,8 +35,14 @@ import java.util.regex.Pattern;
  * 同 pattern 会合并，故本类刻意只替换 {@code enablePaymentPP}（保留 {@code enableAdminTools=Y}），
  * 使登录自身断言与本次 mock 语义同时成立。</p>
  *
- * <p><b>判定依据</b>：一律以 <b>CAPTURE 采集到的真实请求/响应</b> 为准（浏览器实际收到了什么），
- * 而不是框架内部状态。每个 scenario 收尾另做泄漏体检（未确证撤销 = 0、isClean）。</p>
+ * <p><b>判定依据</b>：主体是武装阶段注册的 <b>框架 MONITOR 断言</b>（expectStatus / expectJsonPath /
+ * expectBodyContains / expectBodyRegex，由框架在登录期按事件驱动结算，失败经 StepFailureAggregator 冒泡）；
+ * CAPTURE 采集是<b>异步落库</b>的附加证据，故其断言不作门禁（-Droute.e2e.strictCapture=true 可恢复）。
+ * 每个 scenario 收尾另做泄漏体检（未确证撤销 = 0、isClean）。</p>
+ *
+ * <p><b>报告由框架产出，业务层零报告代码</b>：路由命中证据（DELAY / MODIFY / MOCK / MONITOR）由内核在
+ * "所有能力必经"的观测点经 SPI 上报（{@code common.route.RouteEvidenceSink}），由 pw-web-ui 的
+ * Serenity 实现入队、并在场景收尾的主线程钩子里 flush 进报告。本类只负责注册规则与断言。</p>
  */
 @AutoBrowser(verbose = true)
 public class RouteE2EGlue {
@@ -193,6 +199,8 @@ public class RouteE2EGlue {
             LOGGER.warn("[RouteE2E] 采集类断言未通过（非门禁；判定以框架断言为准）: {}",
                     captureAssertion.getMessage());
         }
+        // 注意：本类【不】写任何报告 API —— 路由命中证据由框架内核经 SPI 上报、由 pw-web-ui 的
+        // Serenity 实现在场景收尾（主线程）flush 进报告。业务/测试层只负责注册规则与断言。
         assertNoRouteStateLeak(page);
     }
 
