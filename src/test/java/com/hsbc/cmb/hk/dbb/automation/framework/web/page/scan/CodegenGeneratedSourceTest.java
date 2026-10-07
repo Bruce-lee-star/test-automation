@@ -104,17 +104,22 @@ public class CodegenGeneratedSourceTest {
      */
     @Test
     public void assertionClassWrapsAllAssertionsOfOnePackageIntoOneMethod() {
-        String src = RoleElementAssertionGenerator.renderClass("com.demo.pages.login", "LoginPageAssertions",
-                "com.demo.pages.login.LoginPage",
+        String src = RoleElementAssertionGenerator.renderClass("com.demo.pages.login", "LoginPage",
                 List.of(List.of(
                         RoleElementAssertionGenerator.assertStatement("loginPage", "userName"),
                         RoleElementAssertionGenerator.assertStatement("loginPage", "password"))));
 
         assertTrue("断言类必须在独立子包（与 .steps 对称），实际：" + src,
                 src.contains("package com.demo.pages.login.assertions;"));
+        assertTrue("类名按步骤类同一规则派生（LoginPage → LoginAssertions），实际：" + src,
+                src.contains("public class LoginAssertions {"));
         assertTrue("必须 import 页面类", src.contains("import com.demo.pages.login.LoginPage;"));
+        assertTrue("必须带 Serenity @Step import", src.contains("import net.serenitybdd.annotations.Step;"));
         assertTrue("必须带 Hamcrest assertThat", src.contains("import static org.hamcrest.MatcherAssert.assertThat;"));
         assertTrue("必须带 equalTo", src.contains("import static org.hamcrest.Matchers.equalTo;"));
+        // 可编译的关键：页面实例必须有来源（与步骤类同款 PageObjectFactory 字段），否则 loginPage 未声明
+        assertTrue("必须像步骤类一样通过 PageObjectFactory 获取页面实例，实际：" + src,
+                src.contains("private final LoginPage loginPage = PageObjectFactory.getPage(LoginPage.class);"));
         assertTrue("一次封装 = 一个方法", src.contains("public void assertStep1()"));
         assertFalse("不得生成第二个方法（本次封装只有一个）", src.contains("public void assertStep2()"));
         assertTrue("方法体内必须是全部断言", src.contains("assertThat(loginPage.userName.isVisible(), equalTo(true));"));
@@ -122,6 +127,17 @@ public class CodegenGeneratedSourceTest {
         assertTrue("@Step 只保留裸注解", src.contains("    @Step\n"));
         assertFalse("不得带描述文案（用户要求只要断言），实际：" + src, src.contains("@Step(\""));
         assertFalse("断言类不得生成操作调用", src.contains(".click()") || src.contains(".fill("));
+    }
+
+    @Test
+    public void assertionClassNameDerivationMatchesStepsRule() {
+        // 与步骤类同一规则（RoleElementStepGenerator#stepClassNameOf：LoginPage → LoginSteps），
+        // 故断言类为 LoginPage → LoginAssertions（不是 LoginPageAssertions），保持两侧命名对称。
+        assertEquals("LoginAssertions", RoleElementAssertionGenerator.assertionsClassNameOf("LoginPage"));
+        assertEquals("SetupSecondPwdAssertions",
+                RoleElementAssertionGenerator.assertionsClassNameOf("SetupSecondPwdPage"));
+        assertEquals("NonPageShapeAssertions", RoleElementAssertionGenerator.assertionsClassNameOf("NonPageShape"));
+        assertEquals("loginPage", RoleElementAssertionGenerator.pageVarOf("LoginPage"));
     }
 
     // ───────────────────── ④ 标记块增量合并 ─────────────────────
