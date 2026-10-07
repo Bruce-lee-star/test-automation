@@ -2,6 +2,8 @@ package com.hsbc.cmb.hk.dbb.automation.framework.web.page.scan;
 
 import org.junit.Test;
 
+import java.util.List;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -86,6 +88,40 @@ public class CodegenGeneratedSourceTest {
         // 单表达式保持既有产物形状：不得因本次修复产生大范围产物 churn
         assertEquals("page.okBtn.click()", RoleElementStepGenerator.lambdaBody("page.okBtn.click()"));
         assertEquals("", RoleElementStepGenerator.lambdaBody(null));
+    }
+
+    // ───────────────────── ⑤ 断言类产物（新增断言 Tab） ─────────────────────
+
+    @Test
+    public void visibleAssertionStatementHasExpectedShape() {
+        assertEquals("assertThat(loginPage.userName.isVisible(), equalTo(true))",
+                RoleElementAssertionGenerator.assertStatement("loginPage", "userName"));
+    }
+
+    /**
+     * 断言类产物形状：独立类、落在 {@code .assertions} 子包、一次封装一个方法且方法体内是全部断言、
+     * <b>注解不带描述文案</b>（用户要求"只要断言"）、Hamcrest 两个静态 import 齐备。
+     */
+    @Test
+    public void assertionClassWrapsAllAssertionsOfOnePackageIntoOneMethod() {
+        String src = RoleElementAssertionGenerator.renderClass("com.demo.pages.login", "LoginPageAssertions",
+                "com.demo.pages.login.LoginPage",
+                List.of(List.of(
+                        RoleElementAssertionGenerator.assertStatement("loginPage", "userName"),
+                        RoleElementAssertionGenerator.assertStatement("loginPage", "password"))));
+
+        assertTrue("断言类必须在独立子包（与 .steps 对称），实际：" + src,
+                src.contains("package com.demo.pages.login.assertions;"));
+        assertTrue("必须 import 页面类", src.contains("import com.demo.pages.login.LoginPage;"));
+        assertTrue("必须带 Hamcrest assertThat", src.contains("import static org.hamcrest.MatcherAssert.assertThat;"));
+        assertTrue("必须带 equalTo", src.contains("import static org.hamcrest.Matchers.equalTo;"));
+        assertTrue("一次封装 = 一个方法", src.contains("public void assertStep1()"));
+        assertFalse("不得生成第二个方法（本次封装只有一个）", src.contains("public void assertStep2()"));
+        assertTrue("方法体内必须是全部断言", src.contains("assertThat(loginPage.userName.isVisible(), equalTo(true));"));
+        assertTrue("方法体内必须是全部断言", src.contains("assertThat(loginPage.password.isVisible(), equalTo(true));"));
+        assertTrue("@Step 只保留裸注解", src.contains("    @Step\n"));
+        assertFalse("不得带描述文案（用户要求只要断言），实际：" + src, src.contains("@Step(\""));
+        assertFalse("断言类不得生成操作调用", src.contains(".click()") || src.contains(".fill("));
     }
 
     // ───────────────────── ④ 标记块增量合并 ─────────────────────
