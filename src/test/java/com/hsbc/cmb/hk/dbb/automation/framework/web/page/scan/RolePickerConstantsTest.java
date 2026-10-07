@@ -21,25 +21,24 @@ public class RolePickerConstantsTest {
      *
      * <p>原断言写死「= 枚举名小写」，等于把评审 F-06 的错位（Java {@code scan_page} vs JS
      * {@code scanPage}）当成契约固化下来，使「扫描/键盘拾取静默失效」长期保持绿灯。
-     * 现按浏览侧真实契约断言；与 JS 脚本字面量的一致性由 {@link RolePickerModeContractTest} 实读脚本守护。</p>
+     * 现按浏览侧真实契约断言（全页扫描 / 区域扫描已整体移除，仅余 idle 与 manual 两种模式）。</p>
      */
     @Test
     public void modeConstants_followBrowserSideContractValues() {
         assertEquals("idle", RolePickerConstants.MODE_IDLE);
         assertEquals("manual", RolePickerConstants.MODE_MANUAL);
-        assertEquals("scanPage", RolePickerConstants.MODE_SCAN_PAGE);
-        assertEquals("scanRegion", RolePickerConstants.MODE_SCAN_REGION);
+        // 全页扫描 / 区域扫描已整体移除：MODE_SCAN_PAGE、MODE_SCAN_REGION 与 CMD_SCAN、CMD_SCAN_REGION、
+        // CMD_REGION_SCANNED 常量随之删除，故此处只断言残留的两种模式。
     }
 
     @Test
     public void commandNames_areDistinct() {
         // Set.of 遇到重复元素会抛 IllegalArgumentException，故其自身即为唯一性断言
         Set<String> cmds = Set.of(
-                RolePickerConstants.CMD_START, RolePickerConstants.CMD_SCAN, RolePickerConstants.CMD_SCAN_REGION,
-                RolePickerConstants.CMD_REGION_SCANNED, RolePickerConstants.CMD_PACKAGE,
+                RolePickerConstants.CMD_START, RolePickerConstants.CMD_PACKAGE,
                 RolePickerConstants.CMD_REFRESH_CODE, RolePickerConstants.CMD_STOP,
                 RolePickerConstants.CMD_ABORT, RolePickerConstants.CMD_DONE);
-        assertEquals(9, cmds.size());
+        assertEquals(6, cmds.size());
     }
 
     @Test
