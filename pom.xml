@@ -269,6 +269,21 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- surefire 只跑单测：把 IT 运行器排除掉，避免与 failsafe 重复执行同一套件。
+                 实测（2026-10-09）：命令行带 -Dtest=<某 IT> 时，同一套件会被 surefire 与 failsafe
+                 各跑一遍（耗时翻倍，且框架监听器会把"第二个插件的 suite"误报成 RERUN STARTING）。
+                 注意：-Dtest 会【覆盖】includes/excludes，故这只是防呆；IT 一律用 -Dit.test= 指定。 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven-surefire-plugin.version}</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/*IT.java</exclude>
+                        <exclude>**/CucumberTestRunner*.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>

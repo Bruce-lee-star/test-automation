@@ -12,8 +12,13 @@ Feature: Route V2 能力真实 E2E（DBB SIT，真浏览器）
   每个 scenario 收尾都做路由状态泄漏体检（未确证撤销 = 0、isClean）。
 
   # 运行：
-  #   mvn verify -Dtest=CucumberRouteE2ERunnerIT -Dtags="@route-e2e"
+  #   整组：mvn clean verify -Dit.test=CucumberTestRunnerIT -Dtags="@route-e2e"
+  #   单个：mvn clean verify -Dit.test=CucumberTestRunnerIT -Dtags="@route-e2e-mock"
+  #         （每个 scenario 上方有各自的 per-case tag：@route-e2e-capture / -monitor / -mock /
+  #           -mock-when / -modify / -delay / -priority；文件级 @route-e2e 仍选中整组）
+  #   只跑 E2E 并跳过全量单测：追加 -Dtest=NoSuchUnitTest -DfailIfNoTests=false
 
+  @route-e2e-capture
   Scenario: route v2 e2e - 登录期真实接口采集（CAPTURE）
     Given I arm route v2 e2e case "login-capture"
     And logon DBB "O63_SIT1" environment as user "WP7UAT2_2"
@@ -23,36 +28,42 @@ Feature: Route V2 能力真实 E2E（DBB SIT，真浏览器）
     And route v2 e2e case "login-capture" assertions pass
 
 
+  @route-e2e-monitor
   Scenario: route v2 e2e - 登录期 MONITOR 断言真实接口
     Given I arm route v2 e2e case "login-monitor"
     And logon DBB "O63_SIT1" environment as user "WP7UAT2_2"
     Then route v2 e2e case "login-monitor" assertions pass
 
 
+  @route-e2e-mock
   Scenario: route v2 e2e - 登录期 MOCK 静态体（真实夹具 + 字段替换 + 自定义头）
     Given I arm route v2 e2e case "login-mock"
     And logon DBB "O63_SIT1" environment as user "WP7UAT2_2"
     Then route v2 e2e case "login-mock" assertions pass
 
 
+  @route-e2e-mock-when
   Scenario: route v2 e2e - 登录期 MOCK 条件替换 when/then（命中 + 不命中两分支）
     Given I arm route v2 e2e case "login-mock-when"
     And logon DBB "O63_SIT1" environment as user "WP7UAT2_2"
     Then route v2 e2e case "login-mock-when" assertions pass
 
 
+  @route-e2e-modify
   Scenario: route v2 e2e - 登录期 MODIFY 改写请求（自定义请求头到达服务端）
     Given I arm route v2 e2e case "login-modify"
     And logon DBB "O63_SIT1" environment as user "WP7UAT2_2"
     Then route v2 e2e case "login-modify" assertions pass
 
 
+  @route-e2e-delay
   Scenario: route v2 e2e - 登录期 DELAY 延时（链路完整 + 规则命中）
     Given I arm route v2 e2e case "login-delay"
     And logon DBB "O63_SIT1" environment as user "WP7UAT2_2"
     Then route v2 e2e case "login-delay" assertions pass
 
 
+  @route-e2e-priority
   Scenario: route v2 e2e - 登录期能力并存与执行顺序（MODIFY + MOCK + MONITOR 同 pattern）
     Given I arm route v2 e2e case "login-priority"
     And logon DBB "O63_SIT1" environment as user "WP7UAT2_2"
