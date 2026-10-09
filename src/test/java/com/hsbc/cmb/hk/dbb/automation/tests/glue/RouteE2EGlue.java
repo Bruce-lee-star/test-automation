@@ -1,11 +1,13 @@
 package com.hsbc.cmb.hk.dbb.automation.tests.glue;
 
+import com.hsbc.cmb.hk.dbb.automation.framework.common.route.CapturedApiCallView;
 import com.hsbc.cmb.hk.dbb.automation.framework.route.RouteEngine;
 import com.hsbc.cmb.hk.dbb.automation.framework.route.RouteRuntime;
 import com.hsbc.cmb.hk.dbb.automation.framework.route.dsl.RouteDsl;
 import com.hsbc.cmb.hk.dbb.automation.framework.route.monitor.CapturedApiCall;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.annotations.AutoBrowser;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.page.factory.PageObjectFactory;
+import com.hsbc.cmb.hk.dbb.automation.framework.web.route.core.ApiCaptureContext;
 import com.hsbc.cmb.hk.dbb.automation.tests.pages.LoginPage;
 import com.microsoft.playwright.Page;
 import io.cucumber.java.en.Given;
@@ -15,7 +17,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 // 断言不走 JUnit5 静态导入：本 Runner 为 JUnit4（CucumberWithSerenity），IT 运行期 classpath 上无
 // org.junit.jupiter.api.Assertions，统一改用文件内本地断言助手（见 helpers 区的「断言助手」段）。
@@ -202,6 +207,55 @@ public class RouteE2EGlue {
         // 注意：本类【不】写任何报告 API —— 路由命中证据由框架内核经 SPI 上报、由 pw-web-ui 的
         // Serenity 实现在场景收尾（主线程）flush 进报告。业务/测试层只负责注册规则与断言。
         assertNoRouteStateLeak(page);
+    }
+
+    /**
+     * {@code ApiCaptureContext} 门面 E2E：走 pw-web-ui 业务门面读取<b>同一份</b>采集数据，并与
+     * pw-route 的 DTO 门面（{@code RouteDsl.peekCaptured}）交叉核对。
+     *
+     * <p>链路：{@code ApiCaptureContext.getCurrent()} → SPI {@code ApiCaptureQuery}
+     * （pw-route 的 {@code ApiCaptureQueryImpl}，静态块自注册）→ {@code RouteEngine} → per-context
+     * 采集 sink → {@code CaptureSink.toView} 只读视图。
+     *
+     * <p><b>为什么单列一步</b>：case 断言里的采集判定按既有约定<b>不作门禁</b>（异步落库，见类注释），
+     * 而门面契约必须能红 —— 本步是独立 Step，失败即场景失败。
+     *
+     * <p><b>为什么排在 case 断言之前</b>：此刻采集体必然还在，不依赖撤销/收尾时序。
+     */
+    @Then("the capture facade exposes the calls captured for case {string}")
+    public void assertCaptureFacade(String caseName) {
+        if (!caseName.equals(armedCase)) {
+            fail("armed case mismatch: expected " + armedCase + " but asserting " + caseName);
+        }
+        Page page = page();
+        assertFalse(page.isClosed(), "页面必须存活（门面读取依赖当前线程的 Context）");
+
+        ApiCaptureContext facade = ApiCaptureContext.getCurrent();
+        List<CapturedApiCallView> viaFacade = facade.getAllApiCalls();
+        assertTrue(!viaFacade.isEmpty(),
+                "ApiCaptureContext.getAllApiCalls() 必须能列出采集记录（为空 ⇒ 当前线程无 Context 或 SPI 未装配）");
+
+        List<CapturedApiCall> viaDsl = awaitCaptured();
+        assertTrue(!viaDsl.isEmpty(), "DTO 门面 peekCaptured 也必须非空，实际: " + summarize(viaDsl));
+
+        // 跨门面一致性：两者读同一 sink，URL 集合必须同源
+        Set<String> urlsViaFacade = viaFacade.stream().map(CapturedApiCallView::url)
+                .filter(Objects::nonNull).collect(Collectors.toSet());
+        Set<String> urlsViaDsl = viaDsl.stream().map(CapturedApiCall::url)
+                .filter(Objects::nonNull).collect(Collectors.toSet());
+        assertEquals(urlsViaDsl.size(), urlsViaFacade.size(),
+                "两门面 URL 集合必须同量（dsl=" + urlsViaDsl.size() + ", facade=" + urlsViaFacade.size() + "）");
+        assertTrue(urlsViaFacade.containsAll(urlsViaDsl), "DTO 门面看到的每条 URL 都必须能经业务门面看到");
+
+        // 单键查询：按 url / 按渠道 / 等待
+        String sample = urlsViaDsl.iterator().next();
+        assertTrue(!facade.getCallsByUrl(sample).isEmpty(), "getCallsByUrl(" + sample + ") 必须命中");
+        assertTrue(!facade.getCallsByChannel("MONITOR").isEmpty(),
+                "MONITOR 规则默认采集 ⇒ getCallsByChannel(\"MONITOR\") 必须非空");
+        assertNotNull(facade.waitForApi(view -> sample.equals(view.url()), 5_000L),
+                "waitForApi 对已存在的记录必须立即返回（不得超时）");
+        LOGGER.info("[RouteE2E] capture facade ok: {} 条（URL 集合与 DTO 门面一致，sample={}）",
+                viaFacade.size(), sample);
     }
 
     /** S1：登录期真实接口必须被采集到（请求 + 状态 + 响应体）。 */

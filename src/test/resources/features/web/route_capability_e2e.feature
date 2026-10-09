@@ -17,7 +17,10 @@ Feature: Route V2 能力真实 E2E（DBB SIT，真浏览器）
   Scenario: route v2 e2e - 登录期真实接口采集（CAPTURE）
     Given I arm route v2 e2e case "login-capture"
     And logon DBB "O63_SIT1" environment as user "WP7UAT2_2"
-    Then route v2 e2e case "login-capture" assertions pass
+    # ApiCaptureContext 业务门面（pw-web-ui）走同一份采集体：与 DTO 门面（peekCaptured）交叉核对。
+    # 排在 case 断言之前，避免依赖撤销/收尾时序；该步是独立 Step ⇒ 门面坏了会真红（采集类断言本身不作门禁）。
+    Then the capture facade exposes the calls captured for case "login-capture"
+    And route v2 e2e case "login-capture" assertions pass
 
 
   Scenario: route v2 e2e - 登录期 MONITOR 断言真实接口
