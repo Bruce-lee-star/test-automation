@@ -90,10 +90,10 @@ public class RouteE2EGlue {
         Page page = page();
         switch (caseName) {
             case "login-capture" -> RouteDsl.on(page)
-                    .api(PROFILE_LIST).monitor().capture().captureBody(true).done()
-                    .api(LEFT_MENU).monitor().capture().captureBody(true).done()
-                    .api(INSIGHT_RETRIEVE).monitor().capture().captureBody(true).done()
-                    .api(PINNED_ACCOUNT).monitor().capture().captureBody(true).done()
+                    .api(PROFILE_LIST).monitor().done()
+                    .api(LEFT_MENU).monitor().done()
+                    .api(INSIGHT_RETRIEVE).monitor().done()
+                    .api(PINNED_ACCOUNT).monitor().done()
                     .start();
             case "login-monitor" -> RouteDsl.on(page)
                     .api(AUTH_ASSERT).monitor().expectStatus(200).capture().captureBody(true).timeout(60).done()
@@ -117,7 +117,7 @@ public class RouteE2EGlue {
                     .done()
                     .api(LEFT_MENU).monitor()
                     .expectStatus(200).expectBodyRegex("\"enablePaymentPP\"\\s*:\\s*\"X\"")
-                    .capture().captureBody(true).done()
+                    .done()
                     .start();
             case "login-mock-when" -> RouteDsl.on(page)
                     .api(LEFT_MENU)
@@ -132,7 +132,7 @@ public class RouteE2EGlue {
                     .done()
                     .api(LEFT_MENU).monitor()
                     .expectStatus(200).expectBodyRegex("\"enablePaymentPP\"\\s*:\\s*\"Z\"")
-                    .capture().captureBody(true).done()
+                    .done()
                     .start();
             case "login-modify" -> RouteDsl.on(page)
                     // 只增不删：删 X-Requested-With 之类会让服务端改行为（非 AJAX 响应），会污染登录流程

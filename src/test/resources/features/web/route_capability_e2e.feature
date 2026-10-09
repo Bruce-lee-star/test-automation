@@ -5,7 +5,8 @@ Feature: Route V2 能力真实 E2E（DBB SIT，真浏览器）
   auth/assert、j_spring_security-check_v2、leftmenu/permissionLeftMenuConfig、profile/list、
   notifications/streams、insight/retrieve、pinned-account —— 而不是用脚本去"重打"接口。
 
-  本轮覆盖矩阵：S1 采集（capture/captureBody/captureBodyLimitBytes/record）
+  本轮覆盖矩阵：S1 采集（.monitor() 默认即采，含响应体；captureBodyLimitBytes 可调。
+  业务层不再写 .capture() / .captureBody(true)；需要关闭时用 .capture(false) / .captureBody(false)）
   · S2 MONITOR 正向断言（expectStatus/expectJsonPath/expectBodyContains/monitorTimeoutMs）
   · S4 MOCK 静态体（mockStatus/mockBody/mockContentType/mockHeaders/mockReplacements）。
   每个 scenario 收尾都做路由状态泄漏体检（未确证撤销 = 0、isClean）。
