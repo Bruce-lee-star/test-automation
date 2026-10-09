@@ -156,9 +156,12 @@ public class RouteE2EGlue {
                     .api(LEFT_MENU)
                     .modifyRequest().setRequestHeader(MODIFY_HEADER, "1").done()
                     .api(LEFT_MENU)
-                    .mock().status(200).contentType("application/json")
-                    .header(MOCK_HEADER, "pri")
-                    .mockBodyFromFile(LEFT_MENU_FIXTURE)
+                    // 与 login-mock 同款：取真实响应 + 只替换一格，而不是静态夹具整块替换 ——
+                    // leftmenu 承载首页组件渲染所需的全部 flag，整块替换会让首页组件不出现
+                    // （实测 Element not visible within 60 seconds: h3[aria-label="Recent activity"]）。
+                    .mock().interceptResponse()
+                    // 注意：intercept 与静态 status/body/headers 互斥（build 期 fail-fast），
+                    // 故此处不声明 mockHeader —— 自定义头下发由 login-mock（静态路径）覆盖。
                     .replaceField("$.enablePaymentPP", "PRI")
                     .done()
                     .api(LEFT_MENU).monitor()
@@ -379,8 +382,8 @@ public class RouteE2EGlue {
                 "MOCK 应先生效（enablePaymentPP=PRI），实际前 200 字符: " + preview(leftMenu.responseBody()));
         assertTrue(leftMenu.responseBody().contains("enableAdminTools"),
                 "MONITOR 断言（expectBodyContains enableAdminTools）在 mock 响应上成立 ⇒ MOCK 早于 MONITOR 执行");
-        assertTrue(headerContains(leftMenu, MOCK_HEADER, "pri"),
-                "MOCK 自定义头必须下发，实际=" + leftMenu.responseHeaders());
+        // 自定义头下发不在此断言：本 case 用 intercept（只改真实响应字段），而 intercept 与静态
+        // status/body/headers 互斥 ⇒ mockHeader 由 login-mock（静态路径）覆盖。
         LOGGER.info("[RouteE2E] login-priority ok: mock+monitor 并存生效");
     }
 
