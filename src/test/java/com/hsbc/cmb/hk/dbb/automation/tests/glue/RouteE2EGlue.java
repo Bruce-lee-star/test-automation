@@ -62,9 +62,6 @@ public class RouteE2EGlue {
     private static final String INSIGHT_RETRIEVE = "insight/retrieve";
     private static final String PINNED_ACCOUNT = "pinned-account";
 
-    /** 真实响应夹具（leftmenu 接口的真实返回，236 行 flag 集）。 */
-    private static final String LEFT_MENU_FIXTURE = "mocks/dbb/leftmenu-permissionLeftMenuConfig.json";
-
     /** MOCK 下发用的自定义响应头（用于验证 mockHeaders 真的到达浏览器）。 */
     private static final String MOCK_HEADER = "x-route-e2e";
 
@@ -126,9 +123,11 @@ public class RouteE2EGlue {
                     .start();
             case "login-mock-when" -> RouteDsl.on(page)
                     .api(LEFT_MENU)
-                    .mock().status(200).contentType("application/json")
-                    .mockBodyFromFile(LEFT_MENU_FIXTURE)
-                    // 命中分支：真实夹具里 enableAdminTools=Y ⇒ 应写入 enablePaymentPP=Z
+                    // 与 login-mock / login-priority 同款：取真实响应 + 条件替换，而不是静态夹具整块替换 ——
+                    // leftmenu 承载首页主面板渲染所需的全部 flag，整块替换会让主面板空白
+                    // （实测：Element not visible within 60 seconds: h3[aria-label="Recent activity"]）。
+                    .mock().interceptResponse()
+                    // 命中分支：真实响应里 enableAdminTools=Y ⇒ 应写入 enablePaymentPP=Z
                     .when("$.enableAdminTools", "EQUALS", "Y")
                     .thenSet("$.enablePaymentPP", "Z")
                     // 不命中分支：条件显然为假 ⇒ 该 thenSet 必须【不】生效
