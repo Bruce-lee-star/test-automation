@@ -15,6 +15,8 @@ import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.page.engine.BasePage;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.PlaywrightManager;
+import com.microsoft.playwright.Frame;
+import com.microsoft.playwright.Page;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -56,6 +58,11 @@ import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.sli
  *   <li><b>L-API</b>：{@code framework.web} 不得依赖 {@code framework.api}
  *       （ARCH-1 已将 {@code JsonUtils} 下沉 {@code common.utils}，web 改依赖 core 版，
  *       断开 web→api 唯一编译边，使 api 与 web 真正同级）。</li>
+ *   <li><b>L-WAIT</b>：业务代码（framework 包之外）不得直接调用原生
+ *       {@code Page.waitForFunction}/{@code Frame.waitForFunction}（§8.4 零容忍：DELAY 交付重入 main，
+ *       原生 waitForFunction 阻塞 main 致 DELAY 超时）；使用 DELAY 须改
+ *       {@code RouteDsl.waitForUiFunction}。框架内部仅 {@code framework.route.dsl}（RouteDsl）与
+ *       {@code framework.web.page.scan}（RoleElementPicker）豁免。</li>
  * </ul>
  */
 public class ArchitectureTest {
@@ -241,6 +248,41 @@ public class ArchitectureTest {
     }
 
     /**
+     * API 边界门禁（企业级，§8.4 零容忍，2026-10-12）：业务代码（framework 包之外）不得直接调用
+     * Playwright 原生 {@code Page.waitForFunction}/{@code Frame.waitForFunction}。
+     *
+     * <p>背景：DELAY 路由能力交付一律重入 main 拥有线程（{@code RouteDispatcher} 入队，由 main 业务线程
+     * {@code drainMainThreadActions} 串行执行）。原生 {@code waitForFunction} 会阻塞 main 业务线程，
+     * 使已入队 main 的 DELAY 交付无法 drain，延迟响应卡到 15s 超时（E2E run-b 实证）。使用 DELAY 的
+     * scenario 必须改用 {@code RouteDsl.waitForUiFunction(...)}（内部循环 drain + 短窗口 waitForFunction）。
+     * 框架并已由 {@code RecordingPageProxy} 提供运行期 guard（DELAY 武装时原生 waitForFunction 抛
+     * {@code BrowserException}），本规则为构建期双保险。</p>
+     *
+     * <p>边界：框架自身合法 seam（{@code RouteDsl.waitForUiFunction} 对真实 Page 调 waitForFunction）被
+     * {@code resideOutsideOfPackage("..framework..")} 自然排除，不在此规则范围；框架内部约束见
+     * {@link #frameworkCodeMustNotCallNativeWaitForFunction}。</p>
+     */
+    @Test
+    public void businessCodeMustNotCallNativeWaitForFunction() {
+        noClasses()
+                .that().resideOutsideOfPackage("..framework..")
+                .should().callMethodWhere(new DescribedPredicate<JavaMethodCall>(
+                        "call native Playwright Page/Frame.waitForFunction") {
+                    @Override
+                    public boolean test(JavaMethodCall call) {
+                        if (!"waitForFunction".equals(call.getTarget().getName())) {
+                            return false;
+                        }
+                        JavaClass owner = call.getTarget().getOwner();
+                        return owner.isAssignableTo(Page.class) || owner.isAssignableTo(Frame.class);
+                    }
+                })
+                // 必须用 CLASSES_WITH_TESTS：业务代码位于 test-automation 的 target/test-classes，
+                // DoNotIncludeTests 快照会将其排除，导致 resideOutsideOfPackage("..framework..") 匹配空集。
+                .check(CLASSES_WITH_TESTS);
+    }
+
+    /**
      * Phase 4 门禁（doc15 §8）：业务代码不得继承已删除的 {@code SerenityBasePage}。
      * 该类全部 Layer B 录制方法已下沉为 {@code BasePage} 公开委托壳，业务 Page 应继承 {@code BasePage}
      * （或后续逐步演进为组合式 POJO + {@code ManagedPageAware}）。此规则防止 SerenityBasePage 被重新引入。
@@ -332,6 +374,39 @@ public class ArchitectureTest {
                         JavaClass.Predicates.resideInAPackage("..framework.web.lifecycle..")
                                 .and(JavaClass.Predicates.simpleNameEndingWith("Impl")))
                 .check(CLASSES_NO_TESTS_WITH_TESTS_PKG);
+    }
+
+    /**
+     * API 边界门禁（企业级，§8.4 零容忍，2026-10-12）：framework 生产代码不得直接调用原生
+     * {@code Page.waitForFunction}/{@code Frame.waitForFunction}，除非是已声明为合法 seam 的包。
+     *
+     * <p>唯一合法调用点（按包豁免）：
+     * <ul>
+     *   <li>{@code framework.route.dsl} —— {@code RouteDsl.waitForUiFunction} 对真实 Page 调 waitForFunction，
+     *       绕过 {@code RecordingPageProxy} 的 guard（guard 只对代理 Page 生效，真实 Page 不拦截）；</li>
+     *   <li>{@code framework.web.page.scan} —— {@code RoleElementPicker} 拾取器，运行于无 DELAY 路由上下文，安全。</li>
+     * </ul>
+     * 其余 framework 类（含未来新增的 BasePage 助手 / PageElement 动作）一律禁止，防止重蹈「main 阻塞导致
+     * DELAY 交付超时」覆辙。框架合法 seam 之外的任何新增调用点都会使本测试失败。</p>
+     */
+    @Test
+    public void frameworkCodeMustNotCallNativeWaitForFunction() {
+        noClasses()
+                .that().resideInAPackage("..framework..")
+                .and().resideOutsideOfPackage("..framework.route.dsl..")
+                .and().resideOutsideOfPackage("..framework.web.page.scan..")
+                .should().callMethodWhere(new DescribedPredicate<JavaMethodCall>(
+                        "call native Playwright Page/Frame.waitForFunction") {
+                    @Override
+                    public boolean test(JavaMethodCall call) {
+                        if (!"waitForFunction".equals(call.getTarget().getName())) {
+                            return false;
+                        }
+                        JavaClass owner = call.getTarget().getOwner();
+                        return owner.isAssignableTo(Page.class) || owner.isAssignableTo(Frame.class);
+                    }
+                })
+                .check(CLASSES_NO_TESTS);
     }
 
     // ==================== L7：lifecycle 内部面门禁（跨子包封装治理 Phase 1） ====================
