@@ -28,6 +28,7 @@ public class ForkAwareAccountResolverTest {
         set(ForkAwareAccountResolver.SUREFIRE_FORK_NUMBER, "");
         set(ForkAwareAccountResolver.STRIDE_KEY, "");
         set(ACCOUNTS_KEY, "");
+        RunScopeAccountProviders.setInjected(null); // 解除 §5.7 测试 seam，防跨测试泄漏
     }
 
     private static void set(String k, String v) {
@@ -141,5 +142,46 @@ public class ForkAwareAccountResolverTest {
     @Test
     public void isMine_trueWhenEnvUnconfigured() {
         assertTrue(ForkAwareAccountResolver.isMine("UNCONFIGURED_ENV", "anyUser"));
+    }
+
+    // ---- §5.7 RunScopeAccountProvider 动态裁剪 ----
+    // 仅跑 O63（provider 返回活跃子集 [A,C]）：fork 只在子集里切，其余账号不参与分区。
+
+    private static final RunScopeAccountProvider O63_ACTIVE_ONLY = env ->
+            "O63_SIT1".equals(env) ? List.of("A", "C") : List.of();
+
+    @Test
+    public void myUsers_trimmedByActiveProvider() {
+        RunScopeAccountProviders.setInjected(O63_ACTIVE_ONLY);
+        set(ACCOUNTS_KEY, "A,B,C,D,E,F,G,H"); // 全量 8 个
+        set(ForkAwareAccountResolver.STRIDE_KEY, "4");
+        set(ForkAwareAccountResolver.FORK_INDEX_OVERRIDE, "0");
+        // 活跃子集 [A,C] → fork0 整段切得 [A,C]
+        assertEquals(List.of("A", "C"), ForkAwareAccountResolver.myUsers(ENV));
+        set(ForkAwareAccountResolver.FORK_INDEX_OVERRIDE, "1");
+        // 子集已空 → 无账号（O38/O88 不占 fork）
+        assertEquals(List.of(), ForkAwareAccountResolver.myUsers(ENV));
+    }
+
+    @Test
+    public void isMine_trimmedProviderExcludesOutOfScopeUser() {
+        RunScopeAccountProviders.setInjected(O63_ACTIVE_ONLY);
+        set(ACCOUNTS_KEY, "A,B,C,D,E,F,G,H");
+        set(ForkAwareAccountResolver.STRIDE_KEY, "4");
+        set(ForkAwareAccountResolver.FORK_INDEX_OVERRIDE, "0");
+        // A/C 在活跃子集内 → 属本 fork
+        assertTrue(ForkAwareAccountResolver.isMine(ENV, "A"));
+        assertTrue(ForkAwareAccountResolver.isMine(ENV, "C"));
+        // F 不在活跃子集 → 不属本 fork（不会误占 O38/O88 账号）
+        assertFalse(ForkAwareAccountResolver.isMine(ENV, "F"));
+    }
+
+    @Test
+    public void myUsers_fullWhenProviderReturnsEmpty() {
+        RunScopeAccountProviders.setInjected(env -> List.of()); // 空 = 不裁剪
+        set(ACCOUNTS_KEY, "A,B,C,D,E,F,G,H");
+        set(ForkAwareAccountResolver.STRIDE_KEY, "4");
+        set(ForkAwareAccountResolver.FORK_INDEX_OVERRIDE, "0");
+        assertEquals(List.of("A", "B", "C", "D"), ForkAwareAccountResolver.myUsers(ENV));
     }
 }
