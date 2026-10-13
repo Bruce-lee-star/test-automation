@@ -77,7 +77,7 @@ flowchart TD
     J --> K[测试点基线比对<br/>新增/修改/删除/保留]
     K --> L[生成手工 Excel + Cucumber Feature]
     L --> M[编排 TestFlow]
-    M --> N[Playwright MCP 登录+导航+动态交互<br/>多轮抓无障碍树]
+    M --> N[Playwright MCP 登录+导航+动态交互<br/>抓 DOM 类型/约束/级联 → 建 PageModel]
     N --> O[RoleElementPicker 定位评分<br/>每元素输出 top-N 候选 + score]
     O --> O1{score >= 阈值?}
     O1 -->|是| P[选最高分定位器入 TestFlow]
@@ -98,7 +98,7 @@ flowchart TD
                 <button class="py-2 text-neutral whitespace-nowrap" data-tab="testPoint">3. ID级基线比对</button>
                 <button class="py-2 text-neutral whitespace-nowrap" data-tab="locator">4. RoleElementPicker 定位评分</button>
                 <button class="py-2 text-neutral whitespace-nowrap" data-tab="case">5. 用例生成(Excel+Cucumber)</button>
-                <button class="py-2 text-neutral whitespace-nowrap" data-tab="autoScript">6. MCP链路 & 覆盖率报告</button>
+                <button class="py-2 text-neutral whitespace-nowrap" data-tab="autoScript">6. PageModel 页面模型</button>
                 <button class="py-2 text-neutral whitespace-nowrap" data-tab="coverage">7. 覆盖率看板 & 资产健康度</button>
                 <button class="py-2 text-neutral whitespace-nowrap" data-tab="nfr">8. 非功能 & 工程化</button>
             </div>
@@ -291,6 +291,41 @@ flowchart LR
                 <div class="mt-4 p-3 bg-blue-50 rounded text-sm">
                     <b>阈值：</b> finalScore ≥ 70 → stable；40-69 → degraded（TestFlow 里自动串降级链）；&lt; 40 → unstable（报告里标红，要求人工介入或开发补 testid）。
                 </div>
+
+                <h4 class="font-medium mt-5 mb-2">🔑 元素是一等公民：ElementRepository（跨 case 复用）</h4>
+                <p class="text-sm text-gray-600 mb-2">元素定位器不绑定在单个 case 里，而是独立成<b>元素库</b>，全局唯一 ID。多个 case 引用同一元素时，定位器只维护一份——登录页"提交按钮"被 50 个 case 用，改一次全量生效。</p>
+<pre class="bg-gray-50 p-3 rounded text-xs">{
+  "elementId": "ELEM-LOGIN-SUBMIT-001",
+  "page": "/login",
+  "semanticName": "提交按钮",
+  "best": { "strategy": "role+name-exact", "selector": "button[name=提交]", "score": 92 },
+  "fallbackChain": ["aria-label", "xpath-anchor"],
+  "lastVerifiedAt": "2026-10-13T10:00:00",
+  "verifyPassRate": 1.0,
+  "usedByCases": ["LOGIN-001", "LOGIN-002", "LOGIN-010"]
+}</pre>
+
+                <h4 class="font-medium mt-4 mb-2">✅ 回放验证门禁（生成 ≠ 可用）</h4>
+                <p class="text-sm text-gray-600 mb-2">定位器生成后<b>不许直接入库</b>，必须过回放验证：</p>
+                <ul class="list-disc pl-5 text-sm space-y-1 mb-4">
+                    <li><b>关闭缓存重跑</b>：清掉 storageState / cookies，重新登录后再找一次元素</li>
+                    <li><b>换数据重跑</b>：用另一套测试账号 / 另一环境（SIT2 vs SIT3）再找一次</li>
+                    <li><b>多次重跑</b>：同一元素连续找 N 次（默认 N=3），每次都能唯一命中才算 stable</li>
+                    <li><b>出现率记录</b>：命中次数/N，写入 <code>verifyPassRate</code>；&lt; 0.9 自动降级为 unstable</li>
+                </ul>
+
+                <h4 class="font-medium mt-4 mb-2">🔗 影响面分析（元素变了哪些 case 会挂）</h4>
+                <p class="text-sm text-gray-600 mb-2">每次版本 diff 时，对 ElementRepository 做 diff：</p>
+                <table class="border w-full text-sm mb-4">
+                    <tr class="bg-gray-100"><th class="border p-2">元素变更类型</th><th class="border p-2">影响</th><th class="border p-2">动作</th></tr>
+                    <tr><td class="border p-2">定位器 selector 改了</td><td class="border p-2">usedByCases 里所有 case</td><td class="border p-2">报告列出受影响 case，强制回归</td></tr>
+                    <tr><td class="border p-2">元素被删除</td><td class="border p-2">引用它的 case 全部断链</td><td class="border p-2">阻断入库，先处理引用</td></tr>
+                    <tr><td class="border p-2">score 从 90 掉到 60</td><td class="border p-2">降级为 degraded</td><td class="border p-2">TestFlow 自动切 fallbackChain</td></tr>
+                    <tr><td class="border p-2">新元素加入</td><td class="border p-2">无</td><td class="border p-2">正常入库</td></tr>
+                </table>
+
+                <h4 class="font-medium mt-4 mb-2">🛡️ 多轮快照一致性校验</h4>
+                <p class="text-sm text-gray-600">动态交互探测时同一元素会在多轮快照里出现。若 role/name 在不同轮次里<b>不一致</b>（比如 name 从"提交"变成"提交(1)"），说明元素是动态生成的，定位器必须用更稳的策略（testid / aria-label），不能信 role+name。这一步在 Picker 内部自动做，结果写进 <code>candidates[].score</code> 扣分。</p>
             </div>
 
             <!-- Tab 5 -->
@@ -301,40 +336,196 @@ flowchart LR
                     <tr><td class="border p-2">caseId</td><td class="border p-2">用例唯一编号</td></tr>
                     <tr><td class="border p-2">tpId</td><td class="border p-2">关联测试点 ID（TP-xxx，稳定主键）</td></tr>
                     <tr><td class="border p-2">jiraStory</td><td class="border p-2">关联 Story</td></tr>
+                    <tr><td class="border p-2">designTechnique</td><td class="border p-2">本 case 使用的设计方法（见下表）</td></tr>
                     <tr><td class="border p-2">step / expected</td><td class="border p-2">步骤与预期</td></tr>
                     <tr><td class="border p-2">priority</td><td class="border p-2">P0/P1/P2</td></tr>
                     <tr><td class="border p-2">changeFlag</td><td class="border p-2">added/modified/kept/deleted</td></tr>
                     <tr><td class="border p-2">locatorScore</td><td class="border p-2">自动化用例对应元素的定位评分</td></tr>
                 </table>
                 <p class="text-xs text-gray-500">Excel 仅作对外快照；源数据存资产 JSON，Excel 由 JSON 导出，不反向编辑。</p>
+
+                <h4 class="font-medium mt-4 mb-2">🎯 测试用例设计方法库（Agent 按 TP 类型自动选）</h4>
+                <table class="border w-full text-xs">
+                    <tr class="bg-gray-100">
+                        <th class="border p-2">设计方法</th>
+                        <th class="border p-2">适用 TP 类型</th>
+                        <th class="border p-2">本框架怎么用</th>
+                        <th class="border p-2">优先级</th>
+                    </tr>
+                    <tr>
+                        <td class="border p-2"><b>等价类划分</b><br/>Equivalence Partitioning</td>
+                        <td class="border p-2">表单/输入框/字段校验类</td>
+                        <td class="border p-2">把字段取值分成有效/无效等价类，每类抽 1 个代表值，不做穷举</td>
+                        <td class="border p-2">P0/P1 必用</td>
+                    </tr>
+                    <tr>
+                        <td class="border p-2"><b>边界值分析</b><br/>BVA</td>
+                        <td class="border p-2">带长度/数值/日期范围的字段</td>
+                        <td class="border p-2">取 min / min-1 / min+1 / max / max-1 / max+1，靠 MCP 探测到的字段 minLength/maxLength</td>
+                        <td class="border p-2">P0 必用</td>
+                    </tr>
+                    <tr>
+                        <td class="border p-2"><b>决策表</b><br/>Decision Table</td>
+                        <td class="border p-2">多条件组合触发不同结果（权限+角色+数据范围）</td>
+                        <td class="border p-2">列条件桩+动作桩，每条规则一行 case；DSS 权限类必走</td>
+                        <td class="border p-2">P0/P1</td>
+                    </tr>
+                    <tr>
+                        <td class="border p-2"><b>状态迁移</b><br/>State Transition</td>
+                        <td class="border p-2">审批流/订单/单据状态流转</td>
+                        <td class="border p-2">从 Story 状态机描述抽 state+event，覆盖合法路径+非法跳转</td>
+                        <td class="border p-2">P0/P1</td>
+                    </tr>
+                    <tr>
+                        <td class="border p-2"><b>场景法</b><br/>Scenario-based</td>
+                        <td class="border p-2">完整业务流程（登录→查询→提交→审批）</td>
+                        <td class="border p-2">主流程 happy path 1 条 + 每个分支一条；对应手工 case 的串联</td>
+                        <td class="border p-2">P0</td>
+                    </tr>
+                    <tr>
+                        <td class="border p-2"><b>正交/两两组合</b><br/>Pairwise</td>
+                        <td class="border p-2">下拉项多、组合爆炸（币种×租户×渠道）</td>
+                        <td class="border p-2">字段组合数 &gt; 20 时启用 pairwise，不全排列</td>
+                        <td class="border p-2">P1</td>
+                    </tr>
+                    <tr>
+                        <td class="border p-2"><b>错误推测</b><br/>Error Guessing</td>
+                        <td class="border p-2">隐性需求（异常/超时/并发/越权）</td>
+                        <td class="border p-2">7 大类隐性场景自动套用；source 字段引用历史缺陷库</td>
+                        <td class="border p-2">P0/P1</td>
+                    </tr>
+                    <tr>
+                        <td class="border p-2"><b>探索性测试</b><br/>Exploratory</td>
+                        <td class="border p-2">新模块无历史参考</td>
+                        <td class="border p-2">不生成固定 case，由测试人员手工补；Agent 只输出"建议探索点"</td>
+                        <td class="border p-2">P2</td>
+                    </tr>
+                </table>
+
+                <h4 class="font-medium mt-4 mb-2">🧠 Agent 选型逻辑（自动）</h4>
+                <ol class="list-decimal pl-5 text-sm space-y-1">
+                    <li>TP 是<b>字段校验类</b> → 等价类 + BVA</li>
+                    <li>TP 含<b>多条件组合</b> → 决策表（组合≤20）/ pairwise（&gt;20）</li>
+                    <li>TP 含<b>状态/流转关键词</b>（审批/提交/驳回） → 状态迁移</li>
+                    <li>TP 是<b>端到端流程</b> → 场景法</li>
+                    <li>TP 是 <code>tpType=implicit</code> → 错误推测，按 7 大类命中</li>
+                    <li>每条 case 必须在 <code>designTechnique</code> 字段标注用了哪种方法，便于评审时抽查"是不是拍脑袋写的"</li>
+                </ol>
             </div>
 
             <!-- Tab 6 -->
             <div id="autoScript" class="tab-panel hidden">
-                <h3 class="font-semibold text-lg mb-3">MCP 探测链路 + 覆盖率报告</h3>
-                <ol class="list-decimal pl-5 space-y-2 text-sm">
+                <h3 class="font-semibold text-lg mb-3">PageModel 页面模型 + MCP 探测链路</h3>
+                <p class="text-sm text-gray-600 mb-3">不只是"抓可点元素"。探测目标是建立<b>完整页面模型</b>：每个字段的<b>类型</b>、约束、级联关系——这才是用例设计的真正输入。无障碍树只是数据源之一，还要补 DOM 属性、表单校验规则、网络请求触发的联动。</p>
+
+                <h4 class="font-medium mb-2">一、PageModel 数据结构</h4>
+<pre class="bg-gray-50 p-3 rounded text-xs">{
+  "page": "/transfer/apply",
+  "title": "转账申请",
+  "fields": [
+    {
+      "fieldId": "F-001",
+      "label": "金额",
+      "controlType": "number",
+      "required": true,
+      "min": 0.01, "max": 1000000, "step": 0.01,
+      "currency": "HKD",
+      "dependsOn": [],
+      "locator": "ELEM-TRANSFER-AMOUNT"
+    },
+    {
+      "fieldId": "F-002",
+      "label": "币种",
+      "controlType": "select",
+      "required": true,
+      "options": ["HKD","USD","CNY"],
+      "dependsOn": [],
+      "cascade": ["F-003"]
+    },
+    {
+      "fieldId": "F-003",
+      "label": "收款行",
+      "controlType": "select",
+      "required": true,
+      "optionsByParent": {
+        "HKD": ["HSBC-HK","BOCHK"],
+        "USD": ["HSBC-HK","Citibank-HK"],
+        "CNY": ["BOCHK","CCB-HK"]
+      },
+      "dependsOn": ["F-002"]
+    }
+  ],
+  "actions": [
+    {"actionId":"A-001","label":"提交","type":"primary-button","triggers":"POST /api/transfer","locator":"ELEM-TRANSFER-SUBMIT"},
+    {"actionId":"A-002","label":"保存草稿","type":"secondary-button","triggers":"POST /api/draft"}
+  ],
+  "dialogs": [
+    {"dialogId":"D-001","trigger":"点击A-001且未填F-001","type":"validation-toast"},
+    {"dialogId":"D-002","trigger":"提交成功后","type":"success-modal","nextPage":"/transfer/list"}
+  ]
+}</pre>
+
+                <h4 class="font-medium mt-4 mb-2">二、字段类型 → 测试设计方法自动映射</h4>
+                <table class="border w-full text-xs mb-4">
+                    <tr class="bg-gray-100">
+                        <th class="border p-2">controlType</th>
+                        <th class="border p-2">自动生成的测试点</th>
+                        <th class="border p-2">用例设计方法</th>
+                    </tr>
+                    <tr><td class="border p-2">text</td><td class="border p-2">必填/空串/最长/特殊字符/首尾空格</td><td class="border p-2">等价类 + BVA</td></tr>
+                    <tr><td class="border p-2">number</td><td class="border p-2">min/max/min-1/max+1/0/负数/小数位/非数字</td><td class="border p-2">等价类 + BVA</td></tr>
+                    <tr><td class="border p-2">select</td><td class="border p-2">每个 option 选中 + 不选（若非必）</td><td class="border p-2">等价类（每个选项一类）</td></tr>
+                    <tr><td class="border p-2">select + dependsOn</td><td class="border p-2">父字段切每个值，验证子字段 options 变化</td><td class="border p-2">决策表（父×子全组合）</td></tr>
+                    <tr><td class="border p-2">datepicker</td><td class="border p-2">今天/过去/未来/跨月/格式非法/闰年</td><td class="border p-2">BVA + 边界日期</td></tr>
+                    <tr><td class="border p-2">checkbox/radio</td><td class="border p-2">全选/全不选/单选/必选其一</td><td class="border p-2">等价类</td></tr>
+                    <tr><td class="border p-2">textarea</td><td class="border p-2">maxLength 边界 + 多行 + 换行符</td><td class="border p-2">BVA</td></tr>
+                </table>
+
+                <h4 class="font-medium mt-2 mb-2">三、级联关系图（自动建）</h4>
+                <div class="mermaid">
+flowchart LR
+    F002[币种 select] -->|切换| F003[收款行 select]
+    F001[金额 number] -.->|提交校验| A001[提交按钮]
+    F002 -.->|提交校验| A001
+    F003 -.->|提交校验| A001
+    A001 -->|成功| D002[成功弹窗]
+    A001 -->|未填 F-001| D001[校验 toast]
+                </div>
+                <p class="text-xs text-gray-500 mt-1">实线=级联依赖（父变→子重载）；虚线=提交时校验。决策表/状态迁移 case 从这张图自动生成。</p>
+
+                <h4 class="font-medium mt-4 mb-2">四、MCP 探测链路（产出 PageModel）</h4>
+                <ol class="list-decimal pl-5 space-y-1.5 text-sm">
                     <li>读凭证池（环境变量注入，日志脱敏），登录目标系统</li>
-                    <li><b>动态交互循环</b>：点击 Tab / 下拉 / 输入 / 展开折叠，每轮抓无障碍树快照</li>
-                    <li>多轮快照送 RoleElementPicker，每个元素产出 top-N 候选 + 评分</li>
-                    <li>按评分选定位器入 TestFlow，失败按 fallbackChain 降级</li>
-                    <li>生成 Feature + Step 代码，过 <b>输出质量门禁</b>（Cucumber 可解析 + Step 绑定检查）</li>
+                    <li><b>DOM 属性抓取</b>：每个表单元素读 <code>type / required / min / max / minlength / maxlength / pattern / options / data-*</code>——这是字段类型和约束的主来源</li>
+                    <li><b>无障碍树补充</b>：补 label / role / accessible-name（图标按钮、无 label 场景）</li>
+                    <li><b>动态交互循环</b>：切下拉/输入/点 Tab，每轮 diff DOM，记录"父字段变了谁重载"→ 建 <code>dependsOn / cascade</code></li>
+                    <li><b>网络监听</b>：拦截提交请求，记录每个 action 触发的 API（用于 API 级断言）</li>
+                    <li>每个字段/动作送 RoleElementPicker，产出 top-N 定位候选 + 评分 + 回放验证</li>
+                    <li>按 PageModel 自动生成 TP + 用例设计方法映射</li>
+                    <li>生成 Feature + Step，过输出门禁（Cucumber 可解析 + Step 绑定）</li>
                     <li>写资产新版本，git commit（人工 push）</li>
                 </ol>
-                <h4 class="font-medium mt-4 mb-2">探测报告（每次必出）</h4>
+
+                <h4 class="font-medium mt-4 mb-2">五、探测报告（每次必出）</h4>
 <pre class="bg-gray-50 p-3 rounded text-xs">{
-  "page": "/login",
-  "elementInventory": {
-    "total": 24,
-    "accessible": 18,
-    "degraded": 4,
-    "unsupported": 2
+  "page": "/transfer/apply",
+  "fieldInventory": {
+    "total": 6,
+    "withTypeKnown": 6,
+    "cascadeEdges": 1
   },
-  "unsupportedDetail": [
-    {"element": "验证码 canvas", "reason": "Canvas 无无障碍树", "action": "人工脚本"},
-    {"element": "富文本编辑器", "reason": "contenteditable 黑洞", "action": "降级 keyboard 操作"}
-  ],
-  "locatorScoreDist": {"S":12, "A":4, "B":5, "C":2, "E":1, "G":0},
-  "unstableElements": []
+  "actionInventory": {"total": 2},
+  "dialogInventory": {"total": 2},
+  "locatorCoverage": {"stable": 5, "degraded": 1, "unstable": 0},
+  "autoGeneratedTP": {
+    "byEquivalence": 4,
+    "byBVA": 6,
+    "byDecisionTable": 3,
+    "byScenario": 1
+  },
+  "unsupported": [
+    {"element":"金额输入框","reason":"自定义 number spinner 无原生 type","action":"读 aria-valuenow"}
+  ]
 }</pre>
             </div>
 
