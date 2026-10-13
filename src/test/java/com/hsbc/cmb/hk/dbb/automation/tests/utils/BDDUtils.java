@@ -5,6 +5,7 @@ import com.hsbc.cmb.hk.dbb.automation.framework.api.core.step.BaseStep;
 import com.hsbc.cmb.hk.dbb.automation.framework.common.security.SecretValue;
 import com.hsbc.cmb.hk.dbb.automation.framework.core.context.ContextKey;
 import com.hsbc.cmb.hk.dbb.automation.framework.core.context.TestContextHolder;
+import com.hsbc.cmb.hk.dbb.automation.tests.ssoplan.ForkAwareAccountResolver;
 import net.thucydides.model.environment.SystemEnvironmentVariables;
 import net.thucydides.model.util.EnvironmentVariables;
 import org.json.JSONObject;
@@ -46,7 +47,10 @@ public class BDDUtils {
      */
     public static BDDUtils getLogonDBBInfo(String env, String username) {
         logger.info("Get DBB login info - Environment: {}, Username: {}", env, username);
-        
+
+        // §5.4/§5.5 跨 fork 账号分区 fail-fast：未配置 sso.accounts.<env> 时 no-op（零回归）。
+        ForkAwareAccountResolver.assertAccountBelongsToCurrentFork(env, username);
+
         BDDUtils bddUtils = new BDDUtils();
         
         try {
