@@ -48,6 +48,13 @@
              includeTestSourceDirectory=false锛堟祴璇曟簮涓嶅叆璇ラ棬绂侊級鈫?姝ゆā鍧楁病鏈変换浣曞彲鏍￠獙瀵硅薄銆?
              妗嗘灦鐢熶骇浠ｇ爜鐨勯鏍奸棬绂佷粛鍦ㄦ鏋朵粨搴撶殑 build job 涓己鍒舵墽琛岋紙鍚笌 checkstyle-baseline.xml 鐨勮鏁版瘮瀵癸級銆?-->
         <checkstyle.skip>true</checkstyle.skip>
+
+        <!-- SSO 跨 fork 分区（设计文档 §9.5）：fork 索引与 stride，CI 经 -D 注入；
+             本地默认 0 / 4（单 fork，零行为变化）。 -->
+        <fork.index>0</fork.index>
+        <sso.fork.user.stride>4</sso.fork.user.stride>
+        <!-- failsafe 跨 JVM fork 数（§9.5）：默认 1（与历史一致）；CI 经 -DtestForkCount=N 开启多 fork。 -->
+        <testForkCount>1</testForkCount>
     </properties>
 
     <dependencies>
@@ -330,7 +337,8 @@
                 <configuration>
                     <useFile>false</useFile>
                     <rerunFailingTestsCount>${rerunFailingTestsCount}</rerunFailingTestsCount>
-                    <forkCount>1</forkCount>
+                    <forkCount>${testForkCount}</forkCount>
+                    <reuseForks>true</reuseForks>
                     <!-- 2026-10-10锛氭湰妯″潡 E2E 涓嶅啀璁?fork 绾ц秴鏃讹紙鍘熶负 ${forkedProcessTimeoutInSeconds}=1800s锛夈€?
                          鎰忓浘锛欵2E 鏃堕暱闅忕幆澧冩尝鍔ㄥぇ锛堝疄娴嬪崟杞?9:55锝?9:41锛夛紝涓€鏃﹁秴杩囦笂闄愪細琚己鏉€ 鈥斺€?
                          鏈畬鎴愮殑鐢ㄤ緥缁撴灉鍏ㄩ儴涓㈠け锛屼笖"琚腑鏂?浼氳璇姤鎴愬け璐ワ紙master 鐨?pom 娉ㄩ噴閲?
@@ -365,7 +373,7 @@
                     <!-- 鈿?JDK16+ 寮哄皝瑁咃細Serenity REST(RestSpecificationFactory) 鍦ㄩ潤鎬佸垵濮嬪寲鏃剁敤 ByteBuddy
                          鍙嶅皠娉ㄥ叆绫伙紝闇€ java.base 鎵撳紑 java.lang(ClassLoader.getPackage/defineClass)锛?
                          java.lang.reflect 渚?Mockito/Serenity 鍙嶅皠澧炲己锛沯ava.util 渚?RestAssured 鐨?Groovy 鍙嶅皠銆?-->
-                    <argLine>@{jacocoArgLine} -XX:+EnableDynamicAgentLoading --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED</argLine>
+                    <argLine>@{jacocoArgLine} -XX:+EnableDynamicAgentLoading --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED -Dfork.index=${fork.index} -Dsso.fork.user.stride=${sso.fork.user.stride}</argLine>
                     <systemPropertyVariables>
                         <serenity.outputDirectory>${project.build.directory}/site/serenity</serenity.outputDirectory>
                         <cucumber.filter.tags>${tags}</cucumber.filter.tags>

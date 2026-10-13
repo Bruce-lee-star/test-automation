@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业级多任务协同Agent｜测试需求资产管理平台 V1.7</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        success: '#00B42A',
+                        warning: '#FF7D00',
+                        danger: '#F53F3F',
+                        neutral: '#86909C',
+                        dark: '#1D2129',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .mermaid {background:#fff; border-radius:8px; padding:12px; border:1px solid #e5e6eb;}
+        pre {white-space:pre-wrap; word-break:break-all; font-size:13px;}
+        .tab-active {border-bottom:2px solid #165DFF; color:#165DFF; font-weight:600;}
+        .score-bar{height:8px;border-radius:4px;background:#e5e6eb;overflow:hidden;}
+        .score-fill{height:100%;}
+    </style>
+</head>
+<body class="bg-gray-50 text-dark">
+    <div class="max-w-7xl mx-auto p-4 md:p-6">
+        <header class="mb-6">
+            <h1 class="text-2xl md:text-3xl font-bold text-primary">多任务协同Agent - 测试需求资产管理平台 V1.7</h1>
+            <p class="text-neutral mt-1">Jira Epic/Story绑定｜显性+隐性需求挖掘｜稳定TP-ID版本化资产｜测试点拆解｜Excel手工用例｜Cucumber自动化用例｜Playwright MCP + RoleElementPicker(定位评分) 自动脚本生成｜ID级基线比对｜输入/输出质量门禁</p>
+            <div class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded text-sm">
+                <span class="font-semibold">V1.7 更新说明（基于 V1.6 评审）：</span>
+                <ol class="list-decimal pl-5 mt-1 space-y-0.5">
+                    <li><b>需求判定证据链</b>：每次判定必须输出 confidence(0-1) + judgmentEvidence(对比了哪些字段/标签/关键词)，confidence &lt; 0.7 走人工门禁；Modify/BugFix/Deprecated 强制人工确认才进入 Vn+1。</li>
+                    <li><b>测试点稳定 ID</b>：每个测试点分配 <code>TP-xxx</code>，版本升级 ID 不变，内容变更；基线比对改为 <b>ID 集合 diff + 同 ID 文本 diff</b>，不再纯文本比对。</li>
+                    <li><b>资产状态机</b>：Draft → InReview → Approved → Archived → Deprecated，杜绝"旧版本不可改但不知谁审过"。</li>
+                    <li><b>幂等性</b>：同 (assetId, storyNumber, reqType) 已有 Draft 版本则复用，不新建 Vn+1。</li>
+                    <li><b>RoleElementPicker 定位评分系统</b>：每个候选定位器打 0-100 分，按 role+name &gt; data-testid &gt; aria-label &gt; 稳定 class/id &gt; 锚点 xpath &gt; 绝对 xpath &gt; 视觉OCR 排序；低于阈值标记 unstable。</li>
+                    <li><b>元素覆盖率报告</b>：探测完成输出 accessible / degraded / unsupported 三栏统计，Canvas/Shadow DOM/富文本显式标记。</li>
+                    <li><b>降级定位链</b>：首选失败自动按分数降序尝试下一档，TestFlow 记录最终采用的定位策略。</li>
+                    <li><b>输入门禁</b>：Story 字数 / Acceptance Criteria 缺失直接拒，标 NeedsClarification，不硬编。</li>
+                    <li><b>Prompt 版本化</b>：判定/挖掘 prompt 存入资产库并打版本号，可回溯。</li>
+                    <li><b>资产入库走 Git</b>：本地产出 → git commit（人工触发），不上四层权限/审计平台。</li>
+                </ol>
+            </div>
+        </header>
+
+        <!-- 总业务流程图 -->
+        <section class="bg-white rounded-lg shadow p-4 mb-6">
+            <h2 class="text-lg font-semibold mb-3">📋 完整业务流程图（V1.7 含质量门禁）</h2>
+            <div class="mermaid">
+flowchart TD
+    A[输入Jira Epic / Story] --> G0{输入质量门禁}
+    G0 -->|字数/AC 缺失| G0X[拒绝: NeedsClarification<br/>返回补全清单]
+    G0 -->|通过| B[多任务协同Agent<br/>判定+隐性挖掘]
+    B --> B1[输出: reqType + confidence + judgmentEvidence]
+    B1 --> B2{confidence >= 0.7<br/>且非 Modify/BugFix/Deprecated?}
+    B2 -->|否| H0[人工审批门禁<br/>PM/测试负责人确认]
+    H0 -->|通过| B3
+    B2 -->|是| B3{需求类型}
+    B3 -->|New| C[创建资产 V1<br/>分配 TP-xxx]
+    B3 -->|Increment| D[Vn→Vn+1<br/>保留全部 TP, 新增 TP]
+    B3 -->|Modify| E[基线比对: TP-ID diff<br/>+ 同ID文本diff, 标记变更]
+    B3 -->|BugFix| F[关联资产 Vn→Vn+1<br/>仅动关联 TP]
+    B3 -->|Enhance| G[Vn→Vn+1<br/>补充 TP]
+    B3 -->|Deprecated| Z[Vn→Vn+1<br/>资产+TP 标废弃]
+
+    C & D & E & F & G & Z --> I[资产库 Git 存储<br/>状态机: Draft→InReview→Approved→Archived]
+    I --> J[拆解显性+隐性需求<br/>隐性 P0/P1/P2 分级 + 依据来源]
+    J --> K[测试点基线比对<br/>新增/修改/删除/保留]
+    K --> L[生成手工 Excel + Cucumber Feature]
+    L --> M[编排 TestFlow]
+    M --> N[Playwright MCP 登录+导航+动态交互<br/>多轮抓无障碍树]
+    N --> O[RoleElementPicker 定位评分<br/>每元素输出 top-N 候选 + score]
+    O --> O1{score >= 阈值?}
+    O1 -->|是| P[选最高分定位器入 TestFlow]
+    O1 -->|否| P2[降级: 下一档定位策略<br/>仍失败标 unstable + 报告]
+    P --> Q[生成脚本, 接入 pw_automation_framework]
+    Q --> QG{输出质量门禁<br/>Feature 可解析 + Step 绑定?}
+    QG -->|失败| QX[报错, 不入库]
+    QG -->|通过| R[输出交付物 + 变更报告 + 资产新版本]
+    R --> S[git commit 本地入库<br/>人工 push, 不自动上传]
+            </div>
+        </section>
+
+        <!-- Tab 切换 -->
+        <div class="border-b border-gray-200 mb-4">
+            <div class="flex gap-6 overflow-x-auto" id="tabBar">
+                <button class="py-2 tab-active whitespace-nowrap" data-tab="reqJudge">1. 判定证据链 & 门禁</button>
+                <button class="py-2 text-neutral whitespace-nowrap" data-tab="asset">2. 资产模型(TP-ID/状态机)</button>
+                <button class="py-2 text-neutral whitespace-nowrap" data-tab="testPoint">3. ID级基线比对</button>
+                <button class="py-2 text-neutral whitespace-nowrap" data-tab="locator">4. RoleElementPicker 定位评分</button>
+                <button class="py-2 text-neutral whitespace-nowrap" data-tab="case">5. 用例生成(Excel+Cucumber)</button>
+                <button class="py-2 text-neutral whitespace-nowrap" data-tab="autoScript">6. MCP链路 & 覆盖率报告</button>
+                <button class="py-2 text-neutral whitespace-nowrap" data-tab="coverage">7. 覆盖率看板 & 资产健康度</button>
+                <button class="py-2 text-neutral whitespace-nowrap" data-tab="nfr">8. 非功能 & 工程化</button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-5 min-h-[400px]">
+
+            <!-- Tab 1 -->
+            <div id="reqJudge" class="tab-panel">
+                <h3 class="font-semibold text-lg mb-3">需求判定证据链 + 人工门禁</h3>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="border p-3 rounded">
+                        <div class="font-medium text-primary">判定输出（必须包含）</div>
+                        <pre class="bg-gray-50 p-2 mt-2 text-xs">{
+  "reqType": "Modify",
+  "confidence": 0.82,
+  "judgmentEvidence": [
+    "Jira label: change=ui-text",
+    "Story 关键词: 调整/修改/优化 (命中 3 次)",
+    "关联资产 REQ-ASSET-2026001 存在",
+    "无新增模块/新页面关键词"
+  ],
+  "needsHumanApproval": true
+}</pre>
+                    </div>
+                    <div class="border p-3 rounded">
+                        <div class="font-medium text-warning">门禁规则</div>
+                        <ul class="list-disc pl-5 text-sm mt-2 space-y-1">
+                            <li><b>confidence &lt; 0.7</b> → 强制人工确认，不自动选类型</li>
+                            <li><b>Modify / BugFix / Deprecated</b> → 无论置信度多少都人工确认（高风险）</li>
+                            <li><b>兜底策略</b>：置信度不足时默认 Modify（影响面最大、最保守）</li>
+                            <li><b>审批人</b>：测试负责人 + 产品负责人双签</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h4 class="font-medium mt-4 mb-2">隐性需求分级（P0/P1/P2 + 依据）</h4>
+                <table class="border w-full text-sm">
+                    <tr class="bg-gray-100"><th class="border p-2">隐性场景</th><th class="border p-2">默认级别</th><th class="border p-2">依据来源</th></tr>
+                    <tr><td class="border p-2">账号密码错误 / 会话过期重登</td><td class="border p-2">P0</td><td class="border p-2">行业通用登录契约</td></tr>
+                    <tr><td class="border p-2">越权访问（角色/数据隔离）</td><td class="border p-2">P0</td><td class="border p-2">Story 权限字段 / 历史越权缺陷</td></tr>
+                    <tr><td class="border p-2">必填校验 / 非法输入</td><td class="border p-2">P0</td><td class="border p-2">表单字段元数据</td></tr>
+                    <tr><td class="border p-2">弹窗/级联/懒加载等动态渲染</td><td class="border p-2">P1</td><td class="border p-2">MCP 探测到的交互触发器</td></tr>
+                    <tr><td class="border p-2">重复提交 / 网络超时</td><td class="border p-2">P1</td><td class="border p-2">提交类按钮存在即挖</td></tr>
+                    <tr><td class="border p-2">UI 文案 / 按钮灰化细节</td><td class="border p-2">P2</td><td class="border p-2">低风险，默认不挖除非 Story 强调</td></tr>
+                </table>
+                <p class="mt-3 text-xs text-gray-500">每个隐性测试点必须带 <code>source</code> 字段（哪条规则/历史缺陷/字段元数据支撑），无依据的 P2 不入库。</p>
+            </div>
+
+            <!-- Tab 2 -->
+            <div id="asset" class="tab-panel hidden">
+                <h3 class="font-semibold text-lg mb-3">资产模型 V1.7（含 TP-ID / 状态机 / 幂等）</h3>
+<pre class="bg-gray-50 p-3 rounded text-xs">{
+  "assetId": "REQ-ASSET-2026001",
+  "version": "V3",
+  "status": "Draft | InReview | Approved | Archived | Deprecated",
+  "reqType": "Modify",
+  "confidence": 0.82,
+  "judgmentEvidence": ["..."],
+  "baselineVersion": "V2",
+  "jira": { "epicNumber": "XXX-1001", "storyNumber": "XXX-2005" },
+  "testPointList": [
+    {
+      "tpId": "TP-001",
+      "tpType": "explicit | implicit",
+      "priority": "P0",
+      "title": "登录失败提示",
+      "source": "行业登录契约",
+      "changeFlag": "added | modified | kept | deleted",
+      "locatorScoreHint": 90
+    }
+  ],
+  "promptVersion": "judge-v1.3 / discover-v2.0",
+  "owner": "...",
+  "caseRef": { "excelCase": "...", "cucumberFeature": "...", "mdDoc": "..." }
+}</pre>
+
+                <h4 class="font-medium mt-4 mb-2">📖 资产 JSON 字段词典</h4>
+                <table class="border w-full text-xs mb-4">
+                    <tr class="bg-gray-100">
+                        <th class="border p-2">字段</th><th class="border p-2">类型</th><th class="border p-2">意义</th><th class="border p-2">取值/示例</th>
+                    </tr>
+                    <tr><td class="border p-2"><code>assetId</code></td><td class="border p-2">string</td><td class="border p-2">资产全局唯一 ID，一个业务模块一个；跨版本不变</td><td class="border p-2">REQ-ASSET-2026001</td></tr>
+                    <tr><td class="border p-2"><code>version</code></td><td class="border p-2">string</td><td class="border p-2">本版号；New=V1，其余基于基线 +1</td><td class="border p-2">V1 / V2 / V3</td></tr>
+                    <tr><td class="border p-2"><code>status</code></td><td class="border p-2">enum</td><td class="border p-2">资产状态机；Draft→InReview→Approved→Archived→Deprecated</td><td class="border p-2">Draft</td></tr>
+                    <tr><td class="border p-2"><code>reqType</code></td><td class="border p-2">enum</td><td class="border p-2">本次需求类型，Agent 判定 + 人工确认</td><td class="border p-2">New/Increment/Modify/BugFix/Enhance/Deprecated</td></tr>
+                    <tr><td class="border p-2"><code>confidence</code></td><td class="border p-2">float</td><td class="border p-2">reqType 判定置信度；&lt;0.7 强制人工门禁</td><td class="border p-2">0.0 ~ 1.0</td></tr>
+                    <tr><td class="border p-2"><code>judgmentEvidence</code></td><td class="border p-2">string[]</td><td class="border p-2">判定依据链：对比了哪些 Jira label / 关键词 / 历史资产，可审计</td><td class="border p-2">["label=change=ui", "关键词命中 3 次"]</td></tr>
+                    <tr><td class="border p-2"><code>baselineVersion</code></td><td class="border p-2">string</td><td class="border p-2">本次比对的上一版；New 时为 null</td><td class="border p-2">V2 / null</td></tr>
+                    <tr><td class="border p-2"><code>jira.epicNumber</code></td><td class="border p-2">string</td><td class="border p-2">绑定的 Epic 编号（追溯链顶层）</td><td class="border p-2">XXX-1001</td></tr>
+                    <tr><td class="border p-2"><code>jira.storyNumber</code></td><td class="border p-2">string</td><td class="border p-2">绑定的 Story 编号；幂等键组成之一</td><td class="border p-2">XXX-2005</td></tr>
+                    <tr><td class="border p-2"><code>testPointList[].tpId</code></td><td class="border p-2">string</td><td class="border p-2">测试点稳定 ID，跨版本不变；基线比对主键</td><td class="border p-2">TP-001</td></tr>
+                    <tr><td class="border p-2"><code>testPointList[].tpType</code></td><td class="border p-2">enum</td><td class="border p-2">测试点来源</td><td class="border p-2">explicit(Story 写明) / implicit(Agent 挖掘)</td></tr>
+                    <tr><td class="border p-2"><code>testPointList[].priority</code></td><td class="border p-2">enum</td><td class="border p-2">优先级；P0 必须 100% 有手工 case</td><td class="border p-2">P0 / P1 / P2</td></tr>
+                    <tr><td class="border p-2"><code>testPointList[].title</code></td><td class="border p-2">string</td><td class="border p-2">测试点标题；基线文本 diff 对象</td><td class="border p-2">登录失败提示</td></tr>
+                    <tr><td class="border p-2"><code>testPointList[].source</code></td><td class="border p-2">string</td><td class="border p-2">隐性测试点的依据来源；无依据的 P2 不入库</td><td class="border p-2">行业登录契约 / 历史缺陷 XXX-123</td></tr>
+                    <tr><td class="border p-2"><code>testPointList[].changeFlag</code></td><td class="border p-2">enum</td><td class="border p-2">相对基线的变更标记</td><td class="border p-2">added/modified/kept/deleted</td></tr>
+                    <tr><td class="border p-2"><code>testPointList[].locatorScoreHint</code></td><td class="border p-2">int</td><td class="border p-2">该测试点涉及元素的定位器最高分（0-100）</td><td class="border p-2">90</td></tr>
+                    <tr><td class="border p-2"><code>promptVersion</code></td><td class="border p-2">string</td><td class="border p-2">判定/挖掘用的 prompt 版本，可回溯</td><td class="border p-2">judge-v1.3/discover-v2.0</td></tr>
+                    <tr><td class="border p-2"><code>owner</code></td><td class="border p-2">string</td><td class="border p-2">资产负责人（测试负责人）</td><td class="border p-2">zhangsan</td></tr>
+                    <tr><td class="border p-2"><code>caseRef.excelCase</code></td><td class="border p-2">path</td><td class="border p-2">手工用例 Excel 快照（导出物，非源数据）</td><td class="border p-2">REQ-ASSET-2026001-V3.xlsx</td></tr>
+                    <tr><td class="border p-2"><code>caseRef.cucumberFeature</code></td><td class="border p-2">path</td><td class="border p-2">自动化 Feature 文件（从手工 case 派生）</td><td class="border p-2">Login.feature</td></tr>
+                    <tr><td class="border p-2"><code>caseRef.mdDoc</code></td><td class="border p-2">path</td><td class="border p-2">评审主文档</td><td class="border p-2">REQ-ASSET-2026001-V3.md</td></tr>
+                </table>
+
+                <h4 class="font-medium mb-2">📖 定位器候选 JSON 字段词典</h4>
+                <table class="border w-full text-xs mb-4">
+                    <tr class="bg-gray-100"><th class="border p-2">字段</th><th class="border p-2">意义</th></tr>
+                    <tr><td class="border p-2"><code>element</code></td><td class="border p-2">元素语义名（如"提交按钮"），由无障碍树 role+name 提取</td></tr>
+                    <tr><td class="border p-2"><code>best</code></td><td class="border p-2">本元素最高分候选（strategy/score/selector 三元组）</td></tr>
+                    <tr><td class="border p-2"><code>candidates[]</code></td><td class="border p-2">全部候选定位器（按 score 降序），失败时按序降级</td></tr>
+                    <tr><td class="border p-2"><code>finalScore</code></td><td class="border p-2">best.score 经过扣分规则后的最终分</td></tr>
+                    <tr><td class="border p-2"><code>stability</code></td><td class="border p-2">stable(≥70) / degraded(40-69, 自动串降级链) / unstable(&lt;40, 人工介入)</td></tr>
+                    <tr><td class="border p-2"><code>fallbackChain[]</code></td><td class="border p-2">TestFlow 运行时按此顺序尝试定位器</td></tr>
+                </table>
+                <div class="mt-4 grid md:grid-cols-2 gap-3">
+                    <div class="border p-3 rounded">
+                        <div class="font-medium text-success">✅ 幂等规则</div>
+                        <p class="text-sm text-gray-600 mt-1">同 <code>(assetId, storyNumber, reqType)</code> 已有 <b>Draft</b> 版本 → 直接复用，不新建 Vn+1。只有 Approved 后再次进来才升版。</p>
+                    </div>
+                    <div class="border p-3 rounded">
+                        <div class="font-medium text-primary">🔄 状态机</div>
+                        <p class="text-sm text-gray-600 mt-1">Draft(Agent产出) → InReview(提交评审) → Approved(人工通过) → Archived(下一版 Approved 后自动归档) → Deprecated(业务下线)。</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3 -->
+            <div id="testPoint" class="tab-panel hidden">
+                <h3 class="font-semibold text-lg mb-3">ID 级基线比对（不做 LLM 语义比对）</h3>
+                <div class="mermaid">
+flowchart LR
+    A[基线 Vn 的 tpId 集合] --> C{ID 集合 diff}
+    B[新版 Vn+1 的 tpId 集合] --> C
+    C -->|仅 Vn+1 有| D[added]
+    C -->|仅 Vn 有| E[deleted]
+    C -->|两边都有| F{title/expected 文本 diff}
+    F -->|完全相同| G[kept]
+    F -->|有差异| H[modified<br/>人工确认是否真改]
+                </div>
+                <p class="mt-3 text-sm text-gray-600">
+                    <b>为什么不上 LLM 语义比对</b>：第一版先做精确 ID diff + 文本 diff，假阳性/假阴性都透明；语义相似度是 V2 再考虑的优化项，不要在第一版引入不可解释的判定。
+                </p>
+            </div>
+
+            <!-- Tab 4: 定位评分 -->
+            <div id="locator" class="tab-panel hidden">
+                <h3 class="font-semibold text-lg mb-3">RoleElementPicker 定位评分系统（v1.7 新增）</h3>
+                <p class="text-sm text-gray-600 mb-3">每个交互元素采集时，Picker 同时产出 <b>top-N 候选定位器</b>，按下表打分，选最高分入 TestFlow；失败自动降级到下一档。</p>
+
+                <table class="border w-full text-sm mb-4">
+                    <tr class="bg-gray-100">
+                        <th class="border p-2">档位</th>
+                        <th class="border p-2">定位策略</th>
+                        <th class="border p-2">基准分</th>
+                        <th class="border p-2">稳定性说明</th>
+                    </tr>
+                    <tr><td class="border p-2">S</td><td class="border p-2"><code>role + accessible-name + exact</code></td><td class="border p-2 bg-green-50">95</td><td class="border p-2">首选，语义定位</td></tr>
+                    <tr><td class="border p-2">A</td><td class="border p-2"><code>data-testid / data-test / data-qa</code></td><td class="border p-2 bg-green-50">90</td><td class="border p-2">开发配合，最稳</td></tr>
+                    <tr><td class="border p-2">B</td><td class="border p-2"><code>role + accessible-name (substring)</code></td><td class="border p-2 bg-blue-50">75</td><td class="border p-2">次选，容忍文案微调</td></tr>
+                    <tr><td class="border p-2">C</td><td class="border p-2"><code>aria-label</code></td><td class="border p-2 bg-blue-50">70</td><td class="border p-2">图标按钮常见</td></tr>
+                    <tr><td class="border p-2">D</td><td class="border p-2"><code>稳定 id / 非 hash class</code></td><td class="border p-2 bg-yellow-50">55</td><td class="border p-2">React/Vue scoped class 会扣到 30</td></tr>
+                    <tr><td class="border p-2">E</td><td class="border p-2"><code>相对 xpath + 邻近锚点</code></td><td class="border p-2 bg-orange-50">40</td><td class="border p-2">必须带锚点，否则扣到 20</td></tr>
+                    <tr><td class="border p-2">F</td><td class="border p-2"><code>绝对 xpath / CSS nth-child</code></td><td class="border p-2 bg-red-50">15</td><td class="border p-2">默认禁用，仅兜底</td></tr>
+                    <tr><td class="border p-2">G</td><td class="border p-2"><code>视觉/OCR 定位</code></td><td class="border p-2 bg-red-50">10</td><td class="border p-2">Canvas/图表专用</td></tr>
+                </table>
+
+                <h4 class="font-medium mb-2">扣分规则（叠加在基准分上）</h4>
+                <ul class="list-disc pl-5 text-sm space-y-1 mb-4">
+                    <li>同一页面出现 <b>多个同 role+name</b>：-30（命中唯一性失败）</li>
+                    <li>class/id 含 hash（<code>sc-1a2b3c</code>、<code>ember123</code>）：-40</li>
+                    <li>定位器跨 iframe / Shadow Root：-20</li>
+                    <li>动态文本（含日期/数字）在 name 里：-15</li>
+                    <li>元素在探测中出现率 &lt; 100%（多轮快照里时有时无）：-25</li>
+                </ul>
+
+                <h4 class="font-medium mb-2">输出示例（每个元素一条）</h4>
+<pre class="bg-gray-50 p-3 rounded text-xs">{
+  "element": "提交按钮",
+  "best": { "strategy": "role+name-exact", "score": 92, "selector": "button[role=button][name=提交]" },
+  "candidates": [
+    { "strategy": "aria-label", "score": 68, "selector": "button[aria-label=提交]" },
+    { "strategy": "xpath-anchor", "score": 38, "selector": "//form[@id=login]//button[.='提交']" }
+  ],
+  "finalScore": 92,
+  "stability": "stable | degraded | unstable",
+  "fallbackChain": ["role+name-exact", "aria-label", "xpath-anchor"]
+}</pre>
+
+                <div class="mt-4 p-3 bg-blue-50 rounded text-sm">
+                    <b>阈值：</b> finalScore ≥ 70 → stable；40-69 → degraded（TestFlow 里自动串降级链）；&lt; 40 → unstable（报告里标红，要求人工介入或开发补 testid）。
+                </div>
+            </div>
+
+            <!-- Tab 5 -->
+            <div id="case" class="tab-panel hidden">
+                <h3 class="font-semibold mb-2">Excel 手工用例字段（V1.7 加 tpId/confidence/locatorScore）</h3>
+                <table class="border w-full text-sm mb-4">
+                    <tr class="bg-gray-100"><th class="border p-2">字段</th><th class="border p-2">说明</th></tr>
+                    <tr><td class="border p-2">caseId</td><td class="border p-2">用例唯一编号</td></tr>
+                    <tr><td class="border p-2">tpId</td><td class="border p-2">关联测试点 ID（TP-xxx，稳定主键）</td></tr>
+                    <tr><td class="border p-2">jiraStory</td><td class="border p-2">关联 Story</td></tr>
+                    <tr><td class="border p-2">step / expected</td><td class="border p-2">步骤与预期</td></tr>
+                    <tr><td class="border p-2">priority</td><td class="border p-2">P0/P1/P2</td></tr>
+                    <tr><td class="border p-2">changeFlag</td><td class="border p-2">added/modified/kept/deleted</td></tr>
+                    <tr><td class="border p-2">locatorScore</td><td class="border p-2">自动化用例对应元素的定位评分</td></tr>
+                </table>
+                <p class="text-xs text-gray-500">Excel 仅作对外快照；源数据存资产 JSON，Excel 由 JSON 导出，不反向编辑。</p>
+            </div>
+
+            <!-- Tab 6 -->
+            <div id="autoScript" class="tab-panel hidden">
+                <h3 class="font-semibold text-lg mb-3">MCP 探测链路 + 覆盖率报告</h3>
+                <ol class="list-decimal pl-5 space-y-2 text-sm">
+                    <li>读凭证池（环境变量注入，日志脱敏），登录目标系统</li>
+                    <li><b>动态交互循环</b>：点击 Tab / 下拉 / 输入 / 展开折叠，每轮抓无障碍树快照</li>
+                    <li>多轮快照送 RoleElementPicker，每个元素产出 top-N 候选 + 评分</li>
+                    <li>按评分选定位器入 TestFlow，失败按 fallbackChain 降级</li>
+                    <li>生成 Feature + Step 代码，过 <b>输出质量门禁</b>（Cucumber 可解析 + Step 绑定检查）</li>
+                    <li>写资产新版本，git commit（人工 push）</li>
+                </ol>
+                <h4 class="font-medium mt-4 mb-2">探测报告（每次必出）</h4>
+<pre class="bg-gray-50 p-3 rounded text-xs">{
+  "page": "/login",
+  "elementInventory": {
+    "total": 24,
+    "accessible": 18,
+    "degraded": 4,
+    "unsupported": 2
+  },
+  "unsupportedDetail": [
+    {"element": "验证码 canvas", "reason": "Canvas 无无障碍树", "action": "人工脚本"},
+    {"element": "富文本编辑器", "reason": "contenteditable 黑洞", "action": "降级 keyboard 操作"}
+  ],
+  "locatorScoreDist": {"S":12, "A":4, "B":5, "C":2, "E":1, "G":0},
+  "unstableElements": []
+}</pre>
+            </div>
+
+            <!-- Tab 7: 覆盖率看板 -->
+            <div id="coverage" class="tab-panel hidden">
+                <h3 class="font-semibold text-lg mb-3">覆盖率看板（多维，每次任务必出）</h3>
+                <p class="text-sm text-gray-600 mb-3">覆盖率分 5 层，从 Story 到自动化脚本全链路追溯。任何一层 &lt; 阈值都在报告里标红，不允许"跑完就算完"。</p>
+
+                <table class="border w-full text-sm mb-4">
+                    <tr class="bg-gray-100">
+                        <th class="border p-2">层</th>
+                        <th class="border p-2">口径</th>
+                        <th class="border p-2">阈值</th>
+                        <th class="border p-2">未达标动作</th>
+                    </tr>
+                    <tr>
+                        <td class="border p-2"><b>L1 Story 字段完整度</b></td>
+                        <td class="border p-2">Jira Story 里 AC / 前置条件 / 负责人 / 验收标准 填齐的比例</td>
+                        <td class="border p-2">≥ 80%</td>
+                        <td class="border p-2">未达标 → 输入门禁拒绝，返回补全清单</td>
+                    </tr>
+                    <tr>
+                        <td class="border p-2"><b>L2 需求→测试点覆盖率</b></td>
+                        <td class="border p-2">Story 每条显性需求是否都拆出了 ≥1 个 TP</td>
+                        <td class="border p-2">100%</td>
+                        <td class="border p-2">有未覆盖需求 → 报告列清单，Agent 补挖</td>
+                    </tr>
+                    <tr>
+                        <td class="border p-2"><b>L3 测试点→手工用例覆盖率</b></td>
+                        <td class="border p-2">每个 TP 是否都有手工 case（手工 case 是<b>唯一源</b>，自动化 case 从手工 case 派生）</td>
+                        <td class="border p-2">P0=100% / P1≥90% / P2≥50%</td>
+                        <td class="border p-2">缺 P0 case → 阻断入库</td>
+                    </tr>
+                    <tr>
+                        <td class="border p-2"><b>L4 手工用例→自动化覆盖率</b></td>
+                        <td class="border p-2">手工 case 里有对应 Cucumber 自动化的比例（自动化 case 由手工 case 派生，不独立存在）</td>
+                        <td class="border p-2">核心链路 ≥ 60% / 全量 ≥ 30%</td>
+                        <td class="border p-2">不阻断，但报告里给出下一轮补自动化建议</td>
+                    </tr>
+                    <tr>
+                        <td class="border p-2"><b>L5 定位器稳定率</b></td>
+                        <td class="border p-2">生成的定位器里 score≥70(stable) 的比例</td>
+                        <td class="border p-2">≥ 80%</td>
+                        <td class="border p-2">&lt; 80% → 列出 unstable 元素清单，要求开发补 testid 或人工写脚本</td>
+                    </tr>
+                </table>
+
+                <h4 class="font-medium mb-2">隐性需求 7 大类覆盖矩阵</h4>
+                <table class="border w-full text-sm mb-4">
+                    <tr class="bg-gray-100"><th class="border p-2">隐性场景类</th><th class="border p-2">本 Story 是否命中</th><th class="border p-2">生成 TP 数</th><th class="border p-2">依据</th></tr>
+                    <tr><td class="border p-2">账号/登录（错误密码/会话过期/租户）</td><td class="border p-2">✓</td><td class="border p-2">3</td><td class="border p-2">Story 含登录动作</td></tr>
+                    <tr><td class="border p-2">动态渲染（弹窗/级联/懒加载）</td><td class="border p-2">✓</td><td class="border p-2">2</td><td class="border p-2">MCP 探测到交互触发器</td></tr>
+                    <tr><td class="border p-2">权限/越权</td><td class="border p-2">✓</td><td class="border p-2">1</td><td class="border p-2">Story 含角色字段</td></tr>
+                    <tr><td class="border p-2">异常/非法输入</td><td class="border p-2">✓</td><td class="border p-2">4</td><td class="border p-2">表单字段数</td></tr>
+                    <tr><td class="border p-2">数据一致性</td><td class="border p-2">—</td><td class="border p-2">0</td><td class="border p-2">只读查询页，无写操作</td></tr>
+                    <tr><td class="border p-2">业务约束（唯一性/状态流转）</td><td class="border p-2">✓</td><td class="border p-2">1</td><td class="border p-2">Story 含状态机描述</td></tr>
+                    <tr><td class="border p-2">UI 细节（必填/灰化/提示）</td><td class="border p-2">—</td><td class="border p-2">0</td><td class="border p-2">P2 默认不挖</td></tr>
+                </table>
+                <p class="text-xs text-gray-500">矩阵里"—"必须写明为什么不命中，不能默认空着——防止 Agent 偷懒跳过整类。</p>
+
+                <h4 class="font-medium mt-4 mb-2">追溯链（Story → TP → case → Feature → Step）</h4>
+<pre class="bg-gray-50 p-3 rounded text-xs">Story XXX-2005
+  └─ TP-001 登录失败提示 [P0, explicit]
+       └─ 手工 case LOGIN-001 错误密码提示【源数据】
+            ├─→ 自动化 Feature: login.feature::Scenario: 错误密码提示
+            │       └─ Step: LoginSteps.iShouldSeeErrorBanner()
+            └─→ 手工 case LOGIN-002 会话过期重登 [implicit, P1]
+                  └─ (暂未自动化, 列入下一轮 backlog)</pre>
+                <p class="text-xs text-gray-500 mt-1">链路单向派生：<b>Story → TP → 手工 case → 自动化 case</b>。自动化 case 不能脱离手工 case 独立存在；删除手工 case 必须连带删自动化 case。每条链路双向可查。</p>
+
+                <h4 class="font-medium mt-4 mb-2">资产健康度（资产库维度，周度报告）</h4>
+                <ul class="list-disc pl-5 text-sm space-y-1">
+                    <li><b>陈旧资产</b>：&gt; 90 天没动过的 Approved 资产 → 标记 stale，建议 owner review</li>
+                    <li><b>低覆盖资产</b>：L2/L3 覆盖率连续两版 &lt; 阈值 → 标红，进技术债清单</li>
+                    <li><b>unstable 定位器聚集</b>：某模块 unstable 元素 &gt; 5 个 → 建议推开发补 testid</li>
+                    <li><b>孤儿 TP</b>：连续 3 个版本 changeFlag=kept 但没有对应 case → 清理</li>
+                </ul>
+            </div>
+
+            <!-- Tab 8 NFR -->
+            <div id="nfr" class="tab-panel hidden">
+                <h3 class="font-semibold text-lg mb-3">非功能最小集（V1.7 落地，不做过度设计）</h3>
+                <table class="border w-full text-sm">
+                    <tr class="bg-gray-100"><th class="border p-2">维度</th><th class="border p-2">要求</th></tr>
+                    <tr><td class="border p-2">幂等</td><td class="border p-2">同 (assetId,story,reqType) 已有 Draft 则复用，不新建版本</td></tr>
+                    <tr><td class="border p-2">超时</td><td class="border p-2">MCP 单步 30s、页面探测总时长 5min、Jira 拉取 10s，超时失败分级</td></tr>
+                    <tr><td class="border p-2">断点续跑</td><td class="border p-2">每完成一个 TP 落盘一次，重启从上次断点继续</td></tr>
+                    <tr><td class="border p-2">TraceID</td><td class="border p-2">每次任务一个 traceId，全日志贯穿</td></tr>
+                    <tr><td class="border p-2">降级</td><td class="border p-2">MCP Server 起不来 → 退化为仅静态 DOM 探测；浏览器起不来 → 报人工</td></tr>
+                    <tr><td class="border p-2">安全</td><td class="border p-2">凭证环境变量注入；日志白名单掩码；不存明文密码到资产 JSON</td></tr>
+                    <tr><td class="border p-2">Prompt 版本</td><td class="border p-2">judgePromptV / discoverPromptV 写入 meta.json，可回溯</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+<script>
+const tabs = document.querySelectorAll('[data-tab]');
+const panels = document.querySelectorAll('.tab-panel');
+tabs.forEach(btn=>{
+    btn.addEventListener('click',()=>{
+        tabs.forEach(b=>b.classList.remove('tab-active'));
+        btn.classList.add('tab-active');
+        panels.forEach(p=>p.classList.add('hidden'));
+        document.getElementById(btn.dataset.tab).classList.remove('hidden');
+    })
+})
+mermaid.initialize({startOnLoad:true});
+</script>
+</body>
+</html>
