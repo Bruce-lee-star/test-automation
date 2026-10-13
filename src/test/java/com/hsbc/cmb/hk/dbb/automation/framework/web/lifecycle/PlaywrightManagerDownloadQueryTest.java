@@ -40,7 +40,7 @@ public class PlaywrightManagerDownloadQueryTest {
         Mockito.when(mockProvider.getContext()).thenReturn(mockCtx);
 
         PlaywrightManager.setProvider(mockProvider);
-        DownloadRegistry.instance().record(mockCtx, saved);
+        DownloadRegistry.instance().record(mockCtx, "report.xlsx", saved);
 
         assertEquals(saved, PlaywrightManager.getLastDownloadPath());
         assertEquals("report.xlsx", PlaywrightManager.getLastDownloadFileName());
@@ -55,8 +55,8 @@ public class PlaywrightManagerDownloadQueryTest {
         Mockito.when(mockProvider.getContext()).thenReturn(mockCtx);
 
         PlaywrightManager.setProvider(mockProvider);
-        DownloadRegistry.instance().record(mockCtx, a);
-        DownloadRegistry.instance().record(mockCtx, b);
+        DownloadRegistry.instance().record(mockCtx, "a.xlsx", a);
+        DownloadRegistry.instance().record(mockCtx, "b.xlsx", b);
 
         assertEquals(2, PlaywrightManager.getDownloadPaths().size());
     }
@@ -106,7 +106,7 @@ public class PlaywrightManagerDownloadQueryTest {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
-            DownloadRegistry.instance().record(mockCtx, saved);
+            DownloadRegistry.instance().record(mockCtx, "async.xlsx", saved);
         }, "fake-download-save");
         saver.setDaemon(true);
         saver.start();
@@ -137,7 +137,7 @@ public class PlaywrightManagerDownloadQueryTest {
         Mockito.when(mockProvider.getContext()).thenReturn(mockCtx);
         PlaywrightManager.setProvider(mockProvider);
 
-        DownloadRegistry.instance().record(mockCtx, Paths.get("target/downloads/old.xlsx").toAbsolutePath());
+        DownloadRegistry.instance().record(mockCtx, "old.xlsx", Paths.get("target/downloads/old.xlsx").toAbsolutePath());
 
         assertNull("本次未触发新下载时应超时返回 null，而不是返回上一次的旧路径", PlaywrightManager.awaitLastDownloadPath(200));
         assertTrue("已登记数应满足 ≥1", PlaywrightManager.awaitDownloadCount(1, 200));

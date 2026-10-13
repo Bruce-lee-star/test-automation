@@ -25,8 +25,8 @@ public class DownloadRegistryTest {
         reg.clear(ctx);
         Path a = Paths.get("target/downloads/a.xlsx");
         Path b = Paths.get("target/downloads/b.xlsx");
-        reg.record(ctx, a);
-        reg.record(ctx, b);
+        reg.record(ctx, "a.xlsx", a);
+        reg.record(ctx, "b.xlsx", b);
         assertEquals(b, reg.last(ctx));
         reg.clear(ctx);
     }
@@ -38,8 +38,8 @@ public class DownloadRegistryTest {
         reg.clear(ctx);
         Path a = Paths.get("target/downloads/a.xlsx");
         Path b = Paths.get("target/downloads/b.xlsx");
-        reg.record(ctx, a);
-        reg.record(ctx, b);
+        reg.record(ctx, "a.xlsx", a);
+        reg.record(ctx, "b.xlsx", b);
         List<Path> all = reg.all(ctx);
         assertEquals(2, all.size());
         assertEquals(a, all.get(0));
@@ -64,7 +64,7 @@ public class DownloadRegistryTest {
         DownloadRegistry reg = DownloadRegistry.instance();
         reg.clear(c1);
         reg.clear(c2);
-        reg.record(c1, Paths.get("target/downloads/c1.xlsx"));
+        reg.record(c1, "c1.xlsx", Paths.get("target/downloads/c1.xlsx"));
         assertNull(reg.last(c2));
         assertEquals(Paths.get("target/downloads/c1.xlsx"), reg.last(c1));
         reg.clear(c1);
@@ -75,7 +75,7 @@ public class DownloadRegistryTest {
     public void record_ignoresNullArgs() {
         DownloadRegistry reg = DownloadRegistry.instance();
         // 不应抛异常（防御性 null 安全）
-        reg.record(null, Paths.get("x"));
-        reg.record(Mockito.mock(BrowserContext.class), null);
+        reg.record(null, "x", Paths.get("x"));
+        reg.record(Mockito.mock(BrowserContext.class), "x", null);
     }
 }

@@ -19,6 +19,6 @@ public class HomePage extends AbstractManagedPage {
     @Element("h3[aria-label=\"Recent activity\"]")
     public PageElement quickLink;
 
-    @Element("[id='topnav.profileswitcher.dropdown']")
+    @Element("[id='topnav.profileswitcher.dropdown'],.current-profile")
     public PageElement profileSwitcher;
 }

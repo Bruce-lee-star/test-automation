@@ -2,8 +2,14 @@ package com.hsbc.cmb.hk.dbb.automation.tests.ssoplan;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.common.config.ConfigSource;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 跨 Surefire fork 的账号静态分区解析器（设计文档 §5.1~§5.5）。
@@ -33,6 +39,11 @@ public final class ForkAwareAccountResolver {
     public static final String SUREFIRE_FORK_NUMBER = "surefire.forkNumber";
     public static final String STRIDE_KEY = "sso.fork.user.stride";
     public static final int DEFAULT_STRIDE = 4;
+
+    private static final Logger LOG = LoggerFactory.getLogger(ForkAwareAccountResolver.class);
+
+    /** §5.7 过分区一次性告警去重（key = env#forkIndex，每 JVM 内只告警一次）。 */
+    private static final Set<String> WARNED_OVER_PARTITION = ConcurrentHashMap.newKeySet();
 
     private ForkAwareAccountResolver() {
     }
@@ -71,6 +82,31 @@ public final class ForkAwareAccountResolver {
     /** 当前 fork 在给定 env 下分得的账号切片（连续 {@link #stride()} 段，大小写敏感、已去重）。 */
     public static List<String> myUsers(String env) {
         return myUsers(load(env), env);
+    }
+
+    /**
+     * §5.7 有效账号池：在 {@code sso.accounts.&lt;env&gt;} 全量之上，再经 {@link RunScopeAccountProvider}
+     * 裁剪出本次运行活跃子集。provider 返回空 / null = 不裁剪（全量）。
+     * 保持全量中的相对顺序，仅剔除非活跃账号。
+     */
+    private static List<String> activePool(SsoAccountManifest manifest, String env) {
+        List<String> all = manifest.usersOf(env);
+        if (all.isEmpty()) {
+            return all;
+        }
+        RunScopeAccountProvider provider = RunScopeAccountProviders.resolve();
+        List<String> active = provider.activeUsers(env);
+        if (active == null || active.isEmpty()) {
+            return all; // 不裁剪
+        }
+        Set<String> activeSet = new LinkedHashSet<>(active);
+        List<String> trimmed = new ArrayList<>(Math.min(all.size(), active.size()));
+        for (String u : all) {
+            if (activeSet.contains(u)) {
+                trimmed.add(u);
+            }
+        }
+        return List.copyOf(trimmed);
     }
 
     /**
@@ -122,7 +158,7 @@ public final class ForkAwareAccountResolver {
     }
 
     private static List<String> myUsers(SsoAccountManifest manifest, String env) {
-        List<String> all = manifest.usersOf(env);
+        List<String> all = activePool(manifest, env);
         if (all.isEmpty()) {
             return List.of();
         }
@@ -133,14 +169,33 @@ public final class ForkAwareAccountResolver {
         int idx = currentForkIndex();
         int start = idx * stride;
         if (start >= all.size()) {
+            warnOverPartition(env, idx, all.size());
             return List.of();
         }
         int end = Math.min(all.size(), start + stride);
         return List.copyOf(all.subList(start, end));
     }
 
+    /**
+     * §5.7 过分区告警：fork 索引超出有效账号池 → 该 fork 无账号可用，并发上限应降（多余 fork 排队 / 跳过）。
+     * 每 (env, fork) 仅告警一次，避免日志刷屏。仅信息性 —— fail-fast 仍是真实跨 fork 防线的兜底。
+     */
+    private static void warnOverPartition(String env, int idx, int poolSize) {
+        if (poolSize <= 0) {
+            return;
+        }
+        String key = env + "#" + idx;
+        if (WARNED_OVER_PARTITION.add(key)) {
+            LOG.warn("SSO fork over-partition (design §5.7): fork {} has no accounts in env {} "
+                    + "(active pool size={}, stride={}). Effective concurrency auto-reduced: extra forks without "
+                    + "accounts either queue or are skipped (scenarios still fail-fast if they attempt a cross-fork "
+                    + "account). Fix: lower forkCount or raise sso.fork.user.stride so accounts cover all forks, "
+                    + "or trim active accounts via RunScopeAccountProvider.", idx, env, poolSize, stride());
+        }
+    }
+
     private static int ownerForkOf(SsoAccountManifest manifest, String env, String user) {
-        List<String> all = manifest.usersOf(env);
+        List<String> all = activePool(manifest, env);
         int i = all.indexOf(user);
         if (i < 0) {
             return -1;

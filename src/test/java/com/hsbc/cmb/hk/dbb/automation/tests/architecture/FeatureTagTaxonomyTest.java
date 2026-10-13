@@ -56,9 +56,16 @@ public class FeatureTagTaxonomyTest {
 
     /** 维度三：域/能力（业务能力编排；新增能力须在此登记）。 */
     private static final Set<String> DOMAIN = Set.of(
-            "login", "baidu", "scan", "scan-record", "picker", "e2e-sandbox",
+            "login", "baidu", "scan", "picker", "e2e-sandbox",
             "parallel-logon", "concurrent-logon",
             "route-e2e",
+            // route-e2e 能力子标签：route_capability_e2e.feature 的场景级编排（2026-10-10 登记）
+            "route-e2e-capture", "route-e2e-monitor", "route-e2e-mock", "route-e2e-mock-when",
+            "route-e2e-modify", "route-e2e-delay", "route-e2e-priority",
+            // route-testbed 靶场能力：route_testbed_e2e.feature 的场景级编排（2026-10-10 登记）
+            "route-testbed", "route-testbed-monitor", "route-testbed-monitor-fail",
+            "route-testbed-mock", "route-testbed-modify", "route-testbed-delay",
+            "route-testbed-cascade", "route-testbed-capture-sse", "route-testbed-isolation",
             "delay", "click", "hover", "type", "check", "select", "popup", "download", "dialog",
             "firefox", "edge", "webkit", "route-edge", "test");
 

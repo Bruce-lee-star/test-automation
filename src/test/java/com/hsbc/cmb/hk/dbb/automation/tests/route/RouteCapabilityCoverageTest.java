@@ -423,6 +423,7 @@ public class RouteCapabilityCoverageTest {
         Route route = mockRoute(mockRequest("https://host/dbb/monitor-status", "GET", null, null, response));
         handler.accept(route);
 
+        awaitAssertionSettlement();
         assertTrue("期望与响应一致时不得上报断言失败", runtime.drainSettledAssertionFailures().isEmpty());
     }
 
@@ -437,6 +438,7 @@ public class RouteCapabilityCoverageTest {
         Route route = mockRoute(mockRequest("https://host/dbb/monitor-status-fail", "GET", null, null, response));
         handler.accept(route);
 
+        awaitAssertionSettlement();
         assertEquals("期望 200 实际 500 必须定案为一条断言失败", 1, runtime.drainSettledAssertionFailures().size());
     }
 
@@ -457,8 +459,9 @@ public class RouteCapabilityCoverageTest {
                 "GET", null, null, response));
         handler.accept(route);
 
-        // body 断言在 IO 线程执行：关闭 IO 池（有界等待）以确保断言任务落定
-        runtime.io().close();
+        // 2026-10-10 同步化：body 断言在调度线程（route-v2-delay）轮询到响应时【同步】就地结算，
+        // 不再投 IO 线程 —— 无需（也不应）关闭 IO 池等待。这里等待的是调度轮询线程完成结算。
+        awaitAssertionSettlement();
         assertTrue("真实夹具的两条 jsonPath 断言必须全部通过", runtime.drainSettledAssertionFailures().isEmpty());
     }
 
@@ -478,7 +481,7 @@ public class RouteCapabilityCoverageTest {
                 "GET", null, null, response));
         handler.accept(route);
 
-        runtime.io().close();
+        awaitAssertionSettlement();
         assertEquals("期望 N 实际 Y 必须定案为一条断言失败", 1, runtime.drainSettledAssertionFailures().size());
     }
 
@@ -498,7 +501,7 @@ public class RouteCapabilityCoverageTest {
                 "GET", null, null, response));
         handler.accept(route);
 
-        runtime.io().close();
+        awaitAssertionSettlement();
         assertEquals("路径不存在必须定案为一条断言失败", 1, runtime.drainSettledAssertionFailures().size());
     }
 
@@ -518,7 +521,7 @@ public class RouteCapabilityCoverageTest {
         Route route = mockRoute(mockRequest("https://host/dbb/monitor-body-text", "GET", null, null, response));
         handler.accept(route);
 
-        runtime.io().close();
+        awaitAssertionSettlement();
         assertTrue("contains/regex 均命中时不得上报失败", runtime.drainSettledAssertionFailures().isEmpty());
     }
 
@@ -543,7 +546,7 @@ public class RouteCapabilityCoverageTest {
                 "application/x-www-form-urlencoded", response));
         handler.accept(route);
 
-        runtime.io().close();
+        awaitAssertionSettlement();
         assertTrue("表单字段命中时不得上报失败", runtime.drainSettledAssertionFailures().isEmpty());
     }
 
@@ -587,7 +590,7 @@ public class RouteCapabilityCoverageTest {
         Route.ResumeOptions options = captureResume(route);
         assertTrue("合并规则里的 MODIFY 必须生效，实际: " + options.postData, find(options.postData, "\"user\"\\s*:\\s*\"merged\""));
 
-        runtime.io().close();
+        awaitAssertionSettlement();
         assertTrue("同一合并规则里的 MONITOR 期望 200 且响应 200，不得上报失败", runtime.drainSettledAssertionFailures().isEmpty());
     }
 
@@ -798,7 +801,22 @@ public class RouteCapabilityCoverageTest {
         }
     }
 
-    /** 轮询等待运行时线程退出，返回仍在存活的线程名（空 = 无残留）。 */
+    /**
+     * 等待调度线程完成响应观测与断言结算（2026-10-10 同步化语义）。
+     *
+     * <p><b>为什么需要等待</b>：{@code handler.accept(route)} 只在主线程完成 dispatch（claim 终结、
+     * 请求入观测队列）；响应轮询走 {@code RouteDelayScheduler}（首轮 25ms、指数退避上限 100ms），
+     * 轮询到 {@code existingResponse()} 后<b>就地同步</b>完成 body 断言并结算（不再投 IO 线程）。
+     * 断言结果<b>不可直接感知"已完成"</b>（无完成信号暴露），故用固定等待窗口覆盖
+     * 首轮轮询 + 结算时延；窗口大于最大轮询间隔，稳定无竞态。
+     */
+    private void awaitAssertionSettlement() {
+        sleep(300L);
+    }
+
+    /**
+     * 轮询等待 runtime 关闭后 IO / 撤销 / 巡检线程全部退出，返回仍在存活的线程名（空 = 无残留）。
+     */
     private static List<String> awaitNoAliveRuntimeThreads(long timeoutMs) {
         long deadline = System.nanoTime() + timeoutMs * 1_000_000L;
         List<String> residual = aliveRuntimeThreadNames();

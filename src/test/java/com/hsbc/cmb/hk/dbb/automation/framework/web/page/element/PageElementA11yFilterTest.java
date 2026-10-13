@@ -6,6 +6,8 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -26,9 +28,16 @@ public class PageElementA11yFilterTest {
     @Test
     public void ariaSnapshot_delegatesToLocator() {
         Locator loc = mock(Locator.class);
-        when(loc.ariaSnapshot()).thenReturn("- button \"OK\"");
+        when(loc.ariaSnapshot(any(Locator.AriaSnapshotOptions.class))).thenReturn("- button \"OK\"");
         assertEquals("- button \"OK\"", elWith(loc).ariaSnapshot());
-        verify(loc).ariaSnapshot();
+
+        // 乙（2026-10-10）：元素侧"读取类"API 不再继承 Playwright 上下文默认超时，
+        // 一律显式传 element.wait.timeout（opTimeout()）—— 本断言钉住"确实传了正值超时"。
+        ArgumentCaptor<Locator.AriaSnapshotOptions> captor =
+                ArgumentCaptor.forClass(Locator.AriaSnapshotOptions.class);
+        verify(loc).ariaSnapshot(captor.capture());
+        assertNotNull("ariaSnapshot 必须显式传超时（元素侧单一事实来源）", captor.getValue().timeout);
+        assertTrue("超时须为正数", captor.getValue().timeout > 0);
     }
 
     @Test

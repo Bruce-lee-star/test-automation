@@ -1,5 +1,7 @@
 package com.hsbc.cmb.hk.dbb.automation.tests.api.steps;
 
+import com.hsbc.cmb.hk.dbb.automation.framework.api.core.step.ApiTestContext;
+
 import org.junit.Test;
 
 import java.util.concurrent.ExecutorService;

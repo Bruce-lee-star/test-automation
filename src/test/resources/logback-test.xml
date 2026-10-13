@@ -66,6 +66,13 @@
       故此处保持基线 INFO：默认只输出关键信息。
     -->
     <logger name="com.hsbc.cmb.hk.dbb.automation" level="INFO"/>
+
+    <!--
+      CT 耗时探针（2026-10-10）：PlaywrightContextManager.closeContext 的 [CT] TRACE 计时日志，
+      用于收集 SIT 真实 context close 分布、定标 CloseGuard.CONTEXT_CLOSE_LIMIT_MS=1500。
+      TRACE 仅输出两行耗时（close 段 + 总链路），收集完毕后可删除本 logger 或改回 INFO。
+    -->
+    <logger name="com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.bootstrap.PlaywrightContextManager" level="TRACE"/>
     
     <!-- Playwright 日志级别 -->
     <logger name="com.microsoft.playwright" level="WARN"/>

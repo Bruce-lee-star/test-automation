@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -6,7 +6,7 @@
 
     <parent>
         <groupId>com.hsbc.cmb.dbb.hk.automation</groupId>
-        <artifactId>Automation_WebUI_Framework_BDD</artifactId>
+        <artifactId>pw_automation_framework</artifactId>
         <version>1.0.1</version>
         <relativePath/>
     </parent>
@@ -17,25 +17,36 @@
 
     <properties>
         <framework.version>1.0.1</framework.version>
-        <!-- Cucumber 标签过滤：默认只跑 @test 场景（对齐 master 的 CucumberTestRunnerIT 注解 @test）。
-             本属性经 failsafe 的 systemPropertyVariables 注入为 cucumber.filter.tags，是主运行器
-             【CucumberTestRunnerIT】的单一事实来源（覆盖其 @CucumberOptions(tags) 注解）。
-             定向覆盖（运行器仍只扫 features 目录，标签交给本属性）：
-               mvn verify -Dit.test=CucumberTestRunnerIT -Dtags='@login'
-               mvn verify -Dit.test=CucumberTestRunnerIT -Dtags='@route or @api'
-             注意：failsafe excludes 里那三个并行运行器各自硬编码标签，本属性对其无效，
-             故它们不参与默认 verify（定向运行命令见 excludes 注释）。 -->
+        <!-- Cucumber 鏍囩杩囨护锛氶粯璁ゅ彧璺?@test 鍦烘櫙锛堝榻?master 鐨?CucumberTestRunnerIT 娉ㄨВ @test锛夈€?
+             鏈睘鎬х粡 failsafe 鐨?systemPropertyVariables 娉ㄥ叆涓?cucumber.filter.tags锛屾槸涓昏繍琛屽櫒
+             銆怌ucumberTestRunnerIT銆戠殑鍗曚竴浜嬪疄鏉ユ簮锛堣鐩栧叾 @CucumberOptions(tags) 娉ㄨВ锛夈€?
+             杩愯妯″瀷锛?026-10-10 璧凤級锛氥€愬彧鎸?feature 杩愯銆戔€斺€?鍞竴鍏ュ彛 + 鏍囩閫夋嫨锛屼笉鍐嶆寜绫诲悕璺戯細
+               mvn verify -Dtags='@login'
+               mvn verify -Dtags='@route or @api'
+             -Dit.test=<绫诲悕> 浠呯敤浜庡畾鍚戣皟璇曪紙瀹冧細瑕嗙洊 failsafe 鐨?includes/excludes锛夈€?-->
         <tags>@test</tags>
 
-        <!-- Checkstyle 门禁：本模块【显式关闭】（2026-09-23，本地全量实测）。
-             原因：parent 的 configLocation 为 ${maven.multiModuleProjectDirectory}/checkstyle.xml，用于定位
-             “框架仓库根”的共享配置；而对作为【独立构建单元】的 test-automation（parent 经 <relativePath/>
-             从 .m2 解析），该变量指向本模块目录 → 配置不存在 → 插件在扫描前即硬失败
-             （实测：Unable to find configuration file at location: .../test-automation/checkstyle.xml），
-             使 `mvn verify` 结构性必红（与测试结果无关），CI 的 e2e job 同样被卡。
-             关闭不损失覆盖：① 本模块 src/main/java 为空（无 main 源码）；② parent 的 checkstyle 本就
-             includeTestSourceDirectory=false（测试源不入该门禁）→ 此模块没有任何可校验对象。
-             框架生产代码的风格门禁仍在框架仓库的 build job 中强制执行（含与 checkstyle-baseline.xml 的计数比对）。 -->
+        <!-- 鍗曟祴寮€鍏筹紙灞炴€э紝闈?profile锛夛細E2E 鍙窇 Cucumber 鍦烘櫙鏃讹紝鎶?surefire锛圝Unit 鍗曟祴锛夋暣浣撹烦杩囷細
+               mvn clean verify -Dskip.unit.tests=true -Dtags='@route-e2e'
+             榛樿 false 鈬?甯歌 mvn test / mvn verify 浠嶈窇鍏ㄩ儴 JUnit 鍗曟祴锛堥棬绂佷笉涓級銆?
+             娉ㄦ剰锛氫笉瑕佺敤 -DskipTests 浠ｆ浛 鈥斺€?閭ｄ釜寮€鍏充細鍚屾椂璺宠繃 failsafe锛孍2E 灏变笉浼氭墽琛屻€?-->
+        <skip.unit.tests>false</skip.unit.tests>
+
+        <!-- 澶辫触閲嶈窇锛氬榻?master 鍒嗘敮榛樿 0锛堜笉閲嶈窇锛夈€傛鏋剁埗 pom 榛樿 1锛?缁?flaky 鐣欎竴娆＄紦鍐?锛夛紝
+             鏈ā鍧楁樉寮忚鐩栦负 0 鈥斺€?2026-10-10 瀹炴祴锛氬€间负 1 鏃舵瘡涓け璐ュ満鏅悇璺?2 閬?
+             锛堟棩蹇楀嚭鐜?2 涓被绾ф姤鍛婂潡銆丗ailed: 14銆丼creenshots Taken: 2锛夛紝E2E 鏃堕暱杩戜箮缈诲€嶃€?
+             CI 闇€瑕?flaky 缂撳啿鏃舵寜鐖?pom 鐨勭害瀹氳鐩栵細-DrerunFailingTestsCount=N锛堢敤鎴峰睘鎬т紭鍏堢骇鏇撮珮锛夈€?-->
+        <rerunFailingTestsCount>0</rerunFailingTestsCount>
+
+        <!-- Checkstyle 闂ㄧ锛氭湰妯″潡銆愭樉寮忓叧闂€戯紙2026-09-23锛屾湰鍦板叏閲忓疄娴嬶級銆?
+             鍘熷洜锛歱arent 鐨?configLocation 涓?${maven.multiModuleProjectDirectory}/checkstyle.xml锛岀敤浜庡畾浣?
+             鈥滄鏋朵粨搴撴牴鈥濈殑鍏变韩閰嶇疆锛涜€屽浣滀负銆愮嫭绔嬫瀯寤哄崟鍏冦€戠殑 test-automation锛坧arent 缁?<relativePath/>
+             浠?.m2 瑙ｆ瀽锛夛紝璇ュ彉閲忔寚鍚戞湰妯″潡鐩綍 鈫?閰嶇疆涓嶅瓨鍦?鈫?鎻掍欢鍦ㄦ壂鎻忓墠鍗崇‖澶辫触
+             锛堝疄娴嬶細Unable to find configuration file at location: .../test-automation/checkstyle.xml锛夛紝
+             浣?`mvn verify` 缁撴瀯鎬у繀绾紙涓庢祴璇曠粨鏋滄棤鍏筹級锛孋I 鐨?e2e job 鍚屾牱琚崱銆?
+             鍏抽棴涓嶆崯澶辫鐩栵細鈶?鏈ā鍧?src/main/java 涓虹┖锛堟棤 main 婧愮爜锛夛紱鈶?parent 鐨?checkstyle 鏈氨
+             includeTestSourceDirectory=false锛堟祴璇曟簮涓嶅叆璇ラ棬绂侊級鈫?姝ゆā鍧楁病鏈変换浣曞彲鏍￠獙瀵硅薄銆?
+             妗嗘灦鐢熶骇浠ｇ爜鐨勯鏍奸棬绂佷粛鍦ㄦ鏋朵粨搴撶殑 build job 涓己鍒舵墽琛岋紙鍚笌 checkstyle-baseline.xml 鐨勮鏁版瘮瀵癸級銆?-->
         <checkstyle.skip>true</checkstyle.skip>
     </properties>
 
@@ -60,7 +71,7 @@
             <artifactId>pw-web-ui</artifactId>
             <version>${framework.version}</version>
         </dependency>
-        <!-- Route V2：唯一路由实现（V1 pw-route 已整体移除；业务层统一使用 RouteDsl） -->
+        <!-- Route V2锛氬敮涓€璺敱瀹炵幇锛圴1 pw-route 宸叉暣浣撶Щ闄わ紱涓氬姟灞傜粺涓€浣跨敤 RouteDsl锛?-->
         <dependency>
             <groupId>com.hsbc.cmb.dbb.hk.automation</groupId>
             <artifactId>pw-route</artifactId>
@@ -72,7 +83,7 @@
             <version>${framework.version}</version>
         </dependency>
 
-        <!-- ENG-P0-2：test-automation 实际用到的外部依赖（原由根 <dependencies> 继承，现显式声明；均为测试期） -->
+        <!-- ENG-P0-2锛歵est-automation 瀹為檯鐢ㄥ埌鐨勫閮ㄤ緷璧栵紙鍘熺敱鏍?<dependencies> 缁ф壙锛岀幇鏄惧紡澹版槑锛涘潎涓烘祴璇曟湡锛?-->
         <dependency>
             <groupId>net.serenity-bdd</groupId>
             <artifactId>serenity-model</artifactId>
@@ -84,10 +95,10 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- 运行 IT 所需（本框架用 Playwright，不真正使用这些 driver）：Serenity 4.2.0 的
-             SupportedWebDriver 静态初始化会对 FirefoxDriver/ChromeDriver/InternetExplorerDriver/
-             EdgeDriver/SafariDriver/HtmlUnitDriver/AppiumDriver 做 ldc，类缺失即 NoClassDefFoundError
-             导致全部 IT 在 Serenity 初始化阶段失败。此处补 test 作用域类路径，使类可加载。 -->
+        <!-- 杩愯 IT 鎵€闇€锛堟湰妗嗘灦鐢?Playwright锛屼笉鐪熸浣跨敤杩欎簺 driver锛夛細Serenity 4.2.0 鐨?
+             SupportedWebDriver 闈欐€佸垵濮嬪寲浼氬 FirefoxDriver/ChromeDriver/InternetExplorerDriver/
+             EdgeDriver/SafariDriver/HtmlUnitDriver/AppiumDriver 鍋?ldc锛岀被缂哄け鍗?NoClassDefFoundError
+             瀵艰嚧鍏ㄩ儴 IT 鍦?Serenity 鍒濆鍖栭樁娈靛け璐ャ€傛澶勮ˉ test 浣滅敤鍩熺被璺緞锛屼娇绫诲彲鍔犺浇銆?-->
         <dependency>
             <groupId>org.seleniumhq.selenium</groupId>
             <artifactId>selenium-java</artifactId>
@@ -100,10 +111,10 @@
             <version>${htmlunit3.driver.version}</version>
             <scope>test</scope>
             <exclusions>
-                <!-- 依赖治理（内网隔离清单）：本框架从不实例化 HtmlUnitDriver（Playwright 驱动），
-                     对它的唯一需求是「类可加载」（上方说明的 SupportedWebDriver 静态 ldc）。而
-                     htmlunit-websocket-client 仅 HtmlUnit 真正跑 WebSocket 时才会用到，本框架用不到，
-                     且该构件命中内网隔离清单，故在此断开（htmlunit 本体经 htmlunit3-driver 传递保留）。 -->
+                <!-- 渚濊禆娌荤悊锛堝唴缃戦殧绂绘竻鍗曪級锛氭湰妗嗘灦浠庝笉瀹炰緥鍖?HtmlUnitDriver锛圥laywright 椹卞姩锛夛紝
+                     瀵瑰畠鐨勫敮涓€闇€姹傛槸銆岀被鍙姞杞姐€嶏紙涓婃柟璇存槑鐨?SupportedWebDriver 闈欐€?ldc锛夈€傝€?
+                     htmlunit-websocket-client 浠?HtmlUnit 鐪熸璺?WebSocket 鏃舵墠浼氱敤鍒帮紝鏈鏋剁敤涓嶅埌锛?
+                     涓旇鏋勪欢鍛戒腑鍐呯綉闅旂娓呭崟锛屾晠鍦ㄦ鏂紑锛坔tmlunit 鏈綋缁?htmlunit3-driver 浼犻€掍繚鐣欙級銆?-->
                 <exclusion>
                     <groupId>org.htmlunit</groupId>
                     <artifactId>htmlunit-websocket-client</artifactId>
@@ -136,7 +147,7 @@
             <artifactId>serenity-junit</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- JUnit 4：执行器回退 master 方案（2026-09-27，P0）——CucumberWithSerenity runner（Serenity 主体接管，scenario tags 天然写入 TestOutcome，根治 JUnit5 旁挂下 @firefox/@edge 覆盖失效）。 -->
+        <!-- JUnit 4锛氭墽琛屽櫒鍥為€€ master 鏂规锛?026-09-27锛孭0锛夆€斺€擟ucumberWithSerenity runner锛圫erenity 涓讳綋鎺ョ锛宻cenario tags 澶╃劧鍐欏叆 TestOutcome锛屾牴娌?JUnit5 鏃佹寕涓?@firefox/@edge 瑕嗙洊澶辨晥锛夈€?-->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -144,15 +155,15 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- cucumber-junit：@RunWith(CucumberWithSerenity) 的 JUnit4 桥接（serenity-cucumber 依赖其运行器） -->
+        <!-- cucumber-junit锛欯RunWith(CucumberWithSerenity) 鐨?JUnit4 妗ユ帴锛坰erenity-cucumber 渚濊禆鍏惰繍琛屽櫒锛?-->
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-junit</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- 依赖治理（内网隔离清单）：Cucumber 已从 serenity-model 的传递链路排除，改由使用方显式声明。
-             本模块**确实使用**下列三者（Cucumber 运行器 + step 定义 + DataTable 断言），
-             故必须显式拉入；版本统一由根 DM 钉 ${cucumber.version}（7.31.0），避免随 Serenity 传递漂移。 -->
+        <!-- 渚濊禆娌荤悊锛堝唴缃戦殧绂绘竻鍗曪級锛欳ucumber 宸蹭粠 serenity-model 鐨勪紶閫掗摼璺帓闄わ紝鏀圭敱浣跨敤鏂规樉寮忓０鏄庛€?
+             鏈ā鍧?*纭疄浣跨敤**涓嬪垪涓夎€咃紙Cucumber 杩愯鍣?+ step 瀹氫箟 + DataTable 鏂█锛夛紝
+             鏁呭繀椤绘樉寮忔媺鍏ワ紱鐗堟湰缁熶竴鐢辨牴 DM 閽?${cucumber.version}锛?.31.0锛夛紝閬垮厤闅?Serenity 浼犻€掓紓绉汇€?-->
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-core</artifactId>
@@ -188,21 +199,21 @@
             <artifactId>playwright</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- RestAssured POST 运行期需要 commons-logging(LogFactory)；serenity-* 已将其排除，此处显式补回 -->
+        <!-- RestAssured POST 杩愯鏈熼渶瑕?commons-logging(LogFactory)锛泂erenity-* 宸插皢鍏舵帓闄わ紝姝ゅ鏄惧紡琛ュ洖 -->
         <dependency>
             <groupId>commons-logging</groupId>
             <artifactId>commons-logging</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- selenium-support：serenity 公开 API 引用 org.openqa.selenium.support.ui.*（如 ExpectedCondition）；
-             测试源码用到 serenity 的 Wait/ExpectedCondition 签名，须显式声明否则 javac 符号补全会 CompletionFailure -->
+        <!-- selenium-support锛歴erenity 鍏紑 API 寮曠敤 org.openqa.selenium.support.ui.*锛堝 ExpectedCondition锛夛紱
+             娴嬭瘯婧愮爜鐢ㄥ埌 serenity 鐨?Wait/ExpectedCondition 绛惧悕锛岄』鏄惧紡澹版槑鍚﹀垯 javac 绗﹀彿琛ュ叏浼?CompletionFailure -->
         <dependency>
             <groupId>org.seleniumhq.selenium</groupId>
             <artifactId>selenium-support</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- 纯单测：mock Playwright Page/BrowserContext，校验 start(page) 监听器幂等注册（不依赖浏览器运行时） -->
+        <!-- 绾崟娴嬶細mock Playwright Page/BrowserContext锛屾牎楠?start(page) 鐩戝惉鍣ㄥ箓绛夋敞鍐岋紙涓嶄緷璧栨祻瑙堝櫒杩愯鏃讹級 -->
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
@@ -210,9 +221,9 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <!-- Mockito inline mock-maker 的固定配对：byte-buddy 1.12.23 + objenesis 3.2。
-                 刻意【不】迁进 <dependencyManagement>：enforcer 的 RequireUpperBoundDeps 把 managed 版本与
-                 传递需求比上限（serenity-model 4.3.4 → objenesis 3.4）会判违规；内联声明才被视作本模块显式钉版。 -->
+            <!-- Mockito inline mock-maker 鐨勫浐瀹氶厤瀵癸細byte-buddy 1.12.23 + objenesis 3.2銆?
+                 鍒绘剰銆愪笉銆戣縼杩?<dependencyManagement>锛歟nforcer 鐨?RequireUpperBoundDeps 鎶?managed 鐗堟湰涓?
+                 浼犻€掗渶姹傛瘮涓婇檺锛坰erenity-model 4.3.4 鈫?objenesis 3.4锛変細鍒よ繚瑙勶紱鍐呰仈澹版槑鎵嶈瑙嗕綔鏈ā鍧楁樉寮忛拤鐗堛€?-->
             <groupId>net.bytebuddy</groupId>
             <artifactId>byte-buddy</artifactId>
             <version>1.12.23</version>
@@ -224,7 +235,7 @@
             <version>3.2</version>
             <scope>test</scope>
         </dependency>
-        <!-- T0-4 补全收尾：Monitor DB 持久化端到端验证（内存库，无需外部 DB） -->
+        <!-- T0-4 琛ュ叏鏀跺熬锛歁onitor DB 鎸佷箙鍖栫鍒扮楠岃瘉锛堝唴瀛樺簱锛屾棤闇€澶栭儴 DB锛?-->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
@@ -235,18 +246,18 @@
 
     <build>
         <plugins>
-            <!-- 报告目录清理（口径统一：报告只呈现【本次运行】的场景）。
-                 背景：Serenity 每次都往同一目录追加场景 JSON/HTML，不清理时汇总报告会把历史运行的行一起算进去
-                 （实测同一目录累积 14 个 JSON、同名场景出现两份），"This run" 因此不可信。
-                 做法：把 maven-clean-plugin 绑到 pre-integration-test（failsafe 跑 IT 之前），**整个清空**
-                 ${project.build.directory}/site/serenity —— 本地跑 verify 无需 mvn clean，口径与 CI 完全一致。
-                 与 CI 的等价性：CI 每次运行都是全新工作区（checkout 后 target/ 为空），本就无历史可留；
-                 保留历史只在本地连续跑时才有差别，而"报告只代表本次运行"是更重要的一致性要求，故一律全清。
-                 副作用（已确认接受）：trend-history/** 也一并清掉，故跨场 FLAKY 徽标（近 5 场失败 ≥3 次）
-                 在真实运行中不再可能触发 —— 它是 trend 数据的唯一消费方；若日后要恢复，应把趋势快照移出
-                 报告目录（例如 target/trend-history），而不是把历史留在报告目录里与"本次运行"口径打架。
-                 另：excludeDefaultDirectories=true 必须保留 —— 否则 clean 目标会连带删掉整个 target/，
-                 把已编译产物在 pre-integration-test 阶段清空，直接毁掉本次运行。 -->
+            <!-- 鎶ュ憡鐩綍娓呯悊锛堝彛寰勭粺涓€锛氭姤鍛婂彧鍛堢幇銆愭湰娆¤繍琛屻€戠殑鍦烘櫙锛夈€?
+                 鑳屾櫙锛歋erenity 姣忔閮藉線鍚屼竴鐩綍杩藉姞鍦烘櫙 JSON/HTML锛屼笉娓呯悊鏃舵眹鎬绘姤鍛婁細鎶婂巻鍙茶繍琛岀殑琛屼竴璧风畻杩涘幓
+                 锛堝疄娴嬪悓涓€鐩綍绱Н 14 涓?JSON銆佸悓鍚嶅満鏅嚭鐜颁袱浠斤級锛?This run" 鍥犳涓嶅彲淇°€?
+                 鍋氭硶锛氭妸 maven-clean-plugin 缁戝埌 pre-integration-test锛坒ailsafe 璺?IT 涔嬪墠锛夛紝**鏁翠釜娓呯┖**
+                 ${project.build.directory}/site/serenity 鈥斺€?鏈湴璺?verify 鏃犻渶 mvn clean锛屽彛寰勪笌 CI 瀹屽叏涓€鑷淬€?
+                 涓?CI 鐨勭瓑浠锋€э細CI 姣忔杩愯閮芥槸鍏ㄦ柊宸ヤ綔鍖猴紙checkout 鍚?target/ 涓虹┖锛夛紝鏈氨鏃犲巻鍙插彲鐣欙紱
+                 淇濈暀鍘嗗彶鍙湪鏈湴杩炵画璺戞椂鎵嶆湁宸埆锛岃€?鎶ュ憡鍙唬琛ㄦ湰娆¤繍琛?鏄洿閲嶈鐨勪竴鑷存€ц姹傦紝鏁呬竴寰嬪叏娓呫€?
+                 鍓綔鐢紙宸茬‘璁ゆ帴鍙楋級锛歵rend-history/** 涔熶竴骞舵竻鎺夛紝鏁呰法鍦?FLAKY 寰芥爣锛堣繎 5 鍦哄け璐?鈮? 娆★級
+                 鍦ㄧ湡瀹炶繍琛屼腑涓嶅啀鍙兘瑙﹀彂 鈥斺€?瀹冩槸 trend 鏁版嵁鐨勫敮涓€娑堣垂鏂癸紱鑻ユ棩鍚庤鎭㈠锛屽簲鎶婅秼鍔垮揩鐓хЩ鍑?
+                 鎶ュ憡鐩綍锛堜緥濡?target/trend-history锛夛紝鑰屼笉鏄妸鍘嗗彶鐣欏湪鎶ュ憡鐩綍閲屼笌"鏈杩愯"鍙ｅ緞鎵撴灦銆?
+                 鍙︼細excludeDefaultDirectories=true 蹇呴』淇濈暀 鈥斺€?鍚﹀垯 clean 鐩爣浼氳繛甯﹀垹鎺夋暣涓?target/锛?
+                 鎶婂凡缂栬瘧浜х墿鍦?pre-integration-test 闃舵娓呯┖锛岀洿鎺ユ瘉鎺夋湰娆¤繍琛屻€?-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-clean-plugin</artifactId>
@@ -269,19 +280,40 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- surefire 只跑单测：把 IT 运行器排除掉，避免与 failsafe 重复执行同一套件。
-                 实测（2026-10-09）：命令行带 -Dtest=<某 IT> 时，同一套件会被 surefire 与 failsafe
-                 各跑一遍（耗时翻倍，且框架监听器会把"第二个插件的 suite"误报成 RERUN STARTING）。
-                 注意：-Dtest 会【覆盖】includes/excludes，故这只是防呆；IT 一律用 -Dit.test= 指定。 -->
+            <!-- surefire 鍙窇鍗曟祴锛氭妸 IT 杩愯鍣ㄦ帓闄ゆ帀锛岄伩鍏嶄笌 failsafe 閲嶅鎵ц鍚屼竴濂椾欢銆?
+                 瀹炴祴锛?026-10-09锛夛細鍛戒护琛屽甫 -Dtest=<鏌?IT> 鏃讹紝鍚屼竴濂椾欢浼氳 surefire 涓?failsafe
+                 鍚勮窇涓€閬嶏紙鑰楁椂缈诲€嶏紝涓旀鏋剁洃鍚櫒浼氭妸"绗簩涓彃浠剁殑 suite"璇姤鎴?RERUN STARTING锛夈€?
+                 娉ㄦ剰锛?Dtest 浼氥€愯鐩栥€慽ncludes/excludes锛屾晠涓婇潰鐨?<excludes> 鍙槸闃插憜锛?
+                 鐪熸鐨勬姢鏍忔槸涓嬮潰娉ㄥ叆鐨?姘镐笉鍖归厤鏍囩"锛堣鐩?-Dtest 鐨勫満鏅紝瑙佽澶勬敞閲婏級銆?-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven-surefire-plugin.version}</version>
                 <configuration>
-                    <excludes>
-                        <exclude>**/*IT.java</exclude>
-                        <exclude>**/CucumberTestRunner*.java</exclude>
-                    </excludes>
+                    <!-- 鍗曟祴寮€鍏筹紙灞炴€э紝闈?profile锛夛細-Dskip.unit.tests=true 鈬?鏈杩愯鍙窇 Cucumber 鍦烘櫙锛?
+                         鏁翠釜 surefire锛圝Unit 鍗曟祴锛夎璺宠繃锛涢粯璁?false锛屽父瑙勬瀯寤轰笉鍙楀奖鍝嶃€?
+                         娉ㄦ剰锛氫笉鑳界敤 -DskipTests 浠ｆ浛锛堝畠杩?failsafe 涓€璧疯烦锛孍2E 灏变笉璺戜簡锛夈€?
+                         鍓綔鐢紙鍒绘剰锛夛細鏈ā鍧楃殑 <skipTests> 鐢?${skip.unit.tests} 椹卞姩锛屾晠妗嗘灦鐖?pom
+                         娌跨敤鐨勫懡浠よ -DskipTests 瀵规湰妯″潡 surefire 涓嶅啀鐢熸晥 鈥斺€?鍥犱负 -DskipTests 浼氳繛
+                         failsafe 涓€璧疯烦杩囷紝瀵?璺?E2E"鍦烘櫙娌℃湁鎰忎箟銆?-->
+                    <skipTests>${skip.unit.tests}</skipTests>
+
+                    <!-- E2E 鍙湪 failsafe锛坕ntegration-test锛夎窇涓€閬嶏細surefire 鐨勯€夋祴鏂瑰紡鐢便€愭鏋剁埗 pom銆戠殑
+                         姝ｅ悜 include `**/*Test.java` 鍐冲畾锛堜笌 master 鍒嗘敮涓€鑷达級鈬?鏈繍琛屽櫒
+                         CucumberTestRunnerIT 鍙婁换浣?*IT 澶╃劧涓嶈繘 test 闃舵銆?
+                         姝ゅ鍘熷厛棰濆鍒楄繃 <excludes>**/*IT.java</exclude>锛氫笌鐖堕厤缃彔鍔犮€佹亽涓嶅懡涓€佺函鍐椾綑锛?
+                         宸蹭簬 2026-10-10 鍒犻櫎锛堜繚鐣欐湰娉ㄩ噴璇存槑"涓轰粈涔堜笉闇€瑕?锛夈€?-->
+
+                    <!-- 鈿?`-Dtest=<IT>` 浼氥€愯鐩栥€戠埗 pom 鐨?includes锛坰urefire 鏃㈡湁璇箟锛夛紝鎶?E2E 杩愯鍣ㄦ媺杩?
+                         test 闃舵锛涜闃舵涓€鏃﹀け璐ワ紝鏋勫缓绔嬪嵆涓 鈬?pre-integration-test / integration-test /
+                         post-integration-test 鍏ㄤ笉鎵ц 鈬?**娌℃湁娴嬭瘯鎶ュ憡**锛?026-10-10 瀹炴祴锛歵est 闃舵 7 errors
+                         鈬?BUILD FAILURE锛屾姤鍛婇樁娈?0 娆℃墽琛岋紱灞婃椂鍙兘鐢?serenity:aggregate 浜嬪悗琛ユ姤鍛婏級銆?
+                         瀹炴祴鍚﹀喅杩囩殑涓ょ"鎶ゆ爮"锛?
+                           鈶?娉ㄥ叆 cucumber.filter.tags 鈥斺€?瀹為檯鐢熸晥鐨勬槸绯荤粺灞炴€?tags锛屾棤鏁堬紱
+                           鈶?杩愯鍣ㄥ唴闈欐€佹敼灞炴€?鈥斺€?Serenity 鍦ㄨ繍琛屽櫒绫诲垵濮嬪寲涔嬪墠宸茶В鏋?tags锛屾棤鏁堛€?
+                         纭畾鎬у仛娉曪細E2E 涓€寰嬪甫 -Dskip.unit.tests=true锛堣涓婃柟 <skipTests>锛夛細
+                         skipTests 鏃╀簬 -Dtest 鐢熸晥 鈬?surefire 鏁翠釜璺宠繃銆佸彧璺?Cucumber锛屾姤鍛婇樁娈靛繀鐒舵墽琛岋細
+                             mvn clean verify -Dskip.unit.tests=true -Dtags='@route-e2e' -->
                 </configuration>
             </plugin>
             <plugin>
@@ -299,47 +331,51 @@
                     <useFile>false</useFile>
                     <rerunFailingTestsCount>${rerunFailingTestsCount}</rerunFailingTestsCount>
                     <forkCount>1</forkCount>
-                    <!-- Cucumber 主流程整体超时兜底（防 Playwright 导航/采集阻塞拖垮整轮）
-                         X-9：提为可配置属性（默认 1800s），CI 可 -DforkedProcessTimeoutInSeconds=N 覆盖 -->
-                    <forkedProcessTimeoutInSeconds>${forkedProcessTimeoutInSeconds}</forkedProcessTimeoutInSeconds>
+                    <!-- 2026-10-10锛氭湰妯″潡 E2E 涓嶅啀璁?fork 绾ц秴鏃讹紙鍘熶负 ${forkedProcessTimeoutInSeconds}=1800s锛夈€?
+                         鎰忓浘锛欵2E 鏃堕暱闅忕幆澧冩尝鍔ㄥぇ锛堝疄娴嬪崟杞?9:55锝?9:41锛夛紝涓€鏃﹁秴杩囦笂闄愪細琚己鏉€ 鈥斺€?
+                         鏈畬鎴愮殑鐢ㄤ緥缁撴灉鍏ㄩ儴涓㈠け锛屼笖"琚腑鏂?浼氳璇姤鎴愬け璐ワ紙master 鐨?pom 娉ㄩ噴閲?
+                         灏辫褰曚簡 300s 瑙﹀彂浜х敓涓€鎵瑰亣澶辫触鐨勪簨鏁咃級銆?
+                         浠ｄ环锛堥』鐭ワ級锛歠ork 瓒呮椂鏈槸"鍗℃鏈€鍚庨槻绾? 鈥斺€?鐢ㄤ緥/娴忚鍣ㄦ寕璧锋椂浼氭案涔呮寕浣?Maven
+                         锛堝巻鍙蹭笂鍑虹幇杩囨暣杞病鏈?BUILD 琛屻€丆I 姘镐笉杩斿洖鐨勬儏鍐碉級銆傝嫢鏃ュ悗瑕佹仮澶嶏細
+                         鍦ㄦ鍔犲洖 <forkedProcessTimeoutInSeconds>N</forkedProcessTimeoutInSeconds>锛堢锛夈€?
+                         娉細妗嗘灦鐖?pom 瀵?surefire锛堝崟娴嬶級浠嶄繚鐣?1800s 鍏滃簳锛屼笉鍙楁澶勫奖鍝嶃€?-->
+                    <!-- 鍞竴鍏ュ彛锛坒eature-only 杩愯妯″瀷锛?026-10-10锛夛細
+                         鎵€鏈?feature 涓€寰嬬粡 CucumberTestRunnerIT锛坒eatures=鏁翠釜 features 鐩綍锛? -Dtags 閫夋嫨锛?
+                         銆愪笉瑕佸啀涓哄崟涓?feature 鏂板缓 runner 绫汇€戔€斺€?姣忎釜 *IT.java 閮戒細琚?includes 鎷夎捣锛岃嫢涓や釜
+                         runner 鎸囧悜鍚屼竴 feature锛岃 feature 浼氳鐪熷疄鎵ц涓ら亶锛岃€?Serenity/JUnit4 鎶ュ憡鎸?feature
+                         鍚嶅悎骞?鈬?鎶ュ憡鏄剧ず Tests run: 14锛?7脳2锛変笖鑰楁椂缈诲€嶏紙2026-10-09/10 瀹炴祴锛?
+                         CucumberRouteE2ERunnerIT 涓庝富鍏ュ彛鍚?feature 鍚屾爣绛撅紝宸插垹闄わ級銆?
+                         瀹氬悜璋冭瘯浠嶅彲鐢?-Dit.test=<绫诲悕>锛堣鍙傛暟瑕嗙洊 includes/excludes锛夈€?-->
                     <includes>
-                        <include>**/*IT.java</include>
-                        <include>**/integration/**/*Test.java</include>
-                        <include>**/CucumberTestRunner*.java</include>
+                        <include>**/CucumberTestRunnerIT.java</include>
                     </includes>
                     <excludes>
-                        <!-- 外部依赖运行器：默认不参与 verify（否则默认门禁结构性必红 —— 2026-09-23 本地全量实测）。
-                             为何标签过滤拦不住它们：本插件 includes 是 **/*IT.java（无条件全跑），而 -Dtags 注入的
-                             cucumber.filter.tags 对 @Suite + @ConfigurationParameter【硬编码标签】的运行器无效
-                             （Cucumber 的 JUnit Platform 配置里 @ConfigurationParameter 优先于该属性），
-                             于是它们必被执行；而三者分别依赖：
-                               ParallelLogon / ConcurrentLogon → 公司 SIT 网络与凭据
-                                 （实测 page=...qualityassurance-amh-gbb-sit.p2g.netd2.hsbc.com.hk、
-                                   6 个 O63/O38/O88 登录任务约 70s 超时）
-                             覆盖不丢：failsafe 的 -Dit.test 会【覆盖】includes/excludes，故定向执行即可（各运行器已硬编码
-                             自身标签，无需再传 -Dtags）：
+                        <!-- 瀹氬悜鍏ュ彛锛氫笉鍙備笌榛樿 verify锛屽悓鏃堕槻姝㈠皢鏉ユ斁瀹?includes 鏃惰鏃犳潯浠舵媺璧?
+                             锛?026-09-23 鏈湴鍏ㄩ噺瀹炴祴锛氫簩鑰呬緷璧栧叕鍙?SIT 缃戠粶涓庡嚟鎹紝榛樿璺戝繀绾?鈥斺€?绾?70s 瓒呮椂锛夈€?
+                             瀹氬悜鎵ц锛?Dit.test 瑕嗙洊 includes/excludes锛屽悇杩愯鍣ㄥ凡纭紪鐮佽嚜韬爣绛撅級锛?
                                mvn verify -Dit.test=CucumberParallelLogonRunnerIT -Dserenity.parallel.for.tests=4 -Dplaywright.browser.headless=true
-                               mvn verify -Dit.test=CucumberConcurrentLogonRunnerIT -Dplaywright.browser.headless=true -->
+                               mvn verify -Dit.test=CucumberConcurrentLogonRunnerIT -Dplaywright.browser.headless=true
+                             CucumberE2ESandboxRunnerIT 鍚岀悊灞炲畾鍚戝叆鍙ｏ紙涓嶅弬涓庨粯璁?verify锛夈€?-->
                         <exclude>**/CucumberParallelLogonRunnerIT.java</exclude>
                         <exclude>**/CucumberConcurrentLogonRunnerIT.java</exclude>
                     </excludes>
                     <testClassesDirectory>${project.build.testOutputDirectory}</testClassesDirectory>
                     <classesDirectory>${project.build.outputDirectory}</classesDirectory>
                     <useModulePath>false</useModulePath>
-                    <!-- ⚠ JDK16+ 强封装：Serenity REST(RestSpecificationFactory) 在静态初始化时用 ByteBuddy
-                         反射注入类，需 java.base 打开 java.lang(ClassLoader.getPackage/defineClass)；
-                         java.lang.reflect 供 Mockito/Serenity 反射增强；java.util 供 RestAssured 的 Groovy 反射。 -->
+                    <!-- 鈿?JDK16+ 寮哄皝瑁咃細Serenity REST(RestSpecificationFactory) 鍦ㄩ潤鎬佸垵濮嬪寲鏃剁敤 ByteBuddy
+                         鍙嶅皠娉ㄥ叆绫伙紝闇€ java.base 鎵撳紑 java.lang(ClassLoader.getPackage/defineClass)锛?
+                         java.lang.reflect 渚?Mockito/Serenity 鍙嶅皠澧炲己锛沯ava.util 渚?RestAssured 鐨?Groovy 鍙嶅皠銆?-->
                     <argLine>@{jacocoArgLine} -XX:+EnableDynamicAgentLoading --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED</argLine>
                     <systemPropertyVariables>
                         <serenity.outputDirectory>${project.build.directory}/site/serenity</serenity.outputDirectory>
                         <cucumber.filter.tags>${tags}</cucumber.filter.tags>
-                        <!-- D-4：环境切换经 -Psit1/sit2/sit3 profile 下发（默认空，不注入 environment 标量键） -->
+                        <!-- D-4锛氱幆澧冨垏鎹㈢粡 -Psit1/sit2/sit3 profile 涓嬪彂锛堥粯璁ょ┖锛屼笉娉ㄥ叆 environment 鏍囬噺閿級 -->
                         <env>${env}</env>
                         <env.code>${env.code}</env.code>
                         <base.url>${base.url}</base.url>
                     </systemPropertyVariables>
-                    <!-- 本地对齐 CI 的「IT 数 > 0」可证伪断言：0 条 IT 命中时响亮失败，
-                         而不是在未配置环境（env/base.url 为空）时静默绿。 -->
+                    <!-- 鏈湴瀵归綈 CI 鐨勩€孖T 鏁?> 0銆嶅彲璇佷吉鏂█锛? 鏉?IT 鍛戒腑鏃跺搷浜け璐ワ紝
+                         鑰屼笉鏄湪鏈厤缃幆澧冿紙env/base.url 涓虹┖锛夋椂闈欓粯缁裤€?-->
                     <failIfNoTests>true</failIfNoTests>
                     <reportsDirectory>${project.build.directory}/failsafe-reports</reportsDirectory>
                 </configuration>
@@ -359,26 +395,26 @@
                 <artifactId>serenity-maven-plugin</artifactId>
                 <version>${serenity.version}</version>
                 <dependencies>
-                    <!-- plexus-archiver 上界钉：serenity-maven-plugin 的插件级传递依赖，
-                         dependencyManagement 无法覆盖插件依赖，故在此显式钉版（修复安全漏洞 + 满足内网治理）。
-                         版本与根 pom 的 ${plexus.archiver.version} 共用同一属性口径（同一份父 POM 提供），
-                         避免框架打包插件（maven-jar-plugin）与本插件两处版本漂移。 -->
+                    <!-- plexus-archiver 涓婄晫閽夛細serenity-maven-plugin 鐨勬彃浠剁骇浼犻€掍緷璧栵紝
+                         dependencyManagement 鏃犳硶瑕嗙洊鎻掍欢渚濊禆锛屾晠鍦ㄦ鏄惧紡閽夌増锛堜慨澶嶅畨鍏ㄦ紡娲?+ 婊¤冻鍐呯綉娌荤悊锛夈€?
+                         鐗堟湰涓庢牴 pom 鐨?${plexus.archiver.version} 鍏辩敤鍚屼竴灞炴€у彛寰勶紙鍚屼竴浠界埗 POM 鎻愪緵锛夛紝
+                         閬垮厤妗嗘灦鎵撳寘鎻掍欢锛坢aven-jar-plugin锛変笌鏈彃浠朵袱澶勭増鏈紓绉汇€?-->
                     <dependency>
                         <groupId>org.codehaus.plexus</groupId>
                         <artifactId>plexus-archiver</artifactId>
                         <version>${plexus.archiver.version}</version>
                     </dependency>
-                    <!-- 依赖治理（内网隔离清单）——**插件类路径**是项目级 exclusion 覆盖不到的第二条链路。
-                         实测证据：mvn -X 的 "Populating class realm plugin>serenity-maven-plugin" 段此前含
-                         org.htmlunit:htmlunit-websocket-client(4.7.0，命中隔离清单)、
-                         org.seleniumhq.selenium:htmlunit3-driver(4.38.0，与项目侧 4.23.0 版本偏斜)
-                         以及整条 io.cucumber:* 栈。
-                         ① 不用的排除：serenity:aggregate 只读 test-outcome JSON 出汇总报告、不驱动浏览器，
-                           故对 serenity-core 排除 htmlunit 栈（含 websocket-client）与 htmlunit3-driver。
-                         ② 要用的显式声明：Cucumber 是聚合阶段的**运行期必需**（实测：一并排除后报
-                           NoClassDefFoundError: io/cucumber/core/resource/Resource），故不排除，改为按项目
-                           统一版本显式声明 —— 使插件 realm 用 ${cucumber.version}，而不是由 Serenity 传递的版本。
-                         手法同 plexus-archiver：在插件 <dependencies> 内声明同名 GA，就近优先覆盖传递版本。 -->
+                    <!-- 渚濊禆娌荤悊锛堝唴缃戦殧绂绘竻鍗曪級鈥斺€?*鎻掍欢绫昏矾寰?*鏄」鐩骇 exclusion 瑕嗙洊涓嶅埌鐨勭浜屾潯閾捐矾銆?
+                         瀹炴祴璇佹嵁锛歮vn -X 鐨?"Populating class realm plugin>serenity-maven-plugin" 娈垫鍓嶅惈
+                         org.htmlunit:htmlunit-websocket-client(4.7.0锛屽懡涓殧绂绘竻鍗?銆?
+                         org.seleniumhq.selenium:htmlunit3-driver(4.38.0锛屼笌椤圭洰渚?4.23.0 鐗堟湰鍋忔枩)
+                         浠ュ強鏁存潯 io.cucumber:* 鏍堛€?
+                         鈶?涓嶇敤鐨勬帓闄わ細serenity:aggregate 鍙 test-outcome JSON 鍑烘眹鎬绘姤鍛娿€佷笉椹卞姩娴忚鍣紝
+                           鏁呭 serenity-core 鎺掗櫎 htmlunit 鏍堬紙鍚?websocket-client锛変笌 htmlunit3-driver銆?
+                         鈶?瑕佺敤鐨勬樉寮忓０鏄庯細Cucumber 鏄仛鍚堥樁娈电殑**杩愯鏈熷繀闇€**锛堝疄娴嬶細涓€骞舵帓闄ゅ悗鎶?
+                           NoClassDefFoundError: io/cucumber/core/resource/Resource锛夛紝鏁呬笉鎺掗櫎锛屾敼涓烘寜椤圭洰
+                           缁熶竴鐗堟湰鏄惧紡澹版槑 鈥斺€?浣挎彃浠?realm 鐢?${cucumber.version}锛岃€屼笉鏄敱 Serenity 浼犻€掔殑鐗堟湰銆?
+                         鎵嬫硶鍚?plexus-archiver锛氬湪鎻掍欢 <dependencies> 鍐呭０鏄庡悓鍚?GA锛屽氨杩戜紭鍏堣鐩栦紶閫掔増鏈€?-->
                     <dependency>
                         <groupId>net.serenity-bdd</groupId>
                         <artifactId>serenity-core</artifactId>
@@ -392,10 +428,10 @@
                                 <groupId>org.seleniumhq.selenium</groupId>
                                 <artifactId>htmlunit3-driver</artifactId>
                             </exclusion>
-                            <!-- 同上：聚合阶段不驱动浏览器，driver 栈（含 devtools 传递依赖）无用；
-                                 且插件 realm 里它们是 4.38.0，与项目侧钉定的 4.23.1 版本偏斜。
-                                 selenium-api / selenium-support 刻意保留：serenity 公开 API 签名引用它们
-                                 （org.openqa.selenium.support.ui.*），排除会导致聚合阶段类加载失败。 -->
+                            <!-- 鍚屼笂锛氳仛鍚堥樁娈典笉椹卞姩娴忚鍣紝driver 鏍堬紙鍚?devtools 浼犻€掍緷璧栵級鏃犵敤锛?
+                                 涓旀彃浠?realm 閲屽畠浠槸 4.38.0锛屼笌椤圭洰渚ч拤瀹氱殑 4.23.1 鐗堟湰鍋忔枩銆?
+                                 selenium-api / selenium-support 鍒绘剰淇濈暀锛歴erenity 鍏紑 API 绛惧悕寮曠敤瀹冧滑
+                                 锛坥rg.openqa.selenium.support.ui.*锛夛紝鎺掗櫎浼氬鑷磋仛鍚堥樁娈电被鍔犺浇澶辫触銆?-->
                             <exclusion>
                                 <groupId>org.seleniumhq.selenium</groupId>
                                 <artifactId>selenium-java</artifactId>
@@ -449,10 +485,10 @@
             </plugin>
 
             <!--
-              JaCoCo：覆盖率探针（prepare-agent 在父 pom 注入）。
-              当前单元测试为“行为护盾”（Mockito 隔离，验证委派转发），并不执行 framework-web 实现，
-              故 framework-web 行覆盖率约 0%；覆盖率“只升不降”门禁（check）待 T1-9 补充真实覆盖测试后启用。
-              此处仅出报告（聚焦刚拆分的 BasePage 包），便于 CI/人工查看覆盖缺口。
+              JaCoCo锛氳鐩栫巼鎺㈤拡锛坧repare-agent 鍦ㄧ埗 pom 娉ㄥ叆锛夈€?
+              褰撳墠鍗曞厓娴嬭瘯涓衡€滆涓烘姢鐩锯€濓紙Mockito 闅旂锛岄獙璇佸娲捐浆鍙戯級锛屽苟涓嶆墽琛?framework-web 瀹炵幇锛?
+              鏁?framework-web 琛岃鐩栫巼绾?0%锛涜鐩栫巼鈥滃彧鍗囦笉闄嶁€濋棬绂侊紙check锛夊緟 T1-9 琛ュ厖鐪熷疄瑕嗙洊娴嬭瘯鍚庡惎鐢ㄣ€?
+              姝ゅ浠呭嚭鎶ュ憡锛堣仛鐒﹀垰鎷嗗垎鐨?BasePage 鍖咃級锛屼究浜?CI/浜哄伐鏌ョ湅瑕嗙洊缂哄彛銆?
             -->
             <plugin>
                 <groupId>org.jacoco</groupId>
@@ -473,10 +509,10 @@
                 </executions>
             </plugin>
 
-            <!-- ⭐ 汇总报告生成（原 T2-8 自动化）：本模块内联 exec-maven-plugin 在 verify 阶段触发，
-                 生命周期上晚于上方 serenity:aggregate 所在的 post-integration-test，
-                 顺序由 Maven 阶段保证，不再依赖同阶段内的插件声明顺序。
-                 仅本模块（唯一含 framework-reporting 的业务测试模块）执行，根与框架模块不触发。 -->
+            <!-- 猸?姹囨€绘姤鍛婄敓鎴愶紙鍘?T2-8 鑷姩鍖栵級锛氭湰妯″潡鍐呰仈 exec-maven-plugin 鍦?verify 闃舵瑙﹀彂锛?
+                 鐢熷懡鍛ㄦ湡涓婃櫄浜庝笂鏂?serenity:aggregate 鎵€鍦ㄧ殑 post-integration-test锛?
+                 椤哄簭鐢?Maven 闃舵淇濊瘉锛屼笉鍐嶄緷璧栧悓闃舵鍐呯殑鎻掍欢澹版槑椤哄簭銆?
+                 浠呮湰妯″潡锛堝敮涓€鍚?framework-reporting 鐨勪笟鍔℃祴璇曟ā鍧楋級鎵ц锛屾牴涓庢鏋舵ā鍧椾笉瑙﹀彂銆?-->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
@@ -493,10 +529,10 @@
                             <arguments>
                                 <argument>${project.build.directory}/site/serenity</argument>
                             </arguments>
-                            <!-- 必须用 test 作用域：SummaryReportGenerator 依赖 net.thucydides.model.*（serenity-model），
-                                 而本模块把 serenity-model 显式声明为 <scope>test</scope>（ENG-P0-2）——Maven 的「最近声明优先」
-                                 会让它不再以 compile 作用域传递，故 classpathScope=compile 时运行期 NoClassDefFoundError
-                                 （SystemEnvironmentVariables），导致 mvn verify（CI/E-6）在汇总报告处必然失败。 -->
+                            <!-- 蹇呴』鐢?test 浣滅敤鍩燂細SummaryReportGenerator 渚濊禆 net.thucydides.model.*锛坰erenity-model锛夛紝
+                                 鑰屾湰妯″潡鎶?serenity-model 鏄惧紡澹版槑涓?<scope>test</scope>锛圗NG-P0-2锛夆€斺€擬aven 鐨勩€屾渶杩戝０鏄庝紭鍏堛€?
+                                 浼氳瀹冧笉鍐嶄互 compile 浣滅敤鍩熶紶閫掞紝鏁?classpathScope=compile 鏃惰繍琛屾湡 NoClassDefFoundError
+                                 锛圫ystemEnvironmentVariables锛夛紝瀵艰嚧 mvn verify锛圕I/E-6锛夊湪姹囨€绘姤鍛婂蹇呯劧澶辫触銆?-->
                             <classpathScope>test</classpathScope>
                         </configuration>
                     </execution>
@@ -507,13 +543,13 @@
 
     <profiles>
         <!--
-          ⭐ 引擎级并行（评审08类-4 / X-1 / W-5）：需在隔离前置（C-1 用例级绑定）闭环后启用。
-          显式 -Pparallel 才开启 cucumber/junit 并行；默认 mvn test/verify 仍串行，安全。
+          猸?寮曟搸绾у苟琛岋紙璇勫08绫?4 / X-1 / W-5锛夛細闇€鍦ㄩ殧绂诲墠缃紙C-1 鐢ㄤ緥绾х粦瀹氾級闂幆鍚庡惎鐢ㄣ€?
+          鏄惧紡 -Pparallel 鎵嶅紑鍚?cucumber/junit 骞惰锛涢粯璁?mvn test/verify 浠嶄覆琛岋紝瀹夊叏銆?
         -->
         <profile>
             <id>parallel</id>
             <properties>
-                <!-- CON-1 引擎级并行：并发度旋钮（CI 用 -Dparallelism=N -DmaxPoolSize=M 覆盖） -->
+                <!-- CON-1 寮曟搸绾у苟琛岋細骞跺彂搴︽棆閽紙CI 鐢?-Dparallelism=N -DmaxPoolSize=M 瑕嗙洊锛?-->
                 <parallelism>4</parallelism>
                 <maxPoolSize>8</maxPoolSize>
             </properties>
@@ -524,7 +560,7 @@
                         <artifactId>maven-failsafe-plugin</artifactId>
                         <configuration>
                             <systemPropertyVariables>
-                                <!-- 开启 Cucumber 引擎级并行（默认串行，仅 -Pparallel 生效） -->
+                                <!-- 寮€鍚?Cucumber 寮曟搸绾у苟琛岋紙榛樿涓茶锛屼粎 -Pparallel 鐢熸晥锛?-->
                                 <cucumber.execution.parallel.enabled>true</cucumber.execution.parallel.enabled>
                                 <cucumber.execution.parallel.config.fixed.parallelism>${parallelism}</cucumber.execution.parallel.config.fixed.parallelism>
                                 <cucumber.execution.parallel.config.fixed.max-pool-size>${maxPoolSize}</cucumber.execution.parallel.config.fixed.max-pool-size>
@@ -537,3 +573,4 @@
     </profiles>
 
 </project>
+

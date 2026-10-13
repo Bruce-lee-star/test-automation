@@ -153,7 +153,7 @@ public class LoginSteps {
         logger.info("No valid session, performing login for: {}", sessionKey);
 
         loginPage.navigateTo(currentUrl);
-
+//        RoleElementPicker.openPanel(loginPage.getPage(), "");
         // Axe-core accessibility scan on login page
 //        AxeCoreScanner.scanPage("Login Page - Initial");
         loginPage.userNameIpt.type(username);
@@ -231,8 +231,11 @@ public class LoginSteps {
      * updateContctOverlayFlag=true 弹出遮罩），故用 {@code jsClick} 绕过遮罩的 actionability 拦截。</p>
      */
     private void switchProfile(String profile) {
+        // 2026-10-10：先落定、再读/点 —— 与本方法 javadoc 口径一致（原先恰好相反）。
+        // waitForVisible 自带框架级导航重试；元素操作前还有框架「抖动闸门」（主框架导航后先静默再动作）。
+        homePage.profileSwitcher.waitForVisible(60);
         if (!readProfileText().contains(profile)) {
-            homePage.profileSwitcher.waitForVisible(60).click(); // 绕过可能的遮罩拦截
+            homePage.profileSwitcher.click(); // 绕过可能的遮罩拦截
             // 固定 5s 让下拉渲染；waitForTimeout 已由框架层做成 nav-safe（导航销毁 frame 时
             // 自动降级为 Thread.sleep 兜底），无需测试层额外 try/catch。
             homePage.waitForTimeout(5000);
@@ -247,17 +250,15 @@ public class LoginSteps {
     }
 
     /**
-     * 读当前 profile 文本，吸收登录后导航/重定向抖动（innerText 在 DOM 重建期会抛异常，
-     * 被框架包装为 ElementOperationException）。短重试即可越过瞬时抖动。
+     * 读当前 profile 文本（<b>单次读取，测试层不做重试</b>）。
+     *
+     * <p>2026-10-10 移除原有的「5 次循环 + 1 次兜底」重试：每次失败在框架层要付
+     * 「动作等待 30s + 诊断探测 30s + 截图」≈60s，实测单点失败被放大到 ~5 分钟
+     * （7.txt：6 组诊断+截图；全轮 89% 时间在等）。等待/重试一律回归框架 ——
+     * 需要"稳定后再读"时用 {@code waitForVisible(...)}（框架内置导航重试），
+     * 测试层不再自行循环。</p>
      */
     private String readProfileText() {
-        for (int i = 0; i < 5; i++) {
-            try {
-                return homePage.profileSwitcher.getText();
-            } catch (Exception e) {
-                homePage.waitForTimeout(500);
-            }
-        }
         return homePage.profileSwitcher.getText();
     }
 

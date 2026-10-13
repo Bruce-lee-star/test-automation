@@ -10,7 +10,7 @@ Feature: RoleElement 拾取器全场景录制回归验证
     click / dblclick / hover / type / check / uncheck / selectOption / popup / download / dialog
 
   Background:
-    Given 打开录制测试页 "file:///d:/IdeaProject/Automation_WebUI_Framework_For_DBB/src/test/resources/scan-test-all.html"
+    Given 打开录制测试页 "file:///d:/IdeaProject/pw_automation_framework/src/test/resources/scan-test-all.html"
 
   @scan @click
   Scenario: 单击与双击

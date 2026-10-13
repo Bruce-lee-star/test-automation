@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业级多任务协同Agent｜测试需求资产管理平台 V1.6</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        success: '#00B42A',
+                        warning: '#FF7D00',
+                        danger: '#F53F3F',
+                        neutral: '#86909C',
+                        dark: '#1D2129',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .mermaid {background:#fff; border-radius:8px; padding:12px; border:1px solid #e5e6eb;}
+        pre {white-space:pre-wrap; word-break:break-all; font-size:13px;}
+        .tab-active {border-bottom:2px solid #165DFF; color:#165DFF; font-weight:600;}
+    </style>
+</head>
+<body class="bg-gray-50 text-dark">
+    <div class="max-w-7xl mx-auto p-4 md:p-6">
+        <!-- Header -->
+        <header class="mb-6">
+            <h1 class="text-2xl md:text-3xl font-bold text-primary">多任务协同Agent - 测试需求资产管理平台 V1.6</h1>
+            <p class="text-neutral mt-1">Jira Epic/Story绑定｜显性+隐性需求挖掘｜版本化资产V1/V2/Vn｜测试点拆解｜Excel手工用例｜Cucumber自动化用例｜Playwright MCP + RoleElementPicker 自动脚本生成｜基线比对</p>
+            <div class="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-sm">
+                <span class="font-semibold">更新说明V1.6：</span>
+                1. 登录模型重构：不再固定SSO，支持账号池通用凭证（用户名+密码+自定义扩展字段，如验证码、租户ID、域账号等）；
+                2. 时序图新增【动态交互探测】环节：部分页面元素需要人工/自动交互后才动态渲染，需要分步交互+多次抓取无障碍树快照；
+                3. 重构资产模型，绑定Jira Epic/Story编号，标准化Story内容；
+                4. 新增隐性需求挖掘能力，识别需求文档未写明的隐含业务、边界、异常场景；
+                5. 不再仅用原始JSON作为交付物，支持导出结构化Markdown、Excel、Cucumber Feature三类产出；
+                6. 移除调度脚本相关描述；
+                7. 需求版本规则：仅新需求生成V1；增量/修改/BugFix/增强/废弃全部基于基线升级Vn+1
+            </div>
+        </header>
+
+        <!-- 总业务流程图区域 -->
+        <section class="bg-white rounded-lg shadow p-4 mb-6">
+            <h2 class="text-lg font-semibold mb-3">📋 完整业务流程图</h2>
+            <div class="mermaid">
+flowchart TD
+    A[输入Jira Epic / Story原始内容] --> B[多任务协同Agent:需求分类判定+隐性需求挖掘]
+    B --> B0{区分需求类型}
+    B0 -->|新需求 New| C[创建测试需求资产 V1，无基线]
+    B0 -->|增量需求 Increment| D[版本升级 Vn → Vn+1]
+    B0 -->|修改需求 Modify| E[基线比对:标记变更项，版本升级Vn→Vn+1]
+    B0 -->|缺陷修复 BugFix| F[关联现有资产，版本升级Vn→Vn+1]
+    B0 -->|需求增强 Enhance| G[版本升级 Vn → Vn+1]
+    B0 -->|废弃需求 Deprecated| H[版本升级 Vn → Vn+1，资产标记废弃]
+
+    C & D & E & F & G & H --> I[需求资产库管理<br/>保留历史版本，旧版本不可修改]
+    I --> J[Agent拆解Story：显性需求 + 挖掘隐性/隐含需求]
+    J --> K[测试点基线比对<br/>新增测试点 / 修改测试点 / 删除测试点 / 增强]
+    K --> L[生成两类测试用例]
+    L --> L1[手工测试用例 → 导出Excel<br/>字段：case name,step,expected result]
+    L --> L2[自动化测试用例 → Cucumber Feature文件]
+
+    L2 --> M[Agent生成TestFlow<br/>页面交互动作编排：点击/输入/校验]
+    M --> N[Playwright MCP<br/>登录+导航页面，动态交互触发组件渲染，多次抓取无障碍树 Accessibility Tree]
+    N --> O[RoleElementPicker 基于多轮快照生成稳定元素定位器]
+    O --> P[自动生成Playwright自动化脚本<br/>接入pw_automation_framework]
+    P --> Q[自动化用例基线比对<br/>新增/增强/修改/删除自动化case]
+    Q --> R[输出结构化交付物：Markdown需求拆解文档 + Excel + Feature + 变更报告 + 资产新版本Vn+1]
+    R --> S[交付资产，本地文件产出，不自动提交上传]
+            </div>
+        </section>
+
+        <!-- MCP调用时序图 -->
+        <section class="bg-white rounded-lg shadow p-4 mb-6">
+            <h2 class="text-lg font-semibold mb-3">⏱️ Playwright MCP页面探测任务时序图（支持动态交互渲染页面）</h2>
+            <div class="mermaid">
+sequenceDiagram
+    actor User
+    participant Task as PageDiscoveryTask<br/>【Java主任务】
+    participant MCP_CLIENT as PlaywrightMcpClient<br/>【Java内置JSON-RPC客户端】
+    participant MCP_SERVER as Playwright MCP Server(stdio子进程)
+    participant Browser as Chromium Browser
+    participant Picker as RoleElementPicker
+    participant CredStore as 账号凭证池<br/>(username+password+扩展字段)
+    participant AssetStore as 测试资产库(版本化Vn)
+
+    User->>Task: 传入入参 assetId / targetUrl / credentialKey / env
+    Task->>CredStore: 根据credentialKey读取整套登录凭证
+    CredStore-->>Task: 返回用户名、密码、自定义扩展字段(租户/域等)
+    Task->>Task: 初始化Playwright，使用凭证完成系统登录（支持账号密码/SSO多种登录模式）
+    Task->>Browser: 打开浏览器、登录系统、导航至目标页面
+    Note over Task,Browser: 【动态交互探测循环】部分组件需要点击/输入才会动态渲染
+    loop 动态交互 & 快照采集
+        Task->>Browser: 执行交互动作（点击/下拉选择/输入文本，触发动态组件渲染）
+        Task->>MCP_CLIENT: 调用getAccessibilitySnapshot()获取当前页面无障碍树
+        MCP_CLIENT->>MCP_SERVER: JSON-RPC 2.0 stdio发送指令：获取无障碍树
+        MCP_SERVER->>Browser: 执行 page.accessibility.snapshot()
+        Browser-->>MCP_SERVER: 返回当前状态Accessibility Tree JSON
+        MCP_SERVER-->>MCP_CLIENT: JSON-RPC 返回无障碍树数据
+        MCP_CLIENT-->>Task: 透传本轮无障碍树JSON
+        Task->>Task: 判断是否还有未展示动态组件，决定是否继续交互
+    end
+    Task->>Picker: 送入多轮全部无障碍树快照集合，解析所有静态+动态可交互元素
+    Picker-->>Task: 返回稳定定位器集合(role+name)
+    Task->>Task: 编排TestFlow（包含触发动态渲染的交互步骤）、生成Cucumber Feature + Java Step代码
+    Task->>AssetStore: 写入新版本资产Vn，持久化产出物
+    AssetStore-->>Task: 返回资产存储结果
+    Task-->>User: 控制台输出探测报告 + 退出状态
+            </div>
+    <p class="mt-3 text-sm text-gray-600">说明：MCP Server是独立stdio子进程；PlaywrightMcpClient是Java框架内置的完整JSON-RPC2.0客户端；资产文件仅本地生成，不会自动提交上传。<br/>支持动态页面：通过循环交互+多次快照，捕获点击/下拉/输入后才渲染出来的弹窗、表格、级联下拉等动态元素。账号池支持多种登录模式：账号密码登录、SSO单点登录，可携带租户ID、域账号、二次校验参数等扩展字段。</p>
+</section>
+
+        <!-- Tab切换面板 -->
+        <div class="border-b border-gray-200 mb-4">
+            <div class="flex gap-6 overflow-x-auto" id="tabBar">
+                <button class="py-2 tab-active whitespace-nowrap" data-tab="reqJudge">1. 需求分类判定 & 隐性需求挖掘</button>
+                <button class="py-2 text-neutral whitespace-nowrap" data-tab="asset">2. 测试需求资产管理（绑定Jira）</button>
+                <button class="py-2 text-neutral whitespace-nowrap" data-tab="testPoint">3. 测试点拆解 & 基线比对</button>
+                <button class="py-2 text-neutral whitespace-nowrap" data-tab="case">4. 测试用例生成(Excel + Cucumber)</button>
+                <button class="py-2 text-neutral whitespace-nowrap" data-tab="autoScript">5. Playwright MCP链路 & TestFlow</button>
+                <button class="py-2 text-neutral whitespace-nowrap" data-tab="report">6. 变更汇总报告 & 交付物</button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-5 min-h-[400px]">
+            <!-- Tab1 需求分类判定 & 隐性需求挖掘 -->
+            <div id="reqJudge" class="tab-panel">
+                <h3 class="font-semibold text-lg mb-3">需求判定 + 隐性需求挖掘规则</h3>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="border p-3 rounded">
+                        <div class="font-medium text-primary">✅ 新需求 New</div>
+                        <p class="text-sm text-gray-600">系统不存在对应业务资产，全新业务模块、全新页面、全新业务流程；无基线可对比。<br/>动作：新建测试需求资产 <strong>V1</strong>，从零拆解显性+隐性测试点。</p>
+                    </div>
+                    <div class="border p-3 rounded">
+                        <div class="font-medium text-warning">📈 增量需求 Increment</div>
+                        <p class="text-sm text-gray-600">已有业务基线，在原有流程上叠加新功能；原有逻辑保持不变。<br/>动作：基线Vn升级<strong>Vn+1</strong>；原有需求基线保留，新增显性+隐性测试点，原有用例保留。</p>
+                    </div>
+                    <div class="border p-3 rounded">
+                        <div class="font-medium text-danger">✏️ 修改需求 Modify</div>
+                        <p class="text-sm text-gray-600">已有功能逻辑变更、页面UI变更、接口参数变更，原有业务主体不变。<br/>动作：基线Vn升级<strong>Vn+1</strong>；基线比对，标记原有需求【修改】，关联显性、隐性测试点同步更新。</p>
+                    </div>
+                    <div class="border p-3 rounded">
+                        <div class="font-medium text-blue-600">🔧 缺陷修复 BugFix</div>
+                        <p class="text-sm text-gray-600">线上/测试缺陷修复，业务规则不变，修复bug。<br/>动作：基线Vn升级<strong>Vn+1</strong>；仅更新缺陷关联测试点与回归用例，补充隐性回归场景。</p>
+                    </div>
+                    <div class="border p-3 rounded">
+                        <div class="font-medium text-indigo-600">🚀 需求增强 Enhance</div>
+                        <p class="text-sm text-gray-600">原有业务逻辑不变，补充边界场景、优化交互，不改动主流程。<br/>动作：基线Vn升级<strong>Vn+1</strong>；补充增强类显性+隐性测试点，原有主流程用例保留。</p>
+                    </div>
+                    <div class="border p-3 rounded">
+                        <div class="font-medium text-neutral">🗑️ 废弃/删除需求 Deprecated</div>
+                        <p class="text-sm text-gray-600">功能下线，业务流程不再使用。<br/>动作：基线Vn升级<strong>Vn+1</strong>，资产标记废弃；关联用例标记归档，历史基线保留只读。</p>
+                    </div>
+                </div>
+                <div class="mt-4 border p-3 rounded bg-blue-50">
+                    <h4 class="font-medium mb-2">隐性需求挖掘规则（Agent内置）</h4>
+                    <ul class="list-disc pl-5 text-sm space-y-1">
+                        <li>账号登录场景：账号密码错误、密码过期、租户切换、域账号校验、二次验证码、会话过期重登</li>
+                        <li>动态页面场景：点击后弹窗渲染、级联下拉、表格懒加载、tab切换、折叠面板、异步加载内容</li>
+                        <li>权限场景：角色、数据隔离、越权访问（Story经常不描述）</li>
+                        <li>异常场景：网络超时、表单非法输入、空值、超长文本、重复提交</li>
+                        <li>数据一致性：保存/提交后数据落库校验、列表刷新、状态流转</li>
+                        <li>业务约束：唯一性、数值范围、状态前置依赖、业务闭环校验</li>
+                        <li>UI隐性规则：必填星标、按钮灰化、弹窗阻断、提示文案</li>
+                    </ul>
+                </div>
+                <div class="mt-4">
+                    <label class="block font-medium mb-1">输入Jira Epic编号、Story编号、Story原文，Agent自动判定+挖掘隐性需求：</label>
+                    <textarea id="reqInput" class="w-full border rounded p-2 h-32" placeholder="Epic:XXX-1001&#10;Story:XXX-2005&#10;Story内容：用户提交表单..."></textarea>
+                    <button onclick="judgeReq()" class="mt-2 bg-primary text-white px-4 py-2 rounded">执行需求判定+隐性需求挖掘</button>
+                    <div id="reqResult" class="mt-3 p-3 bg-gray-50 rounded hidden"></div>
+                </div>
+            </div>
+
+            <!-- Tab2 测试需求资产管理（绑定Jira） -->
+            <div id="asset" class="tab-panel hidden">
+                <h3 class="font-semibold text-lg mb-3">测试需求资产（版本化V1/V2/Vn）标准化模型【绑定Jira】</h3>
+<pre class="bg-gray-50 p-3 rounded text-sm">
+{
+  "assetId": "REQ-ASSET-2026001",
+  "assetName": "多任务协同Agent页面操作模块",
+  "version": "V1",
+  "reqType": "New | Increment | Modify | BugFix | Enhance | Deprecated",
+  "baselineVersion": "null | V1",
+  "status": "Active / Modified / Deprecated",
+  "jira": {
+    "epicNumber": "XXX-1001",
+    "epicSummary": "Epic业务主题",
+    "storyNumber": "XXX-2005",
+    "storySummary": "Story标题",
+    "storyRawContent": "Jira原始Story描述",
+    "storyStandardContent": "Agent标准化整理后的Story（消除歧义，补全前置条件）"
+  },
+  "requirementSplit": {
+    "explicitRequirementList": ["原始Story写明的需求项"],
+    "implicitRequirementList": ["挖掘出的隐性/隐含需求项（登录、动态渲染、边界、权限、异常）"]
+  },
+  "changeSummary": "本次变更摘要",
+  "relatedModule": "pw_automation_framework 页面自动化模块",
+  "owner": "需求/测试负责人",
+  "createTime": "",
+  "testPointList": [],
+  "testFlow": {},
+  "elementInventory":[],
+  "caseRef": {
+    "excelCase": "REQ-ASSET-2026001-V1.xlsx",
+    "cucumberFeature": "AgentPage.feature",
+    "mdDoc": "REQ-ASSET-2026001-V1_需求拆解.md"
+  }
+}
+</pre>
+                <div class="mt-4 border p-3 rounded bg-green-50">
+                    <h4 class="font-medium mb-2">✅ 标准化交付产出（不再只依赖JSON）</h4>
+                    <ul class="list-disc pl-5 text-sm">
+                        <li><b>Markdown需求拆解文档</b>：Epic/Story信息、显性需求、隐性需求、业务前置约束、业务流程图、测试点清单（评审主文档）</li>
+                        <li><b>Excel手工用例</b>：case name、step、expected result、关联Story、测试点ID、优先级、用例类型</li>
+                        <li><b>Cucumber Feature</b>：标准化Gherkin场景，接入pw_automation_framework执行</li>
+                        <li><b>资产JSON</b>仅作为元数据索引文件，用于程序读取，不对外作为交付文档</li>
+                    </ul>
+                </div>
+                <p class="mt-3 text-sm text-gray-600">版本迭代规则：<b>New：V1；其余全部Vn+1</b>；每次变更生成新版本，旧资产不可原地覆盖，用于基线比对。资产生命周期：草稿→评审通过→归档→废弃。</p>
+            </div>
+
+            <!-- Tab3 测试点拆解 & 基线比对 -->
+            <div id="testPoint" class="tab-panel hidden">
+                <h3 class="font-semibold text-lg mb-3">测试点基线比对结果分类</h3>
+                <ul class="list-disc pl-5 space-y-2 text-sm">
+                    <li><span class="text-success font-medium">新增测试点</span>：新业务逻辑，包含显性+挖掘出的隐性场景，新增手工case + 新增Cucumber自动化case</li>
+                    <li><span class="text-warning font-medium">修改测试点</span>：原有业务规则变更，更新手工case，更新自动化脚本；同步校验关联隐性场景是否同步变更</li>
+                    <li><span class="text-primary font-medium">增强测试点</span>：原有逻辑不变，补充边界/异常隐性场景，自动化case增强</li>
+                    <li><span class="text-neutral font-medium">删除测试点</span>：业务下线，对应手工、自动化用例标记删除，归档保留历史版本</li>
+                    <li><span class="text-dark font-medium">保留测试点</span>：不受本次需求变更影响，原有用例不变，回归验证；同时校验关联隐性场景是否依然有效</li>
+                </ul>
+                <div class="mt-4">
+                    <button onclick="genTestPoint()" class="bg-primary text-white px-4 py-2 rounded">基于Jira Story自动提取显性+隐性测试点</button>
+                    <div id="tpResult" class="mt-3 p-3 bg-gray-50 rounded hidden"></div>
+                </div>
+            </div>
+
+            <!-- Tab4 测试用例生成：Excel模板字段 + Cucumber -->
+            <div id="case" class="tab-panel hidden">
+                <h3 class="font-semibold mb-2">Excel手工用例模板字段（绑定Jira）</h3>
+                <table class="border w-full text-sm mb-4">
+                    <tr class="bg-gray-100">
+                        <th class="border p-2">字段</th>
+                        <th class="border p-2">说明</th>
+                    </tr>
+                    <tr>
+                        <td class="border p-2">case name</td>
+                        <td class="border p-2">用例名称，唯一编号</td>
+                    </tr>
+                    <tr>
+                        <td class="border p-2">jiraStory</td>
+                        <td class="border p-2">关联Jira Story编号</td>
+                    </tr>
+                    <tr>
+                        <td class="border p-2">testPointId</td>
+                        <td class="border p-2">关联测试点ID，区分显性/隐性需求</td>
+                    </tr>
+                    <tr>
+                        <td class="border p-2">step</td>
+                        <td class="border p-2">操作步骤（包含触发动态渲染交互）</td>
+                    </tr>
+                    <tr>
+                        <td class="border p-2">expected result</td>
+                        <td class="border p-2">预期结果</td>
+                    </tr>
+                    <tr>
+                        <td class="border p-2">priority</td>
+                        <td class="border p-2">优先级 P0/P1/P2</td>
+                    </tr>
+                    <tr>
+                        <td class="border p-2">caseType</td>
+                        <td class="border p-2">手工 / 自动化(Cucumber)</td>
+                    </tr>
+                </table>
+                <h3 class="font-semibold mb-2">Cucumber Feature 示例（适配 pw_automation_framework，绑定Story）</h3>
+<pre class="bg-gray-50 p-3 rounded text-sm">
+# Jira: Epic XXX-1001 | Story XXX-2005
+Feature: 多任务Agent页面元素拾取与测试流程执行
+  As a 自动化测试工程师
+  I want to use RoleElementPicker 拾取页面无障碍树元素
+  So that 自动生成Playwright脚本并执行业务流程
+
+  Background:
+    Given 初始化pw_automation_framework测试环境
+    And 使用账号凭证池完成系统登录（支持账号密码/SSO）
+
+  Scenario: 交互触发动态弹窗，抓取页面无障碍树并生成元素定位器
+    Given 导航至目标业务页面
+    When 点击查询按钮，触发动态弹窗渲染
+    And 通过Playwright MCP获取当前页面无障碍树快照
+    Then RoleElementPicker输出稳定role+name元素定位器
+</pre>
+            </div>
+
+            <!-- Tab5 Playwright MCP链路 & TestFlow -->
+            <div id="autoScript" class="tab-panel hidden">
+                <h3 class="font-semibold text-lg mb-3">Playwright MCP页面探测链路（支持动态渲染页面）</h3>
+                <ol class="list-decimal pl-5 space-y-2 text-sm">
+                    <li>PageDiscoveryTask接收credentialKey，从账号凭证池读取整套登录信息：用户名、密码、扩展字段（租户ID、域账号等），支持账号密码登录或SSO单点登录两种模式</li>
+                    <li>初始化Playwright浏览器，读取凭证执行页面登录，完成后导航目标业务页面</li>
+                    <li><strong>动态交互循环探测：</strong>自动执行交互动作（点击Tab、下拉选择、输入、展开折叠面板），触发弹窗、表格、级联选项等异步动态组件渲染；每一步交互完成后，调用MCP拉取无障碍树快照，多轮收集全部状态的页面元素</li>
+                    <li>RoleElementPicker解析<strong>多组无障碍树快照集合</strong>，基于role+name生成稳定元素定位器，规避脆弱xpath/css选择器，同时记录触发动态组件所需交互步骤</li>
+                    <li>框架内部编排TestFlow动作序列与断言规则，包含触发动态渲染的前置交互步骤，生成Cucumber Feature文件与Playwright Java Step代码，自动写入Jira Story元信息</li>
+                    <li>将TestFlow、多状态元素清单、feature、java step写入版本化测试资产库，生成资产新版本Vn；同步输出Markdown需求拆解文档+Excel用例</li>
+                    <li>任务完成后输出探测报告，所有资产文件仅本地生成，不自动提交或上传任何文件</li>
+                </ol>
+                <div class="mt-3 p-2 bg-amber-50 rounded text-sm">
+                    <span class="font-semibold">🔒 安全说明：</span>
+                    账号、密码、租户等敏感凭证统一由环境变量注入，不会明文打印到控制台/日志；日志自动掩码脱敏，避免账号密码泄露。账号凭证池独立存储，资产元文件<strong>不保存任何明文账号密码</strong>。
+                </div>
+            </div>
+
+            <!-- Tab6 变更汇总报告 & 交付物 -->
+            <div id="report" class="tab-panel hidden">
+                <h3 class="font-semibold text-lg mb-3">版本变更汇总报告（交付物清单）</h3>
+                <pre class="bg-gray-50 p-3 rounded text-sm">
+资产ID：REQ-ASSET-2026001
+版本：V1
+Jira Epic：XXX-1001
+Jira Story：XXX-2005
+需求类型：New
+变更摘要：全新页面模块，新增页面探测自动化能力，支持交互触发动态渲染组件
+
+【需求拆解结果】
+> 显性需求：xxx
+> 隐性需求（挖掘）：账号密码登录校验、租户切换、会话过期、权限校验、点击触发弹窗/级联下拉、表单异常输入、数据一致性
+
+【测试点统计】
+- 新增显性测试点：3
+- 新增隐性测试点：4
+- 修改测试点：0
+- 删除测试点：0
+
+【产出交付文件清单】
+1. REQ-ASSET-2026001-V1_需求拆解.md 【评审主文档】
+2. REQ-ASSET-2026001-V1_手工测试用例.xlsx
+3. AgentPage.feature（Cucumber自动化场景，包含动态交互步骤）
+4. AgentPageSteps.java（Playwright Java步骤代码）
+5. REQ-ASSET-2026001-V1_meta.json【程序元索引，不对外交付，不含账号密码敏感信息】
+                </pre>
+            </div>
+        </div>
+    </div>
+
+<script>
+// Tab切换逻辑
+const tabs = document.querySelectorAll('[data-tab]');
+const panels = document.querySelectorAll('.tab-panel');
+tabs.forEach(btn=>{
+    btn.addEventListener('click',()=>{
+        tabs.forEach(b=>b.classList.remove('tab-active'));
+        btn.classList.add('tab-active');
+        panels.forEach(p=>p.classList.add('hidden'));
+        document.getElementById(btn.dataset.tab).classList.remove('hidden');
+    })
+})
+
+function judgeReq(){
+    const input = document.getElementById("reqInput").value;
+    const resDom = document.getElementById("reqResult");
+    resDom.classList.remove("hidden");
+    resDom.innerText = "【模拟执行】解析Jira Epic/Story，识别显性需求，自动挖掘隐性场景（账号登录校验、动态弹窗渲染、权限、异常、数据一致性等），输出标准化Story内容";
+}
+function genTestPoint(){
+    const resDom = document.getElementById("tpResult");
+    resDom.classList.remove("hidden");
+    resDom.innerText = "【模拟执行】拆分显性测试点 + 挖掘隐性衍生测试点（包含账号密码错误、租户切换、点击触发动态弹窗等场景），标记每个测试点归属Story编号，生成基线比对清单";
+}
+mermaid.initialize({startOnLoad:true});
+</script>
+</body>
+</html>
