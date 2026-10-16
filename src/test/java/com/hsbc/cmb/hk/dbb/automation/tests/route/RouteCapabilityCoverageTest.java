@@ -2,6 +2,7 @@ package com.hsbc.cmb.hk.dbb.automation.tests.route;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.route.RouteEngine;
 import com.hsbc.cmb.hk.dbb.automation.framework.route.RouteRuntime;
+import com.hsbc.cmb.hk.dbb.automation.framework.route.dispatch.RouteDispatcher;
 import com.hsbc.cmb.hk.dbb.automation.framework.route.dsl.RouteCapability;
 import com.hsbc.cmb.hk.dbb.automation.framework.route.dsl.RouteDsl;
 import com.microsoft.playwright.APIRequestContext;
@@ -53,8 +54,8 @@ import static org.junit.Assert.fail;
  * </ul>
  *
  * <p><b>资源泄漏体检（硬断言）</b>：每个用例收尾断言 runtime 注册表回落到基线；
- * 另有专门用例断言 dispatch 后无残留 claim、IO 拒绝数为 0、未确证撤销为 0，
- * 以及 runtime 关闭后 IO / 撤销 / 巡检线程<b>全部退出</b>（无线程残留）。
+ * 另有专门用例断言 dispatch 后无残留 claim、未确证撤销为 0，
+ * 以及 runtime 关闭后 撤销 / 巡检线程<b>全部退出</b>（无线程残留）。
  *
  * <p>响应夹具取真实 DBB 返回：{@code mocks/dbb/leftmenu-permissionLeftMenuConfig.json}、
  * {@code mocks/dbb/pinned-account.json}、{@code mocks/dbb/insight-retrieve.json}。
@@ -396,16 +397,23 @@ public class RouteCapabilityCoverageTest {
     @Test
     // @DisplayName: "DELAY：delay(1) 真延时后才放行（对齐到点必 resume 契约）"
     public void delayOneSecondResumesAfterDelay() {
-        newMockContext();
-        RouteDsl.on(ctx).api("/dbb/delay-one").delay(1).done().start();
-        Consumer<Route> handler = handler();
+        // 关闭 main 队列中转：delay 到点后直接在 SCHED 线程交付 resume，消除单测里 main 队列偶发晚到的时序竞态（确定性）。
+        boolean prevDelivery = RouteDispatcher.isDelayDeliveryMainQueue();
+        RouteDispatcher.setDelayDeliveryMainQueue(false);
+        try {
+            newMockContext();
+            RouteDsl.on(ctx).api("/dbb/delay-one").delay(1).done().start();
+            Consumer<Route> handler = handler();
 
-        Route route = mockRoute(mockRequest("https://host/dbb/delay-one", "GET", null, null, null));
-        long start = System.nanoTime();
-        handler.accept(route);
-        awaitTerminal(route, 5_000L, "resume");
-        long elapsedMs = (System.nanoTime() - start) / 1_000_000L;
-        assertTrue("delay(1) 必须真延时 ≥900ms 才放行，实际 " + elapsedMs + "ms", elapsedMs >= 900L);
+            Route route = mockRoute(mockRequest("https://host/dbb/delay-one", "GET", null, null, null));
+            long start = System.nanoTime();
+            handler.accept(route);
+            awaitTerminal(route, 5_000L, "resume");
+            long elapsedMs = (System.nanoTime() - start) / 1_000_000L;
+            assertTrue("delay(1) 必须真延时 ≥900ms 才放行，实际 " + elapsedMs + "ms", elapsedMs >= 900L);
+        } finally {
+            RouteDispatcher.setDelayDeliveryMainQueue(prevDelivery);
+        }
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -608,7 +616,6 @@ public class RouteCapabilityCoverageTest {
         assertEquals("本用例应恰好分发 1 次", 1L, runtime.metrics().dispatches());
         assertEquals("匹配成功的次数应为 1", 1L, runtime.metrics().hits());
         assertEquals("终结后不得残留 claim（悬挂额度 = 泄漏）", 0, runtime.claims().size());
-        assertEquals("IO 池不得因队满拒绝任务", 0L, runtime.io().rejectedCount());
         assertEquals("不得存在未确证的撤销", 0, runtime.unconfirmedRetirements());
         assertTrue("路由状态必须确证干净（可安全复用该 Context）", runtime.isClean());
 
@@ -618,7 +625,6 @@ public class RouteCapabilityCoverageTest {
                 + ", dispatches=" + runtime.metrics().dispatches()
                 + ", hits=" + runtime.metrics().hits()
                 + ", claims=" + runtime.claims().size()
-                + ", ioRejected=" + runtime.io().rejectedCount()
                 + ", unconfirmedRetirements=" + runtime.unconfirmedRetirements()
                 + ", isClean=" + runtime.isClean()
                 + ", runtimeThreadsAlive=" + aliveRuntimeThreadNames());

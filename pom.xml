@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -6,7 +6,7 @@
 
     <parent>
         <groupId>com.hsbc.cmb.dbb.hk.automation</groupId>
-        <artifactId>pw_automation_framework</artifactId>
+        <artifactId>pw-framework-bom</artifactId>
         <version>1.0.1</version>
         <relativePath/>
     </parent>
@@ -377,7 +377,7 @@
                     <systemPropertyVariables>
                         <serenity.outputDirectory>${project.build.directory}/site/serenity</serenity.outputDirectory>
                         <cucumber.filter.tags>${tags}</cucumber.filter.tags>
-                        <!-- D-4锛氱幆澧冨垏鎹㈢粡 -Psit1/sit2/sit3 profile 涓嬪彂锛堥粯璁ょ┖锛屼笉娉ㄥ叆 environment 鏍囬噺閿級 -->
+                        <!-- D-4: env/env.code/base.url default empty (no environment metrics injected); runtime env resolved via Gherkin step logon DBB "<env>" (resolveEnv), no longer via Maven profile -->
                         <env>${env}</env>
                         <env.code>${env.code}</env.code>
                         <base.url>${base.url}</base.url>
