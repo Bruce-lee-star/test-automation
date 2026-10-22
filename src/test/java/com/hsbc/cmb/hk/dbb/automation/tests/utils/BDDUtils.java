@@ -2,12 +2,11 @@ package com.hsbc.cmb.hk.dbb.automation.tests.utils;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.api.core.services.TestServices;
 import com.hsbc.cmb.hk.dbb.automation.framework.api.core.step.BaseStep;
+import com.hsbc.cmb.hk.dbb.automation.framework.common.config.ConfigSource;
 import com.hsbc.cmb.hk.dbb.automation.framework.common.security.SecretValue;
 import com.hsbc.cmb.hk.dbb.automation.framework.core.context.ContextKey;
 import com.hsbc.cmb.hk.dbb.automation.framework.core.context.TestContextHolder;
 import com.hsbc.cmb.hk.dbb.automation.tests.ssoplan.ForkAwareAccountResolver;
-import net.thucydides.model.environment.SystemEnvironmentVariables;
-import net.thucydides.model.util.EnvironmentVariables;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,8 +19,7 @@ import org.slf4j.LoggerFactory;
 public class BDDUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(BDDUtils.class);
-    private static final EnvironmentVariables environmentVariables = SystemEnvironmentVariables.createEnvironmentVariables();
-    
+
     // 当前线程登录信息：收拢为 core TestContext 的 ContextKey（T3-1），per-scenario 隔离。
     private static final ContextKey<BDDUtils> CURRENT_LOGIN_INFO_KEY =
             ContextKey.of("bddUtils.currentLoginInfo", BDDUtils.class);
@@ -59,7 +57,7 @@ public class BDDUtils {
             logger.debug("Extracted environment identifier: {}", envPrefix);
             
             // Get URL from environment configuration (required field)
-            String url = environmentVariables.getProperty("environment." + env);
+            String url = ConfigSource.resolve("environment." + env, null);
             if (url == null || url.isEmpty()) {
                 String errorMsg = String.format("URL configuration is required but not found for environment: %s", env);
                 logger.error(errorMsg);
@@ -80,7 +78,7 @@ public class BDDUtils {
             
             // Get password (optional field)
             String passwordKey = userinfoKey + "." + username + ".password";
-            String password = environmentVariables.getProperty(passwordKey);
+            String password = ConfigSource.resolve(passwordKey, null);
             if (password == null || password.isEmpty()) {
                 logger.warn("Password configuration not found for environment: {}, user: {}, using default empty value", env, username);
                 bddUtils.password = "";
@@ -92,7 +90,7 @@ public class BDDUtils {
             
             // Get profile (optional field)
             String profileKey = userinfoKey + "." + username + ".profile";
-            String profile = environmentVariables.getProperty(profileKey);
+            String profile = ConfigSource.resolve(profileKey, null);
             if (profile == null || profile.isEmpty()) {
                 logger.warn("Profile configuration not found for environment: {}, user: {}, using default empty value", env, username);
                 bddUtils.profile = "";
@@ -103,7 +101,7 @@ public class BDDUtils {
             
             // Get token security url (optional field)
             String securityUrlKey = userinfoKey + "." + username + ".token.security.url";
-            String securityUrl = environmentVariables.getProperty(securityUrlKey);
+            String securityUrl = ConfigSource.resolve(securityUrlKey, null);
             if (securityUrl == null || securityUrl.isEmpty()) {
                 logger.warn("Token security URL configuration not found for environment: {}, user: {}, using default empty value", env, username);
                 bddUtils.securityUrl = "";
@@ -236,7 +234,7 @@ public class BDDUtils {
      * @return Property value
      */
     public static String getProperty(String key) {
-        return environmentVariables.getProperty(key);
+        return ConfigSource.resolve(key, null);
     }
 
     public static String getSecurityCode(String securityUrl) {

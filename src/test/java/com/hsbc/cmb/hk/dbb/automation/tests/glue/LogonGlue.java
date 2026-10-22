@@ -6,7 +6,7 @@ import com.hsbc.cmb.hk.dbb.automation.tests.steps.LoginSteps;
 import io.cucumber.java.Before;
 import io.cucumber.java.Scenario;
 import io.cucumber.java.en.Given;
-import net.serenitybdd.annotations.Steps;
+import com.hsbc.cmb.hk.dbb.automation.framework.report.annotation.Steps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

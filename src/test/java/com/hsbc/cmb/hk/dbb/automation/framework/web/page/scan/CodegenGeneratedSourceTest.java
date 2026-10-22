@@ -114,7 +114,7 @@ public class CodegenGeneratedSourceTest {
         assertTrue("类名按步骤类同一规则派生（LoginPage → LoginAssertions），实际：" + src,
                 src.contains("public class LoginAssertions {"));
         assertTrue("必须 import 页面类", src.contains("import com.demo.pages.login.LoginPage;"));
-        assertTrue("必须带 Serenity @Step import", src.contains("import net.serenitybdd.annotations.Step;"));
+        assertTrue("必须带框架 @Step import", src.contains("import com.hsbc.cmb.hk.dbb.automation.framework.report.annotation.Step;"));
         assertTrue("必须带 Hamcrest assertThat", src.contains("import static org.hamcrest.MatcherAssert.assertThat;"));
         assertTrue("必须带 equalTo", src.contains("import static org.hamcrest.Matchers.equalTo;"));
         // 可编译的关键：页面实例必须有来源（与步骤类同款 PageObjectFactory 字段），否则 loginPage 未声明

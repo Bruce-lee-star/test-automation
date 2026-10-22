@@ -4,13 +4,12 @@ import com.hsbc.cmb.hk.dbb.automation.framework.api.core.step.ApiTestContext;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.api.core.step.BaseStep;
 import io.cucumber.java.en.Then;
-import net.serenitybdd.core.steps.UIInteractionSteps;
 
 /**
  * Response Status Steps
  * Handles response status code verification
  */
-public class ResponseStatusSteps extends UIInteractionSteps {
+public class ResponseStatusSteps {
 
         private BaseStep baseStep() { return ApiTestContext.baseStep(); }
 

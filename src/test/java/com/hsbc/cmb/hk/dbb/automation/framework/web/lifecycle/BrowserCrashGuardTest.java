@@ -35,12 +35,12 @@ public class BrowserCrashGuardTest {
 
     @BeforeClass
     public static void enableGuard() {
-        System.setProperty("serenity.playwright.concurrent.browser.crash.guard.enabled", "true");
+        System.setProperty("framework.playwright.concurrent.browser.crash.guard.enabled", "true");
     }
 
     @AfterClass
     public static void restore() {
-        System.clearProperty("serenity.playwright.concurrent.browser.crash.guard.enabled");
+        System.clearProperty("framework.playwright.concurrent.browser.crash.guard.enabled");
     }
 
     /** 每个用例后复位注入的恢复动作（含强制重建路径），避免静态状态串扰其它测试。 */
@@ -110,11 +110,11 @@ public class BrowserCrashGuardTest {
     @Test
     public void enabledByDefaultAndViaSystemProperty() {
         assertTrue("默认应启用", BrowserCrashGuard.isEnabled());
-        System.setProperty("serenity.playwright.concurrent.browser.crash.guard.enabled", "false");
+        System.setProperty("framework.playwright.concurrent.browser.crash.guard.enabled", "false");
         try {
             assertFalse(BrowserCrashGuard.isEnabled());
         } finally {
-            System.setProperty("serenity.playwright.concurrent.browser.crash.guard.enabled", "true");
+            System.setProperty("framework.playwright.concurrent.browser.crash.guard.enabled", "true");
         }
     }
 

@@ -5,7 +5,7 @@ import com.hsbc.cmb.hk.dbb.automation.tests.steps.E2ESandboxSteps;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
-import net.serenitybdd.annotations.Steps;
+import com.hsbc.cmb.hk.dbb.automation.framework.report.annotation.Steps;
 
 /**
  * E2E 沙箱 Gherkin 步骤定义。

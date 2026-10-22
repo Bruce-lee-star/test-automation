@@ -5,7 +5,6 @@ import com.hsbc.cmb.hk.dbb.automation.framework.api.core.step.ApiTestContext;
 import com.hsbc.cmb.hk.dbb.automation.framework.api.core.step.BaseStep;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Given;
-import net.serenitybdd.core.steps.UIInteractionSteps;
 
 import java.util.List;
 import java.util.Map;
@@ -14,7 +13,7 @@ import java.util.Map;
  * Query Parameter Steps
  * Handles query parameters manipulation
  */
-public class QueryParameterSteps extends UIInteractionSteps {
+public class QueryParameterSteps {
 
         private BaseStep baseStep() { return ApiTestContext.baseStep(); }
 

@@ -1,6 +1,6 @@
 package com.hsbc.cmb.hk.dbb.automation.tests;
 
-import net.serenitybdd.annotations.Step;
+import com.hsbc.cmb.hk.dbb.automation.framework.report.annotation.Step;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.web.page.factory.PageObjectFactory;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.session.SessionManager;

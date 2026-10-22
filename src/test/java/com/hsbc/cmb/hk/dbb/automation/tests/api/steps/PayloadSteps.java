@@ -4,13 +4,12 @@ import com.hsbc.cmb.hk.dbb.automation.framework.api.core.step.ApiTestContext;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.api.core.step.BaseStep;
 import io.cucumber.java.en.Given;
-import net.serenitybdd.core.steps.UIInteractionSteps;
 
 /**
  * Payload Steps
  * Handles request body manipulation
  */
-public class PayloadSteps extends UIInteractionSteps {
+public class PayloadSteps {
 
         private BaseStep baseStep() { return ApiTestContext.baseStep(); }
 

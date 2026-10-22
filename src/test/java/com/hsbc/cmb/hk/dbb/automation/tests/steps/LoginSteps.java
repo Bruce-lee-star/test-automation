@@ -11,7 +11,7 @@ import com.hsbc.cmb.hk.dbb.automation.tests.pages.HomePage;
 import com.hsbc.cmb.hk.dbb.automation.tests.pages.LoginPage;
 import com.hsbc.cmb.hk.dbb.automation.tests.utils.BDDUtils;
 import com.microsoft.playwright.Page;
-import net.serenitybdd.annotations.Step;
+import com.hsbc.cmb.hk.dbb.automation.framework.report.annotation.Step;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

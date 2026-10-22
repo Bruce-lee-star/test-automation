@@ -65,7 +65,7 @@
         </dependency>
         <dependency>
             <groupId>com.hsbc.cmb.dbb.hk.automation</groupId>
-            <artifactId>pw-reports</artifactId>
+            <artifactId>pw-reports-v2</artifactId>
             <version>${framework.version}</version>
         </dependency>
         <dependency>
@@ -91,16 +91,7 @@
         </dependency>
 
         <!-- ENG-P0-2锛歵est-automation 瀹為檯鐢ㄥ埌鐨勫閮ㄤ緷璧栵紙鍘熺敱鏍?<dependencies> 缁ф壙锛岀幇鏄惧紡澹版槑锛涘潎涓烘祴璇曟湡锛?-->
-        <dependency>
-            <groupId>net.serenity-bdd</groupId>
-            <artifactId>serenity-model</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.serenity-bdd</groupId>
-            <artifactId>serenity-core</artifactId>
-            <scope>test</scope>
-        </dependency>
+        <!-- M3：移除 serenity-model/core（测试代码已无 Serenity 引用；@Step/@Steps/@Shared 经 pw-reports-v2 shim 解析）。 -->
 
         <!-- 杩愯 IT 鎵€闇€锛堟湰妗嗘灦鐢?Playwright锛屼笉鐪熸浣跨敤杩欎簺 driver锛夛細Serenity 4.2.0 鐨?
              SupportedWebDriver 闈欐€佸垵濮嬪寲浼氬 FirefoxDriver/ChromeDriver/InternetExplorerDriver/
@@ -134,26 +125,7 @@
             <version>9.3.0</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>net.serenity-bdd</groupId>
-            <artifactId>serenity-cucumber</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.serenity-bdd</groupId>
-            <artifactId>serenity-screenplay</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.serenity-bdd</groupId>
-            <artifactId>serenity-rest-assured</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.serenity-bdd</groupId>
-            <artifactId>serenity-junit</artifactId>
-            <scope>test</scope>
-        </dependency>
+        <!-- M3：移除 serenity-cucumber/screenplay/rest-assured/junit（runner 已切纯 Cucumber；rest-assured 经 pw-api-core 传入）。 -->
         <!-- JUnit 4锛氭墽琛屽櫒鍥為€€ master 鏂规锛?026-09-27锛孭0锛夆€斺€擟ucumberWithSerenity runner锛圫erenity 涓讳綋鎺ョ锛宻cenario tags 澶╃劧鍐欏叆 TestOutcome锛屾牴娌?JUnit5 鏃佹寕涓?@firefox/@edge 瑕嗙洊澶辨晥锛夈€?-->
         <dependency>
             <groupId>junit</groupId>
@@ -179,6 +151,20 @@
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-java</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- DEV-V5 对齐：v2(pw-reports-v2) 将 cucumber-gherkin/cucumber-plugin 钉在 7.31.0，与框架 cucumber-core 7.34.9 错配，
+             导致 cucumber 内置 shade 的 jackson 类 NoClassDefFoundError。此处就近声明 7.34.9 统一版本（正式修复应同步改 v2 的 pom）。 -->
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-gherkin</artifactId>
+            <version>7.34.9</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-plugin</artifactId>
+            <version>7.34.9</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -377,6 +363,9 @@
                     <systemPropertyVariables>
                         <serenity.outputDirectory>${project.build.directory}/site/serenity</serenity.outputDirectory>
                         <cucumber.filter.tags>${tags}</cucumber.filter.tags>
+                        <!-- 框架 Cucumber 插件（FrameworkCucumberEventListener + PwReportPlugin）与
+                             ObjectFactory（PwReportObjectFactory）已由 pw-web-ui 自带的 /cucumber.properties
+                             自动注册，此处不再声明，避免同一插件被注册两次。 -->
                         <!-- D-4: env/env.code/base.url default empty (no environment metrics injected); runtime env resolved via Gherkin step logon DBB "<env>" (resolveEnv), no longer via Maven profile -->
                         <env>${env}</env>
                         <env.code>${env.code}</env.code>
@@ -394,100 +383,6 @@
                             <goal>integration-test</goal>
                             <goal>verify</goal>
                         </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>net.serenity-bdd.maven.plugins</groupId>
-                <artifactId>serenity-maven-plugin</artifactId>
-                <version>${serenity.version}</version>
-                <dependencies>
-                    <!-- plexus-archiver 涓婄晫閽夛細serenity-maven-plugin 鐨勬彃浠剁骇浼犻€掍緷璧栵紝
-                         dependencyManagement 鏃犳硶瑕嗙洊鎻掍欢渚濊禆锛屾晠鍦ㄦ鏄惧紡閽夌増锛堜慨澶嶅畨鍏ㄦ紡娲?+ 婊¤冻鍐呯綉娌荤悊锛夈€?
-                         鐗堟湰涓庢牴 pom 鐨?${plexus.archiver.version} 鍏辩敤鍚屼竴灞炴€у彛寰勶紙鍚屼竴浠界埗 POM 鎻愪緵锛夛紝
-                         閬垮厤妗嗘灦鎵撳寘鎻掍欢锛坢aven-jar-plugin锛変笌鏈彃浠朵袱澶勭増鏈紓绉汇€?-->
-                    <dependency>
-                        <groupId>org.codehaus.plexus</groupId>
-                        <artifactId>plexus-archiver</artifactId>
-                        <version>${plexus.archiver.version}</version>
-                    </dependency>
-                    <!-- 渚濊禆娌荤悊锛堝唴缃戦殧绂绘竻鍗曪級鈥斺€?*鎻掍欢绫昏矾寰?*鏄」鐩骇 exclusion 瑕嗙洊涓嶅埌鐨勭浜屾潯閾捐矾銆?
-                         瀹炴祴璇佹嵁锛歮vn -X 鐨?"Populating class realm plugin>serenity-maven-plugin" 娈垫鍓嶅惈
-                         org.htmlunit:htmlunit-websocket-client(4.7.0锛屽懡涓殧绂绘竻鍗?銆?
-                         org.seleniumhq.selenium:htmlunit3-driver(4.38.0锛屼笌椤圭洰渚?4.23.0 鐗堟湰鍋忔枩)
-                         浠ュ強鏁存潯 io.cucumber:* 鏍堛€?
-                         鈶?涓嶇敤鐨勬帓闄わ細serenity:aggregate 鍙 test-outcome JSON 鍑烘眹鎬绘姤鍛娿€佷笉椹卞姩娴忚鍣紝
-                           鏁呭 serenity-core 鎺掗櫎 htmlunit 鏍堬紙鍚?websocket-client锛変笌 htmlunit3-driver銆?
-                         鈶?瑕佺敤鐨勬樉寮忓０鏄庯細Cucumber 鏄仛鍚堥樁娈电殑**杩愯鏈熷繀闇€**锛堝疄娴嬶細涓€骞舵帓闄ゅ悗鎶?
-                           NoClassDefFoundError: io/cucumber/core/resource/Resource锛夛紝鏁呬笉鎺掗櫎锛屾敼涓烘寜椤圭洰
-                           缁熶竴鐗堟湰鏄惧紡澹版槑 鈥斺€?浣挎彃浠?realm 鐢?${cucumber.version}锛岃€屼笉鏄敱 Serenity 浼犻€掔殑鐗堟湰銆?
-                         鎵嬫硶鍚?plexus-archiver锛氬湪鎻掍欢 <dependencies> 鍐呭０鏄庡悓鍚?GA锛屽氨杩戜紭鍏堣鐩栦紶閫掔増鏈€?-->
-                    <dependency>
-                        <groupId>net.serenity-bdd</groupId>
-                        <artifactId>serenity-core</artifactId>
-                        <version>${serenity.version}</version>
-                        <exclusions>
-                            <exclusion>
-                                <groupId>org.htmlunit</groupId>
-                                <artifactId>htmlunit</artifactId>
-                            </exclusion>
-                            <exclusion>
-                                <groupId>org.seleniumhq.selenium</groupId>
-                                <artifactId>htmlunit3-driver</artifactId>
-                            </exclusion>
-                            <!-- 鍚屼笂锛氳仛鍚堥樁娈典笉椹卞姩娴忚鍣紝driver 鏍堬紙鍚?devtools 浼犻€掍緷璧栵級鏃犵敤锛?
-                                 涓旀彃浠?realm 閲屽畠浠槸 4.38.0锛屼笌椤圭洰渚ч拤瀹氱殑 4.23.1 鐗堟湰鍋忔枩銆?
-                                 selenium-api / selenium-support 鍒绘剰淇濈暀锛歴erenity 鍏紑 API 绛惧悕寮曠敤瀹冧滑
-                                 锛坥rg.openqa.selenium.support.ui.*锛夛紝鎺掗櫎浼氬鑷磋仛鍚堥樁娈电被鍔犺浇澶辫触銆?-->
-                            <exclusion>
-                                <groupId>org.seleniumhq.selenium</groupId>
-                                <artifactId>selenium-java</artifactId>
-                            </exclusion>
-                            <exclusion>
-                                <groupId>org.seleniumhq.selenium</groupId>
-                                <artifactId>selenium-chrome-driver</artifactId>
-                            </exclusion>
-                            <exclusion>
-                                <groupId>org.seleniumhq.selenium</groupId>
-                                <artifactId>selenium-firefox-driver</artifactId>
-                            </exclusion>
-                            <exclusion>
-                                <groupId>org.seleniumhq.selenium</groupId>
-                                <artifactId>selenium-edge-driver</artifactId>
-                            </exclusion>
-                            <exclusion>
-                                <groupId>org.seleniumhq.selenium</groupId>
-                                <artifactId>selenium-ie-driver</artifactId>
-                            </exclusion>
-                        </exclusions>
-                    </dependency>
-                    <dependency>
-                        <groupId>io.cucumber</groupId>
-                        <artifactId>cucumber-core</artifactId>
-                        <version>${cucumber.version}</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>io.cucumber</groupId>
-                        <artifactId>cucumber-java</artifactId>
-                        <version>${cucumber.version}</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>io.cucumber</groupId>
-                        <artifactId>datatable</artifactId>
-                        <version>${cucumber.version}</version>
-                    </dependency>
-                </dependencies>
-                <executions>
-                    <execution>
-                        <id>serenity-reports</id>
-                        <phase>post-integration-test</phase>
-                        <goals>
-                            <goal>aggregate</goal>
-                        </goals>
-                        <configuration>
-                            <outputDirectory>${project.build.directory}/site/serenity</outputDirectory>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -517,36 +412,7 @@
                 </executions>
             </plugin>
 
-            <!-- 猸?姹囨€绘姤鍛婄敓鎴愶紙鍘?T2-8 鑷姩鍖栵級锛氭湰妯″潡鍐呰仈 exec-maven-plugin 鍦?verify 闃舵瑙﹀彂锛?
-                 鐢熷懡鍛ㄦ湡涓婃櫄浜庝笂鏂?serenity:aggregate 鎵€鍦ㄧ殑 post-integration-test锛?
-                 椤哄簭鐢?Maven 闃舵淇濊瘉锛屼笉鍐嶄緷璧栧悓闃舵鍐呯殑鎻掍欢澹版槑椤哄簭銆?
-                 浠呮湰妯″潡锛堝敮涓€鍚?framework-reporting 鐨勪笟鍔℃祴璇曟ā鍧楋級鎵ц锛屾牴涓庢鏋舵ā鍧椾笉瑙﹀彂銆?-->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.5.0</version>
-                <executions>
-                    <execution>
-                        <id>generate-summary-report</id>
-                        <phase>${summary.report.phase}</phase>
-                        <goals>
-                            <goal>java</goal>
-                        </goals>
-                        <configuration>
-                            <mainClass>com.hsbc.cmb.hk.dbb.automation.framework.common.reporting.SummaryReportGenerator</mainClass>
-                            <arguments>
-                                <argument>${project.build.directory}/site/serenity</argument>
-                            </arguments>
-                            <!-- 蹇呴』鐢?test 浣滅敤鍩燂細SummaryReportGenerator 渚濊禆 net.thucydides.model.*锛坰erenity-model锛夛紝
-                                 鑰屾湰妯″潡鎶?serenity-model 鏄惧紡澹版槑涓?<scope>test</scope>锛圗NG-P0-2锛夆€斺€擬aven 鐨勩€屾渶杩戝０鏄庝紭鍏堛€?
-                                 浼氳瀹冧笉鍐嶄互 compile 浣滅敤鍩熶紶閫掞紝鏁?classpathScope=compile 鏃惰繍琛屾湡 NoClassDefFoundError
-                                 锛圫ystemEnvironmentVariables锛夛紝瀵艰嚧 mvn verify锛圕I/E-6锛夊湪姹囨€绘姤鍛婂蹇呯劧澶辫触銆?-->
-                            <classpathScope>test</classpathScope>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
+            </plugins>
     </build>
 
     <profiles>

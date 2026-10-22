@@ -1,9 +1,10 @@
+import com.hsbc.cmb.hk.dbb.automation.framework.web.junit.CucumberWithPw;
 import io.cucumber.junit.CucumberOptions;
-import net.serenitybdd.cucumber.CucumberWithSerenity;
 import org.junit.runner.RunWith;
 
 /**
- * Cucumber Test Runner (Serenity + JUnit 4)。
+ * Cucumber Test Runner (DEV-V5 迁移：纯 JUnit4 Cucumber；默认 serenity 经其 ObjectFactory/plugin SPI 接管，
+ * -Ppw-report-v2 时切到 pw-reports-v2 的 PwReportObjectFactory + PwReportPlugin 产出对照报告)。
  *
  * <p>2026-09-27 P0 回退：执行器由 JUnit5 {@code @Suite + cucumber 引擎}（Serenity 旁挂
  * SerenityReporterParallel，TestOutcome.getTags() 恒空 → @firefox/@edge 覆盖失效 → 回落
@@ -28,7 +29,7 @@ import org.junit.runner.RunWith;
  * 运行器内自锁（缺标记时改标签属性）经实测<b>无效</b>：Serenity 在本类初始化之前就已解析 tags，
  * 仍跑了全部场景 —— 故不采用该做法。</p>
  */
-@RunWith(CucumberWithSerenity.class)
+@RunWith(CucumberWithPw.class)
 @CucumberOptions(
         features = "src/test/resources/features",
         glue = {"com.hsbc.cmb.hk.dbb.automation.tests.glue",

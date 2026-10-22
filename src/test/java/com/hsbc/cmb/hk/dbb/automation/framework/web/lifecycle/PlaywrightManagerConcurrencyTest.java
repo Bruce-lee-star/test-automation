@@ -20,7 +20,7 @@ import static org.mockito.Mockito.mock;
  * {@code ThreadLocal<Page> pageThreadLocal}、{@code ThreadLocal<String> currentConfigId}
  * 及 {@code ThreadLocal<Object> BROWSER_LOCK} 已迁入
  * {@link TestContextHolder}；包级可见的 ContextKey 供同包
- * {@link PlaywrightSerenityBridge} 等继续访问）。
+ * {@link PlaywrightLifecycleBridge} 等继续访问）。
  * <p>
  * 本测试经生产访问器 {@link PlaywrightManager#getPageThreadLocal()} 验证 Page 绑定按线程隔离，
  * 并验证 currentConfigId 同为按线程隔离（不启真实浏览器，Page 用 mock）。

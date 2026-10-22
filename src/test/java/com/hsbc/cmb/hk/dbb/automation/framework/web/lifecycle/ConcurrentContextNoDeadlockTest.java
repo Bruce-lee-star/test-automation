@@ -33,10 +33,10 @@ import static org.junit.Assert.assertTrue;
  * <ol>
  *   <li>{@code createContext} 的 {@code context.onPage} 仅读取 {@code newPage.url()}（字段读取，无传输），
  *       不再调用 {@code title()}；</li>
- *   <li>下载保存：{@code context.onDownload} 监听器<b>只派发</b>，{@code download.saveAs(...)} 卸载到受管
- *       {@code AsyncPool}（{@code PlaywrightContextManager.saveDownloadAsync}），连接读线程仅负责派发事件。
- *       ⚠ 该卸载曾在「改为 context 级一次注册」时被丢失（回归），2026-09-21 复核并恢复；另有专项守护
- *       {@code DownloadSaveOffloadTest}（慢 saveAs 桩证明派发不阻塞）。</li>
+ *   <li>下载：框架<b>不再</b>注册 {@code context.onDownload}（避免与业务 {@code page.waitForDownload}
+ *       产生竞态与重复落盘）；下载事件由 Playwright 原生捕获，业务拿到 {@link Download} 后自行
+ *       {@code saveAs(...)}。连接读线程自死锁防护的要点在于 {@code onPage}/{@code onLoad} 监听器只做
+ *       字段读取 / 日志，禁止在其中发起同步 CDP 调用。</li>
  * </ol>
  * 所有新增监听器均须只做字段读取 / 日志，禁止在监听器内发起同步 CDP 调用。</p>
  *
@@ -56,7 +56,7 @@ public class ConcurrentContextNoDeadlockTest {
     private static final int PARALLELISM = 3;
     private static final int PER_TASK_TIMEOUT_MS = 50_000;
 
-    /** 强制无头，避免 CI/无显示器环境下启动失败（serenity.conf 默认 headless=false）。
+    /** 强制无头，避免 CI/无显示器环境下启动失败（pw.conf 默认 headless=false）。
      *  静态块在类加载时最早设置，确保 {@link PlaywrightManager#getBrowser()} 实时读取到无头模式。 */
     static {
         System.setProperty("playwright.browser.headless", "true");
@@ -80,8 +80,9 @@ public class ConcurrentContextNoDeadlockTest {
     }
 
     /**
-     * 并发下载场景：{@code onDownload} 的 {@code saveAs} 必须卸载到 {@code DOWNLOAD_EXECUTOR}。
-     * 若回退为监听器内同步 {@code saveAs}，连接读线程自死锁 → 任务超时失败。
+     * 并发下载场景：通过 {@code page.waitForDownload} 捕获下载事件（框架不再注册 onDownload，
+     * 避免与业务下载落盘竞态）。断言连接读线程在事件派发后仍可立即响应 {@code title()}，
+     * 以固化「监听器内不发起同步 CDP 调用」的防自死锁约束。
      */
     @Test
     public void concurrentDownloadsDoNotDeadlockConnectionThread() {
@@ -100,13 +101,13 @@ public class ConcurrentContextNoDeadlockTest {
                                 + "'], {type:'text/plain'}))").toString();
                         page.setContent("<html><body><a id='dl' download='deadlock-guard-" + idx
                                 + ".txt' href='" + blobUrl + "'>d</a></body></html>");
-                        // waitForDownload 在下载事件派发后立即返回，证明 onDownload 监听器已注册且未阻塞。
-                        // 修复点：onDownload 内 saveAs 已卸载到 DOWNLOAD_EXECUTOR，故连接读线程不被阻塞。
+                        // waitForDownload 在下载事件派发后立即返回（Playwright 原生捕获，框架不再注册 onDownload）。
+                        // 修复点：监听器内不发起同步 CDP 调用，故连接读线程不被阻塞。
                         Download download = page.waitForDownload(() -> page.click("#dl"));
                         assertNotNull("Download 事件应被派发（onDownload 监听器已注册）", download);
                         assertNotNull("suggestedFilename 应非空", download.suggestedFilename());
-                        // 关键防回归：onDownload 派发后连接读线程仍应立即响应 page.title()；
-                        // 若 saveAs 同步阻塞连接读线程（旧 bug），此处将自死锁 → 任务在 perTaskTimeout 内失败。
+                        // 关键防回归：事件派发后连接读线程仍应立即响应 page.title()；
+                        // 若监听器内同步阻塞连接读线程（旧 bug），此处将自死锁 → 任务在 perTaskTimeout 内失败。
                         String title = page.title();
                         assertNotNull("onDownload 派发后连接读线程应可响应 title()（未自死锁）", title);
                         return "ok-" + idx;
@@ -190,10 +191,9 @@ public class ConcurrentContextNoDeadlockTest {
      *   <li>{@code @AfterClass#shutdown()} 调用 {@link PlaywrightManager#cleanupAll()}，其遍历
      *       {@code browserInstances} 关闭<b>所有</b>浏览器实例（含并发 worker 线程各自 per-thread 启动的 Chromium）
      *       及其全部 context，并 clear 两个实例 Map + 清理 ThreadLocal，故浏览器进程 / 上下文不会泄漏。</li>
-     *   <li>{@code onDownload} 的 {@code saveAs} 卸载到 {@link PlaywrightContextManager} 的
-     *       {@code DOWNLOAD_EXECUTOR}（受 {@code ShutdownCoordinator} 管理的守护线程池），JVM 退出时关闭；
-     *       任务 finally 关闭 context 即取消在途下载，saveAs 立即以 TargetClosed 结束（被生产 handler 捕获），
-     *       不会令该守护线程长期挂起或泄漏。</li>
+     *   <li>下载不再由框架自动保存（交由业务 {@code Download.saveAs}）；并发下载仍经
+     *       {@code page.waitForDownload} 捕获，且每个任务 finally 关闭 context 即取消在途下载，
+     *       不会令连接读线程挂起或泄漏。</li>
      *   <li>{@link ConcurrentContextExecutor#runAll} 内部线程池为守护线程，finally 执行
      *       {@code shutdown()+awaitTermination(30s)}，worker 线程必然释放。</li>
      * </ol>

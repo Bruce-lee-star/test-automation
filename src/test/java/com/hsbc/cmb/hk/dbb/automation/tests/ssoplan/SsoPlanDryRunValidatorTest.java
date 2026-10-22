@@ -17,7 +17,7 @@ import java.util.Set;
  * 当某 env 声明了账号清单、却含场景引用了未声明的 user，构建直接失败并列出缺失账号与 scenario。
  * 当前仓库未配置 {@code sso.accounts.*} 时仅打印报告、不 fail（零回归）。</p>
  *
- * <p>CI 启用方式：在 {@code serenity.conf} / {@code serenity.properties} 声明
+ * <p>CI 启用方式：在 {@code pw.conf} / {@code pw.properties} 声明
  * {@code sso.accounts.O63_SIT1=WP7UAT2_2,WP7UAT2_5,...} 等，本用例即成为 fail-closed 硬门禁。</p>
  */
 public class SsoPlanDryRunValidatorTest {

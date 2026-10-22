@@ -77,10 +77,6 @@
     <!-- Playwright 日志级别 -->
     <logger name="com.microsoft.playwright" level="WARN"/>
     
-    <!-- Serenity 日志级别 -->
-    <logger name="net.serenitybdd" level="INFO"/>
-    <logger name="net.thucydides" level="INFO"/>
-    
     <!-- Cucumber 日志级别 -->
     <logger name="io.cucumber" level="INFO"/>
 </configuration>

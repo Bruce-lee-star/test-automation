@@ -4,7 +4,7 @@ import com.hsbc.cmb.hk.dbb.automation.framework.web.page.factory.PageObjectFacto
 import com.hsbc.cmb.hk.dbb.automation.tests.pages.BaiduPage;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
-import net.serenitybdd.annotations.Step;
+import com.hsbc.cmb.hk.dbb.automation.framework.report.annotation.Step;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

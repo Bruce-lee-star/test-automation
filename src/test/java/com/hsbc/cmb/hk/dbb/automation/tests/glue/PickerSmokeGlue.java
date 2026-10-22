@@ -5,7 +5,7 @@ import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
-import net.serenitybdd.annotations.Steps;
+import com.hsbc.cmb.hk.dbb.automation.framework.report.annotation.Steps;
 
 /**
  * Cucumber glue for the picker browser smoke. Mirrors {@link BaiduGlue}: the

@@ -44,7 +44,7 @@ public class ConfigKeysRegistryTest {
      * {@code http.ssl.relax-validation}、{@code http.connection.pool.max-total}、
      * {@code serenity.output-directory}。本测试此前只覆盖少量手工登记的键，故未暴露该事实。
      *
-     * <p>这些键名是<b>配置契约</b>（用户 {@code serenity.properties} / {@code -D} 覆盖按字面匹配），
+     * <p>这些键名是<b>配置契约</b>（用户 {@code pw.properties} / {@code -D} 覆盖按字面匹配），
      * 重命名会静默丢弃既有用户配置，因此不修正键名，而是把断言校正为真实成立的结构性规则；
      * 新增键应尽量遵循全小写点分（{@code a-z0-9.}）。
      */

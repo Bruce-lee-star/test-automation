@@ -13,7 +13,7 @@
 ## 约定（D-9）
 
 - **禁止**把真实环境的账号 / 口令 / 令牌写入本目录。真实凭据一律经配置注入（`userinfo_*` + `ENC(...)` 密文
-  或 CI Secrets），见 `serenity.conf` / `SecretValue`。
+  或 CI Secrets），见 `pw.conf` / `SecretValue`。
 - 需要变体数据时，优先用 `tests.data.PayloadFactory`（模板 + `with` 覆盖 + `uniqueUser()` 随机化），
   而非复制新的 JSON 文件。
 

@@ -5,7 +5,6 @@ import com.hsbc.cmb.hk.dbb.automation.framework.api.core.step.ApiTestContext;
 import com.hsbc.cmb.hk.dbb.automation.framework.api.core.step.BaseStep;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.When;
-import net.serenitybdd.core.steps.UIInteractionSteps;
 
 /**
  * Entity Initialization Steps
@@ -19,7 +18,7 @@ import net.serenitybdd.core.steps.UIInteractionSteps;
  * <b>本类负责创建（init），其余 step 类负责取用（baseStep()）</b>，
  * 语义等价于原先期望的 Spring 单例，且不引入任何新依赖。
  */
-public class EntitySteps extends UIInteractionSteps {
+public class EntitySteps {
 
     @Given("an entity")
     public void buildEntity() {

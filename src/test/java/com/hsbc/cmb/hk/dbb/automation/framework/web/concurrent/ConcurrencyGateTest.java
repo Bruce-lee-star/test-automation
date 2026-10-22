@@ -29,13 +29,13 @@ public class ConcurrencyGateTest {
 
     @BeforeClass
     public static void enableGate() {
-        System.setProperty("serenity.playwright.concurrent.partition.enabled", "true");
+        System.setProperty("framework.playwright.concurrent.partition.enabled", "true");
     }
 
     @AfterClass
     public static void restore() {
-        System.clearProperty("serenity.playwright.concurrent.partition.enabled");
-        System.clearProperty("serenity.playwright.concurrent.partition.per.key.permits");
+        System.clearProperty("framework.playwright.concurrent.partition.enabled");
+        System.clearProperty("framework.playwright.concurrent.partition.per.key.permits");
     }
 
     private static ConcurrencyPartitionKey key(String env, String user) {
@@ -143,7 +143,7 @@ public class ConcurrencyGateTest {
 
     @Test
     public void perKeyPermitsAllowsNConcurrent() throws Exception {
-        System.setProperty("serenity.playwright.concurrent.partition.per.key.permits", "2");
+        System.setProperty("framework.playwright.concurrent.partition.per.key.permits", "2");
         try {
             ConcurrencyPartitionKey k = key("PERMIT", "n2");
             CountDownLatch bothAcquired = new CountDownLatch(2);
@@ -171,7 +171,7 @@ public class ConcurrencyGateTest {
             assertTrue(t1done.get());
             assertTrue(t2done.get());
         } finally {
-            System.clearProperty("serenity.playwright.concurrent.partition.per.key.permits");
+            System.clearProperty("framework.playwright.concurrent.partition.per.key.permits");
         }
     }
 }

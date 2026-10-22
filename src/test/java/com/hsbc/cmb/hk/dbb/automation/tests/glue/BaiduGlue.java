@@ -3,7 +3,7 @@ package com.hsbc.cmb.hk.dbb.automation.tests.glue;
 import com.hsbc.cmb.hk.dbb.automation.tests.steps.BaiduSteps;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.When;
-import net.serenitybdd.annotations.Steps;
+import com.hsbc.cmb.hk.dbb.automation.framework.report.annotation.Steps;
 
 public class BaiduGlue {
 

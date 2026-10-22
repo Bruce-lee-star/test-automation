@@ -5,7 +5,7 @@ import com.hsbc.cmb.hk.dbb.automation.framework.web.page.factory.PageObjectFacto
 import com.hsbc.cmb.hk.dbb.automation.tests.pages.E2ESandboxPage;
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
-import net.serenitybdd.annotations.Step;
+import com.hsbc.cmb.hk.dbb.automation.framework.report.annotation.Step;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

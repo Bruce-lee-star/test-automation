@@ -2,7 +2,7 @@ package com.hsbc.cmb.hk.dbb.automation.tests.steps;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.web.page.factory.PageObjectFactory;
 import com.hsbc.cmb.hk.dbb.automation.tests.pages.PickerPage;
-import net.serenitybdd.annotations.Step;
+import com.hsbc.cmb.hk.dbb.automation.framework.report.annotation.Step;
 
 import java.util.Map;
 

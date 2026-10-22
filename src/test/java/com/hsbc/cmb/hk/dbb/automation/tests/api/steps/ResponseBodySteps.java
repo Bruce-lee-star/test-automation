@@ -5,7 +5,6 @@ import com.hsbc.cmb.hk.dbb.automation.framework.api.core.step.ApiTestContext;
 import com.hsbc.cmb.hk.dbb.automation.framework.api.core.step.BaseStep;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Then;
-import net.serenitybdd.core.steps.UIInteractionSteps;
 
 import java.util.List;
 import java.util.Map;
@@ -14,7 +13,7 @@ import java.util.Map;
  * Response Body Steps
  * Handles response body verification and JSON field assertions
  */
-public class ResponseBodySteps extends UIInteractionSteps {
+public class ResponseBodySteps {
 
         private BaseStep baseStep() { return ApiTestContext.baseStep(); }
 

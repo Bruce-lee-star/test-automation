@@ -201,7 +201,7 @@ public class ArchitectureTest {
      * {@code LocatorFactory} / {@code RoleLocatorFactory}——它们返回裸 Playwright {@code Locator}，
      * 属驱动类型泄漏，且会绕过框架的 iframe/shadow 适配、错误处理与录制。
      *
-     * <p>业务应使用业务契约的定位入口：{@code SerenityBasePage#element/locator/elements(String)}（选择器）、
+     * <p>业务应使用业务契约的定位入口：{@code ManagedBasePage#element/locator/elements(String)}（选择器）、
      * {@code #elementByRole*}/{@code #elementsByRole*}（ARIA 角色，返回框架原生
      * {@code PageElement}/{@code PageElementList}），或 {@code @RoleElement} 注解字段。
      *
@@ -226,7 +226,7 @@ public class ArchitectureTest {
      * （{@code framework.web.page..}）上的任何 {@code bringToFront(...)} 方法。
      *
      * <p>背景：标签页 / 窗口激活属框架内部编排——业务切页走 {@code switchToPage} / {@code waitForNewPage}，
-     * 其收尾已由内部 {@code safeBringToFront()} 自动激活目标页。该能力既不在 {@code SerenityBasePage}
+     * 其收尾已由内部 {@code safeBringToFront()} 自动激活目标页。该能力既不在 {@code ManagedBasePage}
      * 能力面上，也不保留任何公开 seam；本规则防止后续把它重新接线回业务代码。</p>
      *
      * <p>边界：仅约束<b>页面对象</b>上的同名方法。业务经 Layer A 直接对 Playwright {@code Page}
@@ -283,21 +283,21 @@ public class ArchitectureTest {
     }
 
     /**
-     * Phase 4 门禁（doc15 §8）：业务代码不得继承已删除的 {@code SerenityBasePage}。
+     * Phase 4 门禁（doc15 §8）：业务代码不得继承已删除的 {@code ManagedBasePage}。
      * 该类全部 Layer B 录制方法已下沉为 {@code BasePage} 公开委托壳，业务 Page 应继承 {@code BasePage}
-     * （或后续逐步演进为组合式 POJO + {@code ManagedPageAware}）。此规则防止 SerenityBasePage 被重新引入。
+     * （或后续逐步演进为组合式 POJO + {@code ManagedPageAware}）。此规则防止 ManagedBasePage 被重新引入。
      */
     @Test
-    public void businessCodeMustNotExtendSerenityBasePage() {
+    public void businessCodeMustNotExtendManagedBasePage() {
         noClasses()
                 .that().resideOutsideOfPackage("..framework.web.page..")
-                .should(new ArchCondition<JavaClass>("not extend the deleted SerenityBasePage") {
+                .should(new ArchCondition<JavaClass>("not extend the deleted ManagedBasePage") {
                     @Override
                     public void check(JavaClass item, ConditionEvents events) {
                         item.getSuperclass()
-                                .filter(superClass -> superClass.getName().endsWith("SerenityBasePage"))
+                                .filter(superClass -> superClass.getName().endsWith("ManagedBasePage"))
                                 .ifPresent(superClass -> events.add(SimpleConditionEvent.violated(item,
-                                        item.getFullName() + " extends SerenityBasePage (deleted; extend BasePage instead)")));
+                                        item.getFullName() + " extends ManagedBasePage (deleted; extend BasePage instead)")));
                     }
                 })
                 .check(CLASSES_NO_TESTS_WITH_TESTS_PKG);
@@ -305,32 +305,32 @@ public class ArchitectureTest {
 
     /**
      * Phase 4 门禁（doc15 §8，G7）：业务代码不得直接依赖录制内部面
-     * {@code SerenityRecorder}/{@code SerenityPageRecorder}（录制属框架内部实现）。
+     * {@code Recorder}/{@code PageRecorder}（录制属框架内部实现）。
      * 业务 Page 经继承 {@code BasePage} 透明获得录制，不应触碰录制门面。
      */
     @Test
     public void businessCodeMustNotExtendBasePage() {
         noClasses()
                 .that().resideOutsideOfPackage("..framework.web.page..")
-                .should(new ArchCondition<JavaClass>("not extend BasePage / SerenityBasePage") {
+                .should(new ArchCondition<JavaClass>("not extend BasePage / ManagedBasePage") {
                     @Override
                     public void check(JavaClass item, ConditionEvents events) {
                         item.getSuperclass()
                                 .filter(superClass -> superClass.getName().endsWith("BasePage"))
                                 .ifPresent(superClass -> events.add(SimpleConditionEvent.violated(item,
                                         item.getFullName() + " extends " + superClass.getName()
-                                                + " (use compositional AbstractManagedPage + ManagedPageAware/SerenityBasePage instead)")));
+                                                + " (use compositional AbstractManagedPage + ManagedPageAware/ManagedBasePage instead)")));
                     }
                 })
                 .check(CLASSES_NO_TESTS_WITH_TESTS_PKG);
     }
 
     @Test
-    public void businessCodeMustNotUseSerenityRecorder() {
+    public void businessCodeMustNotUseRecorder() {
         noClasses()
                 .that().resideOutsideOfPackage("..framework.web.page..")
-                .should().dependOnClassesThat().haveSimpleName("SerenityRecorder")
-                .orShould().dependOnClassesThat().haveSimpleName("SerenityPageRecorder")
+                .should().dependOnClassesThat().haveSimpleName("Recorder")
+                .orShould().dependOnClassesThat().haveSimpleName("PageRecorder")
                 .check(CLASSES_NO_TESTS_WITH_TESTS_PKG);
     }
 
@@ -362,7 +362,7 @@ public class ArchitectureTest {
      * 非 lifecycle 包树的 framework 代码不得直接依赖 lifecycle 的 {@code *Impl} 协作者实现类，
      * 否则会绕过「接口（角色）= 协作者契约、{@code *Impl}=内部无状态单例」的 DI 替换链路，
      * 破坏可测试替身注入与多实现多态（WEB-P1-6）。
-     * <p>说明：{@code *Impl} 仅供 lifecycle 包树内部（含 {@code .serenity} 子包）组合根装配与委托，
+     * <p>说明：{@code *Impl} 仅供 lifecycle 包树内部（含 {@code .bridge} 子包）组合根装配与委托，
      * 故 subject 限制为 lifecycle 包树之外、dependOn 目标限制为 lifecycle 包树内的 {@code *Impl}。</p>
      */
     @Test
@@ -412,7 +412,7 @@ public class ArchitectureTest {
     // ==================== L7：lifecycle 内部面门禁（跨子包封装治理 Phase 1） ====================
     //
     // 背景：doc16《lifecycle 跨子包封装治理》。PlaywrightManager 拆分后协作者被物理拆到
-    // browser/context/page/scenario/serenity/bootstrap/media 子包，而 Java 子包 ≠ 同包，
+    // browser/context/page/scenario/bridge/bootstrap/media 子包，而 Java 子包 ≠ 同包，
     // package-private 不跨子包生效 —— 上一轮为稳定编译把这些成员升为 public。
     // 「public」在此表示「跨子包刻意可见」，绝不等于「业务可用」：本组规则把它固化为构建期门禁，
     // 任何 lifecycle 包树之外的访问（含业务 test-automation）直接构建失败，
@@ -459,10 +459,10 @@ public class ArchitectureTest {
         if ((LIFECYCLE_PKG + "context.CustomOptionsManager").equals(owner)) {
             return "removeAllThreadLocals".equals(name);
         }
-        if ((LIFECYCLE_PKG + "serenity.TestContextBridge").equals(owner)) {
+        if ((LIFECYCLE_PKG + "bridge.TestContextBridge").equals(owner)) {
             return "drainPageErrors".equals(name);
         }
-        if ((LIFECYCLE_PKG + "serenity.SerenityBusBridge").equals(owner)) {
+        if ((LIFECYCLE_PKG + "bridge.LifecycleBusBridge").equals(owner)) {
             return "replayFailures".equals(name);
         }
         if ((LIFECYCLE_PKG + "bootstrap.PlaywrightInitializer").equals(owner)) {
@@ -471,7 +471,7 @@ public class ArchitectureTest {
         if ((LIFECYCLE_PKG + "bootstrap.PlaywrightContextManager").equals(owner)) {
             return "closeContext".equals(name);
         }
-        return (LIFECYCLE_PKG + "serenity.PlaywrightSerenityBridge").equals(owner)
+        return (LIFECYCLE_PKG + "bridge.PlaywrightLifecycleBridge").equals(owner)
                 && "cleanupThreadLocals".equals(name);
     }
 
@@ -506,7 +506,7 @@ public class ArchitectureTest {
      * （{@code perThreadBrowserLock}/{@code getPageThreadLocal}/{@code getFrameworkState}/
      * {@code removeAllThreadLocals}/{@code drainPageErrors}/{@code replayFailures}/
      * {@code initializePlaywrightPaths}/{@code PlaywrightContextManager.closeContext}/
-     * {@code PlaywrightSerenityBridge.cleanupThreadLocals}），
+     * {@code PlaywrightLifecycleBridge.cleanupThreadLocals}），
      * 以及 {@code LifecycleState} 状态根角色接口的<b>任何</b>方法（doc16 Phase 2 新增）。
      *
      * <p>这些方法均为「框架内部 seam」：它们绕过 provider seam 与 Serenity 生命周期编排，

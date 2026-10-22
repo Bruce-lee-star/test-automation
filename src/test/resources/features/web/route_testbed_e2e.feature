@@ -1,4 +1,4 @@
-@regression @route @route-testbed
+@regression @route @route-testbed  @test
 Feature: Route 能力 testbed 靶场 E2E（本地 127.0.0.1:8899，真浏览器）
 
   配套 docs/TEST-CASES.md（TC-* 矩阵）。模式与 route_capability_e2e（DBB SIT）一致：
