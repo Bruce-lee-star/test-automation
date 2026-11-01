@@ -2,11 +2,12 @@ package com.hsbc.cmb.hk.dbb.automation.tests.steps;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.web.lifecycle.concurrent.ConcurrentContextExecutor;
 
+import com.hsbc.cmb.hk.dbb.automation.framework.web.page.codegen.CodegenLauncher;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.page.factory.PageObjectFactory;
-import com.hsbc.cmb.hk.dbb.automation.framework.web.page.scan.RoleElementPicker;
 import com.hsbc.cmb.hk.dbb.automation.framework.route.dsl.RouteDsl;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.session.SessionManager;
 
+import com.hsbc.cmb.hk.dbb.automation.framework.web.utils.NLSUtils;
 import com.hsbc.cmb.hk.dbb.automation.tests.pages.HomePage;
 import com.hsbc.cmb.hk.dbb.automation.tests.pages.LoginPage;
 import com.hsbc.cmb.hk.dbb.automation.tests.utils.BDDUtils;
@@ -115,7 +116,7 @@ public class LoginSteps {
         // 若发生 TargetClosedError，降级为完整登录流程
         try {
             loginPage.navigateTo(homeUrl);
-
+//            RoleElementPicker.openPanel(loginPage.getPage(),"");
             // 【优化】移除 waitForTimeout(15000)：navigation 的 waitUntil 已等待页面加载
             // 15s 的静止等待可能让 DBB 服务端的 session 校验触发 Page 关闭
             String currentUrl = loginPage.getCurrentUrl();
@@ -153,6 +154,9 @@ public class LoginSteps {
         logger.info("No valid session, performing login for: {}", sessionKey);
 
         loginPage.navigateTo(currentUrl);
+//        NLSUtils.setLanguage("en-US");
+////        loginPage.pause();
+//        CodegenLauncher.inspect(loginPage.getPage(), "nls/NLS_footer.json", "nls/NLS_idv_logon.json");
 //        RoleElementPicker.openPanel(loginPage.getPage(), "");
         // Axe-core accessibility scan on login page
 //        AxeCoreScanner.scanPage("Login Page - Initial");

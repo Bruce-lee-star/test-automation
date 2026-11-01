@@ -2,7 +2,7 @@ package com.hsbc.cmb.hk.dbb.automation.framework.config;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.api.config.ApiFrameworkConfig;
 import com.hsbc.cmb.hk.dbb.automation.framework.common.config.ConfigKey;
-import com.hsbc.cmb.hk.dbb.automation.framework.common.config.ConfigKeys;
+import com.hsbc.cmb.hk.dbb.automation.framework.common.config.ConfigRegistry;
 import com.hsbc.cmb.hk.dbb.automation.framework.common.config.MonitorConfig;
 import com.hsbc.cmb.hk.dbb.automation.framework.web.config.WebFrameworkConfig;
 
@@ -30,7 +30,7 @@ import static org.junit.Assert.assertTrue;
  *       API 侧经 {@link ApiFrameworkConfig} 的 {@link ConfigKey} 静态常量暴露。</li>
  * </ul>
  *
- * <p><b>2026-09-20 收敛后模型变更</b>：{@link ConfigKeys} 由「镜像注册表骨架」升级为
+ * <p><b>2026-09-20 收敛后模型变更</b>：{@link ConfigRegistry} 由「镜像注册表骨架」升级为
  * <b>唯一事实来源（SSoT）</b>——Web 枚举 / API 常量 / Monitor 常量均已退化为引用注册表的<b>门面</b>，
  * 同一配置键在全框架只有一处定义。因此：
  * <ul>
@@ -117,7 +117,7 @@ public class ConfigUnificationTest {
     }
 
     /**
-     * 门面一致性（收敛后取代原「镜像默认值一致性」）：{@link ConfigKeys} 是配置键的<b>唯一事实来源</b>，
+     * 门面一致性（收敛后取代原「镜像默认值一致性」）：{@link ConfigRegistry} 是配置键的<b>唯一事实来源</b>，
      * {@code WebFrameworkConfig} / {@code ApiFrameworkConfig} / {@code MonitorConfig} 是<b>门面</b>。
      *
      * <p>本测试按命名约定把每个门面常量映射回其注册表条目（Web → {@code WEB_<枚举名>}，
@@ -130,7 +130,9 @@ public class ConfigUnificationTest {
         List<String> problems = new ArrayList<>();
 
         for (WebFrameworkConfig c : WebFrameworkConfig.values()) {
-            ConfigKeys expected = lookup("WEB_" + c.name(), problems);
+            String registryName = "FRAMEWORK_RECORDING_ENABLED".equals(c.name())
+                    ? c.name() : "WEB_" + c.name();
+            ConfigRegistry expected = lookup(registryName, problems);
             if (expected == null) {
                 continue;
             }
@@ -140,7 +142,7 @@ public class ConfigUnificationTest {
         for (Field f : ApiFrameworkConfig.class.getDeclaredFields()) {
             if (Modifier.isStatic(f.getModifiers()) && f.getType() == ConfigKey.class) {
                 f.setAccessible(true);
-                ConfigKeys expected = lookup("API_" + f.getName(), problems);
+                ConfigRegistry expected = lookup("API_" + f.getName(), problems);
                 if (expected == null) {
                     continue;
                 }
@@ -151,7 +153,7 @@ public class ConfigUnificationTest {
         for (Field f : MonitorConfig.class.getDeclaredFields()) {
             if (Modifier.isStatic(f.getModifiers()) && f.getType() == MonitorConfig.Key.class) {
                 f.setAccessible(true);
-                ConfigKeys expected = lookup(f.getName(), problems);
+                ConfigRegistry expected = lookup(f.getName(), problems);
                 if (expected == null) {
                     continue;
                 }
@@ -172,17 +174,18 @@ public class ConfigUnificationTest {
     }
 
     /** 按名查找注册表条目；找不到则记入 problems 并返回 null。 */
-    private static ConfigKeys lookup(String name, List<String> problems) {
+    private static ConfigRegistry lookup(String name, List<String> problems) {
         try {
-            return ConfigKeys.valueOf(name);
+            return ConfigRegistry.valueOf(name);
         } catch (IllegalArgumentException e) {
-            problems.add("  - 注册表缺少门面对应的条目: ConfigKeys." + name);
+            problems.add("  - 注册表缺少门面对应的条目: ConfigRegistry." + name);
             return null;
         }
     }
 
     /** 断言注册表条目与门面三元组逐字一致。 */
-    private static void assertTripleMatches(List<String> problems, String owner, ConfigKeys expected, ConfigKey actual) {
+    private static void assertTripleMatches(List<String> problems, String owner,
+                                            ConfigRegistry expected, ConfigKey actual) {
         if (!expected.key().equals(actual.key())) {
             problems.add("  - " + owner + "：key 应为 '" + expected.key() + "'，实际 '" + actual.key() + "'");
         }

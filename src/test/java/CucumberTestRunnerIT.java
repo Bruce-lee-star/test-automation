@@ -40,7 +40,7 @@ import org.junit.runner.RunWith;
             "json:target/cucumber-report.json",
             "rerun:target/rerun.txt"
         },
-        tags = "@route-e2e",
+        tags = "@test",
         dryRun = false
 )
 @SuppressWarnings("deprecation")

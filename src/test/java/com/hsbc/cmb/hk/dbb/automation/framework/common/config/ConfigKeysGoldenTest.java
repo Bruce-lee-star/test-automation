@@ -17,10 +17,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * {@link ConfigKeys} 收敛 <b>golden 快照</b>测试 —— 默认值不漂移的守卫。
+ * {@link ConfigRegistry} 收敛 <b>golden 快照</b>测试 —— 默认值不漂移的守卫。
  *
  * <p><b>为什么需要它</b>：配置体系收敛（Web / API / Monitor 三侧的字面量定义全部迁移进
- * {@code ConfigKeys} 注册表）属于大批量机械搬运，一旦搬运中写错某个默认值（少一个字符、
+ * {@code ConfigRegistry} 注册表）属于大批量机械搬运，一旦搬运中写错某个默认值（少一个字符、
  * 改错数字），配置行为会被静默改变——这类缺陷在没有守卫时极难发现：编译通过、测试可能仍通过，
  * 只有当某条配置走到兜底分支时才暴露。
  *
@@ -29,10 +29,10 @@ import static org.junit.Assert.assertTrue;
  * 集合完全相等（既不缺键，也不多出未登记键）。
  *
  * <p><b>{@code <adaptive>} 标记</b>：个别键的默认值依赖运行环境（如
- * {@link ConfigKeys#WEB_PLAYWRIGHT_CONCURRENT_MAX} 按 CPU 核数自适应），基线无法固定为常量，
+ * {@link ConfigRegistry#WEB_PLAYWRIGHT_CONCURRENT_MAX} 按 CPU 核数自适应），基线无法固定为常量，
  * 故以 {@code <adaptive>} 占位；此类键只断言「存在且默认值非空白」，不断言具体取值。
  *
- * <p><b>更新方式</b>：若确认要变更某键的默认值，必须<b>同时</b>修改 {@code ConfigKeys} 与该基线文件，
+ * <p><b>更新方式</b>：若确认要变更某键的默认值，必须<b>同时</b>修改 {@code ConfigRegistry} 与该基线文件，
  * 使变更在评审中显式可见（而不是被这条测试静默放行）。
  */
 public class ConfigKeysGoldenTest {
@@ -49,10 +49,10 @@ public class ConfigKeysGoldenTest {
 
         // 非空性断言：采集失效（读到空基线 / 空注册表）会让本测试静默通过——那是最危险的失败模式。
         assertFalse("golden 基线不应为空（资源未被打包会静默放行本测试）", golden.isEmpty());
-        assertTrue("注册表条目数异常偏少（实际 " + ConfigKeys.values().length + "），疑似采集/迁移不完整", ConfigKeys.values().length > 100);
+        assertTrue("注册表条目数异常偏少（实际 " + ConfigRegistry.values().length + "），疑似采集/迁移不完整", ConfigRegistry.values().length > 100);
 
         Map<String, String> current = new LinkedHashMap<>();
-        for (ConfigKeys c : ConfigKeys.values()) {
+        for (ConfigRegistry c : ConfigRegistry.values()) {
             current.put(c.key(), c.defaultValue());
         }
 
@@ -79,7 +79,7 @@ public class ConfigKeysGoldenTest {
             }
         }
 
-        assertTrue("ConfigKeys 注册表必须与迁移前基线逐键、逐字一致（收敛的机械搬运不得改变任何配置行为）：\n"
+        assertTrue("ConfigRegistry 必须与迁移前基线逐键、逐字一致（收敛的机械搬运不得改变任何配置行为）：\n"
                         + String.join("\n", problems), problems.isEmpty());
 
         assertEquals("注册表键数应与基线一致", golden.size(), current.size());

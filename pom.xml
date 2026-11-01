@@ -86,7 +86,7 @@
         </dependency>
         <dependency>
             <groupId>com.hsbc.cmb.dbb.hk.automation</groupId>
-            <artifactId>pw-codegen</artifactId>
+            <artifactId>pw-codegen-v3</artifactId>
             <version>${framework.version}</version>
         </dependency>
 

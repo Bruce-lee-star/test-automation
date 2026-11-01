@@ -18,9 +18,9 @@ Write-Host ""
 
 while ($retryCount -lt $MaxRetries) {
     $retryCount++
-    Write-Host "[Attempt $retryCount/$MaxRetries] Pushing to origin/main..." -ForegroundColor Yellow
+    Write-Host "[Attempt $retryCount/$MaxRetries] Pushing to origin/DEV-V5..." -ForegroundColor Yellow
 
-    $output = git push origin main 2>&1
+    $output = git push origin DEV-V5 2>&1
     $exitCode = $LASTEXITCODE
 
     if ($exitCode -eq 0) {

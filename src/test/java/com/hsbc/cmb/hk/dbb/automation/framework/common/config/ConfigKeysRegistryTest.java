@@ -9,24 +9,24 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * {@link ConfigKeys} 统一配置键注册表契约测试（C-6 / M-2）。
+ * {@link ConfigRegistry} 统一配置键注册表契约测试（C-6 / M-2）。
  *
  * <p>固化：① 注册表非空；② 全部键唯一（与类加载期 fail-fast 静态校验互锁）；
  * ③ 键名/默认值/描述均非空；④ 键名遵循结构性命名约定（见
  * {@link #keysFollowStructuralNamingConvention()}）。
- * 新增配置键时若重复或格式违规，本测试与 {@link ConfigKeys#validateUniqueKeys()} 均会暴露。
+ * 新增配置键时若重复或格式违规，本测试与 {@link ConfigRegistry#validateUniqueKeys()} 均会暴露。
  */
 public class ConfigKeysRegistryTest {
 
     @Test
     public void registryIsNonEmpty() {
-        assertFalse("注册表不应为空", ConfigKeys.all().isEmpty());
+        assertTrue("注册表不应为空", ConfigRegistry.values().length > 0);
     }
 
     @Test
     public void allKeysAreUniqueAndWellFormed() {
         Set<String> seen = new HashSet<>();
-        for (ConfigKeys c : ConfigKeys.all()) {
+        for (ConfigRegistry c : ConfigRegistry.values()) {
             String key = c.key();
             assertTrue("键名不可为空: " + c, key != null && !key.isBlank());
             assertTrue("注册表存在重复配置键: " + key, seen.add(key));
@@ -50,7 +50,7 @@ public class ConfigKeysRegistryTest {
      */
     @Test
     public void keysFollowStructuralNamingConvention() {
-        for (ConfigKeys c : ConfigKeys.all()) {
+        for (ConfigRegistry c : ConfigRegistry.values()) {
             assertTrue("键名应以小写字母开头、仅含 [A-Za-z0-9.-] : " + c.key(), c.key().matches("^[a-z][A-Za-z0-9.-]*$"));
         }
     }

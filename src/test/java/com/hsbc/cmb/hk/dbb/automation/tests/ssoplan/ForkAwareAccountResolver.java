@@ -1,6 +1,6 @@
 package com.hsbc.cmb.hk.dbb.automation.tests.ssoplan;
 
-import com.hsbc.cmb.hk.dbb.automation.framework.common.config.ConfigSource;
+import com.hsbc.cmb.hk.dbb.automation.framework.common.config.ConfigReader;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 立即抛 {@link IllegalStateException} 并指明该 user 归属的 fork（fix：在正确 fork 运行，或重平衡 stride/账号池）。
  * 未配置 {@code sso.accounts.<env>} 时 no-op（无法分区，由 §5.6 dry-run 报告 WARN），零回归。</p>
  *
- * <p>线程安全：全部为无状态静态方法，配置读取经 {@link ConfigSource} 实时解析（set 即时生效）。</p>
+ * <p>线程安全：全部为无状态静态方法，配置读取经 {@link ConfigReader} 实时解析（set 即时生效）。</p>
  */
 public final class ForkAwareAccountResolver {
 
@@ -58,11 +58,11 @@ public final class ForkAwareAccountResolver {
      * 负值 / 非数字一律按 0 处理（防御性，避免索引越界）。
      */
     public static int currentForkIndex() {
-        String override = ConfigSource.resolve(FORK_INDEX_OVERRIDE, "").trim();
+        String override = ConfigReader.resolve(FORK_INDEX_OVERRIDE, "").trim();
         if (!override.isEmpty()) {
             return nonNegative(parseIntOrZero(override));
         }
-        String raw = ConfigSource.resolve(SUREFIRE_FORK_NUMBER, "").trim();
+        String raw = ConfigReader.resolve(SUREFIRE_FORK_NUMBER, "").trim();
         if (!raw.isEmpty()) {
             return nonNegative(parseIntOrZero(raw) - 1);
         }
@@ -71,7 +71,7 @@ public final class ForkAwareAccountResolver {
 
     /** 步长：每个 fork 分得的账号数；缺省 / 非正 / 非数字回退 {@link #DEFAULT_STRIDE}。 */
     public static int stride() {
-        String raw = ConfigSource.resolve(STRIDE_KEY, "").trim();
+        String raw = ConfigReader.resolve(STRIDE_KEY, "").trim();
         if (raw.isEmpty()) {
             return DEFAULT_STRIDE;
         }

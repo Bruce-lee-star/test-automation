@@ -13,7 +13,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * {@link ForkAwareAccountResolver} 单测（设计文档 §5.1~§5.5）。
  *
- * <p>配置经 {@link ForkAwareAccountResolver} 内部 {@code ConfigSource.resolve} 实时读取系统属性，
+ * <p>配置经 {@link ForkAwareAccountResolver} 内部 {@code ConfigReader.resolve} 实时读取系统属性，
  * 故每个用例用 {@code System.setProperty} 注入，{@link #tearDown()} 复位为空串（置空而非 clearProperty，
  * 避免 ConfigSource 快照回落歧义，见工程记忆 Serenity 配置快照陈旧性陷阱）。</p>
  */

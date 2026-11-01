@@ -1,6 +1,6 @@
 package com.hsbc.cmb.hk.dbb.automation.tests.ssoplan;
 
-import com.hsbc.cmb.hk.dbb.automation.framework.common.config.ConfigSource;
+import com.hsbc.cmb.hk.dbb.automation.framework.common.config.ConfigReader;
 
 import java.util.List;
 import java.util.ServiceLoader;
@@ -71,7 +71,7 @@ public final class RunScopeAccountProviders {
 
     /** 配置类注入：反射实例化 {@code sso.run.scope.provider}；未配置或实例化失败一律返回 {@code null}（回落下一级）。 */
     private static RunScopeAccountProvider fromConfigClass() {
-        String fqcn = ConfigSource.resolve(PROVIDER_CLASS_KEY, "").trim();
+        String fqcn = ConfigReader.resolve(PROVIDER_CLASS_KEY, "").trim();
         if (fqcn.isEmpty()) {
             return null;
         }

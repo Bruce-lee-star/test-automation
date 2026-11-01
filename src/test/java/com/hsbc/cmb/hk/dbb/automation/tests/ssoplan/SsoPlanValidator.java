@@ -1,6 +1,6 @@
 package com.hsbc.cmb.hk.dbb.automation.tests.ssoplan;
 
-import com.hsbc.cmb.hk.dbb.automation.framework.common.config.ConfigSource;
+import com.hsbc.cmb.hk.dbb.automation.framework.common.config.ConfigReader;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -214,7 +214,7 @@ public final class SsoPlanValidator {
 
         private static int stride() {
             try {
-                String raw = ConfigSource.resolve("sso.fork.user.stride", "4").trim();
+                String raw = ConfigReader.resolve("sso.fork.user.stride", "4").trim();
                 if (!raw.isEmpty()) {
                     return Integer.parseInt(raw);
                 }

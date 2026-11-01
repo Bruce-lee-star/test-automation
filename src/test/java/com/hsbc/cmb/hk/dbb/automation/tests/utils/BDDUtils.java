@@ -2,7 +2,7 @@ package com.hsbc.cmb.hk.dbb.automation.tests.utils;
 
 import com.hsbc.cmb.hk.dbb.automation.framework.api.core.services.TestServices;
 import com.hsbc.cmb.hk.dbb.automation.framework.api.core.step.BaseStep;
-import com.hsbc.cmb.hk.dbb.automation.framework.common.config.ConfigSource;
+import com.hsbc.cmb.hk.dbb.automation.framework.common.config.ConfigReader;
 import com.hsbc.cmb.hk.dbb.automation.framework.common.security.SecretValue;
 import com.hsbc.cmb.hk.dbb.automation.framework.core.context.ContextKey;
 import com.hsbc.cmb.hk.dbb.automation.framework.core.context.TestContextHolder;
@@ -57,7 +57,7 @@ public class BDDUtils {
             logger.debug("Extracted environment identifier: {}", envPrefix);
             
             // Get URL from environment configuration (required field)
-            String url = ConfigSource.resolve("environment." + env, null);
+            String url = ConfigReader.getProperty("environment." + env);
             if (url == null || url.isEmpty()) {
                 String errorMsg = String.format("URL configuration is required but not found for environment: %s", env);
                 logger.error(errorMsg);
@@ -78,7 +78,7 @@ public class BDDUtils {
             
             // Get password (optional field)
             String passwordKey = userinfoKey + "." + username + ".password";
-            String password = ConfigSource.resolve(passwordKey, null);
+            String password = ConfigReader.getProperty(passwordKey);
             if (password == null || password.isEmpty()) {
                 logger.warn("Password configuration not found for environment: {}, user: {}, using default empty value", env, username);
                 bddUtils.password = "";
@@ -90,7 +90,7 @@ public class BDDUtils {
             
             // Get profile (optional field)
             String profileKey = userinfoKey + "." + username + ".profile";
-            String profile = ConfigSource.resolve(profileKey, null);
+            String profile = ConfigReader.getProperty(profileKey);
             if (profile == null || profile.isEmpty()) {
                 logger.warn("Profile configuration not found for environment: {}, user: {}, using default empty value", env, username);
                 bddUtils.profile = "";
@@ -101,7 +101,7 @@ public class BDDUtils {
             
             // Get token security url (optional field)
             String securityUrlKey = userinfoKey + "." + username + ".token.security.url";
-            String securityUrl = ConfigSource.resolve(securityUrlKey, null);
+            String securityUrl = ConfigReader.getProperty(securityUrlKey);
             if (securityUrl == null || securityUrl.isEmpty()) {
                 logger.warn("Token security URL configuration not found for environment: {}, user: {}, using default empty value", env, username);
                 bddUtils.securityUrl = "";
@@ -234,7 +234,7 @@ public class BDDUtils {
      * @return Property value
      */
     public static String getProperty(String key) {
-        return ConfigSource.resolve(key, null);
+        return ConfigReader.getProperty(key);
     }
 
     public static String getSecurityCode(String securityUrl) {

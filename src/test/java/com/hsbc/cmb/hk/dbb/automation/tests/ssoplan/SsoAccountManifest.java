@@ -1,6 +1,6 @@
 package com.hsbc.cmb.hk.dbb.automation.tests.ssoplan;
 
-import com.hsbc.cmb.hk.dbb.automation.framework.common.config.ConfigSource;
+import com.hsbc.cmb.hk.dbb.automation.framework.common.config.ConfigReader;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -40,7 +40,7 @@ public final class SsoAccountManifest {
             if (env == null || env.contains("<")) {
                 continue; // 跳过占位 env
             }
-            String raw = ConfigSource.resolve("sso.accounts." + env, "").trim();
+            String raw = ConfigReader.resolve("sso.accounts." + env, "").trim();
             if (raw.isEmpty()) {
                 continue;
             }
