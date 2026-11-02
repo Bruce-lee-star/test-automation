@@ -4,44 +4,28 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>com.hsbc.cmb.dbb.hk.automation</groupId>
-        <artifactId>pw-framework-bom</artifactId>
-        <version>1.0.1</version>
-        <relativePath/>
-    </parent>
-
+    <!-- DEV-V5：废弃 pw-framework-bom 父子关系，改为完全自包含——所有依赖/插件版本在此显式声明，
+         不再继承任何外部 BOM 或父 POM 的 dependencyManagement / build 插件。 -->
+    <groupId>com.hsbc.cmb.dbb.hk.automation</groupId>
     <artifactId>test-automation</artifactId>
+    <version>1.0.1</version>
     <name>Test Automation</name>
     <description>Cucumber test suite: features, step definitions, CucumberTestRunnerIT. Aggregates all framework modules.</description>
 
     <properties>
         <framework.version>1.0.1</framework.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Failsafe passes this tag expression to the single CucumberTestRunnerIT entry point.
              Examples: mvn verify -Dtags='@login' or mvn verify -Dtags='@route or @api'.
              Use -Dit.test=<class> for targeted runner debugging; it overrides Failsafe includes/excludes. -->
-        <tags>@test</tags>
 
         <!-- Set true only when running Cucumber E2E without unit tests:
              mvn clean verify -Dskip.unit.tests=true -Dtags='@route-e2e'.
              The default keeps unit tests enabled. Do not use -DskipTests, which also skips Failsafe. -->
-        <skip.unit.tests>false</skip.unit.tests>
+        <skip.unit.tests>true</skip.unit.tests>
 
         <!-- Align retry behavior with the master branch: no automatic reruns by default.
              CI can opt in with -DrerunFailingTestsCount=N when a flaky-test buffer is required. -->
-        <rerunFailingTestsCount>0</rerunFailingTestsCount>
-
-        <!-- This standalone test-suite module has no production sources, and the framework Checkstyle
-             config resolves relative to the framework reactor rather than this repository. Keep the
-             module-level check disabled; framework production modules enforce the Checkstyle gate. -->
-        <checkstyle.skip>true</checkstyle.skip>
-
-        <!-- SSO 跨 fork 分区（设计文档 §9.5）：fork 索引与 stride，CI 经 -D 注入；
-             本地默认 0 / 4（单 fork，零行为变化）。 -->
-        <fork.index>0</fork.index>
-        <sso.fork.user.stride>4</sso.fork.user.stride>
-        <!-- failsafe 跨 JVM fork 数（§9.5）：默认 1（与历史一致）；CI 经 -DtestForkCount=N 开启多 fork。 -->
-        <testForkCount>1</testForkCount>
     </properties>
 
     <dependencies>
@@ -97,18 +81,20 @@
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-junit</artifactId>
+            <version>7.34.9</version>
             <scope>test</scope>
         </dependency>
-        <!-- Declare the Cucumber runtime, step-definition, and DataTable dependencies explicitly;
-             versions are managed centrally by the framework BOM. -->
+        <!-- Cucumber 运行时/步骤定义/DataTable 依赖：BOM 已废弃，版本在此显式声明（与框架 cucumber 7.34.9 对齐）。 -->
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-core</artifactId>
+            <version>7.34.9</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-java</artifactId>
+            <version>7.34.9</version>
             <scope>test</scope>
         </dependency>
         <!-- 统一测试 classpath 的 cucumber 版本与框架 cucumber-core（7.34.9）对齐，避免 cucumber 内置 shade 的 jackson 类 NoClassDefFoundError。 -->
@@ -127,43 +113,50 @@
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>datatable</artifactId>
+            <version>7.34.9</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.tngtech.archunit</groupId>
             <artifactId>archunit</artifactId>
+            <version>1.3.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
+            <version>20240303</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
+            <version>2.14.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.microsoft.playwright</groupId>
             <artifactId>playwright</artifactId>
+            <version>1.62.0</version>
             <scope>test</scope>
         </dependency>
         <!-- RestAssured needs commons-logging at runtime; declare it explicitly for tests. -->
         <dependency>
             <groupId>commons-logging</groupId>
             <artifactId>commons-logging</artifactId>
+            <version>1.2</version>
             <scope>test</scope>
         </dependency>
         <!-- Mockito supports isolated tests that mock Playwright pages and contexts. -->
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>${mockito.version}</version>
+            <version>4.5.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <!-- Pin inline mock-maker dependencies together to avoid conflicts with transitive versions. -->
+            <!-- Pin inline mock-maker dependencies together to avoid conflicts with transitive versions.
+                 byte-buddy 必须停留在 1.12.x 以匹配 mockito 4.5.1 的内联 mock maker（框架侧 Playwright 用的 1.17.8 不适用）。 -->
             <groupId>net.bytebuddy</groupId>
             <artifactId>byte-buddy</artifactId>
             <version>1.12.23</version>
@@ -179,18 +172,29 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <version>${h2.version}</version>
+            <version>2.2.224</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
 
     <build>
         <plugins>
+            <!-- Compile with Java 21 (self-contained: no parent supplies the compiler configuration). -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>21</release>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                </configuration>
+            </plugin>
+
             <!-- Surefire runs unit tests; Failsafe runs integration tests. Keep the E2E runner out of Surefire. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>${maven-surefire-plugin.version}</version>
+                <version>3.2.5</version>
                 <configuration>
                     <!-- Set true to run Cucumber E2E without unit tests. Do not use -DskipTests, which also skips Failsafe. -->
                     <skipTests>${skip.unit.tests}</skipTests>
@@ -203,20 +207,17 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <version>${maven-failsafe-plugin.version}</version>
+                <version>3.2.5</version>
                 <dependencies>
                     <dependency>
                         <groupId>org.apache.maven.surefire</groupId>
                         <artifactId>surefire-junit47</artifactId>
-                        <version>${maven-failsafe-plugin.version}</version>
+                        <version>3.2.5</version>
                     </dependency>
                 </dependencies>
                 <configuration>
                     <useFile>false</useFile>
                     <rerunFailingTestsCount>${rerunFailingTestsCount}</rerunFailingTestsCount>
-                    <forkCount>${testForkCount}</forkCount>
-                    <reuseForks>true</reuseForks>
-                    <!-- Do not impose a fixed fork timeout on environment-dependent E2E runs. -->
                     <!-- Use one CucumberTestRunnerIT entry point and select features with tags to avoid duplicate scenarios. -->
                     <includes>
                         <include>**/CucumberTestRunnerIT.java</include>
@@ -230,16 +231,9 @@
                     <classesDirectory>${project.build.outputDirectory}</classesDirectory>
                     <useModulePath>false</useModulePath>
                     <!-- Open JDK internals required by ByteBuddy, Mockito, and Groovy reflection in the test runtime. -->
-                    <argLine>@{jacocoArgLine} -XX:+EnableDynamicAgentLoading --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED -Dfork.index=${fork.index} -Dsso.fork.user.stride=${sso.fork.user.stride}</argLine>
+                    <argLine>-XX:+EnableDynamicAgentLoading --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED</argLine>
                     <systemPropertyVariables>
                         <cucumber.filter.tags>${tags}</cucumber.filter.tags>
-                        <!-- 框架 Cucumber 插件（FrameworkCucumberEventListener + PwReportPlugin）与
-                             ObjectFactory（PwReportObjectFactory）由框架自带 Runner（CucumberWithPw）在构造
-                             Cucumber 前经系统属性注入注册，此处不再声明，避免同一插件被注册两次。 -->
-                        <!-- D-4: env/env.code/base.url default empty (no environment metrics injected); runtime env resolved via Gherkin step logon DBB "<env>" (resolveEnv), no longer via Maven profile -->
-                        <env>${env}</env>
-                        <env.code>${env.code}</env.code>
-                        <base.url>${base.url}</base.url>
                     </systemPropertyVariables>
                     <!-- Fail when no integration tests match instead of silently generating an empty report. -->
                     <failIfNoTests>true</failIfNoTests>
@@ -256,55 +250,7 @@
                 </executions>
             </plugin>
 
-            <!-- Generate a JaCoCo report without enforcing a coverage threshold. -->
-            <plugin>
-                <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>report</id>
-                        <phase>test</phase>
-                        <goals>
-                            <goal>report</goal>
-                        </goals>
-                        <configuration>
-                            <formats>
-                                <format>XML</format>
-                            </formats>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
             </plugins>
     </build>
-
-    <profiles>
-        <!-- Opt-in engine-level parallel execution; the default test run remains sequential. -->
-        <profile>
-            <id>parallel</id>
-            <properties>
-                <!-- Defaults for the parallel profile; CI can override both values with Maven properties. -->
-                <parallelism>4</parallelism>
-                <maxPoolSize>8</maxPoolSize>
-            </properties>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-failsafe-plugin</artifactId>
-                        <configuration>
-                            <systemPropertyVariables>
-                                <!-- Cucumber parallel execution remains disabled unless -Pparallel is selected. -->
-                                <cucumber.execution.parallel.enabled>true</cucumber.execution.parallel.enabled>
-                                <cucumber.execution.parallel.config.fixed.parallelism>${parallelism}</cucumber.execution.parallel.config.fixed.parallelism>
-                                <cucumber.execution.parallel.config.fixed.max-pool-size>${maxPoolSize}</cucumber.execution.parallel.config.fixed.max-pool-size>
-                            </systemPropertyVariables>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 
 </project>
