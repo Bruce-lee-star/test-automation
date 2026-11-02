@@ -154,9 +154,9 @@ public class LoginSteps {
         logger.info("No valid session, performing login for: {}", sessionKey);
 
         loginPage.navigateTo(currentUrl);
-//        NLSUtils.setLanguage("en-US");
-////        loginPage.pause();
-//        CodegenLauncher.inspect(loginPage.getPage(), "nls/NLS_footer.json", "nls/NLS_idv_logon.json");
+        NLSUtils.setLanguage("en-US");
+//        loginPage.pause();
+        CodegenLauncher.inspect(loginPage.getPage(), "nls/NLS_footer.json", "nls/NLS_idv_logon.json");
 //        RoleElementPicker.openPanel(loginPage.getPage(), "");
         // Axe-core accessibility scan on login page
 //        AxeCoreScanner.scanPage("Login Page - Initial");

@@ -53,10 +53,9 @@ public class LayeringArchTest {
                         .importPackages(BASE_PACKAGE));
     }
 
-        /**
-     * 涓讳唬鐮佷笉寰椾緷璧?JUnit 5锛堝洖褰掑畧鍗紝2026-10 鍙ｅ緞锛夛細鍏ㄤ粨缁熶竴 JUnit 4 鈥斺€?runner 渚?
-     * 锛圫erenity 鐨?{@code CucumberWithSerenity}锛夋湰灏辨槸 JUnit 4锛屽弻寮曟搸骞跺瓨鍙甫鏉?surefire provider
-     * 鎶夋嫨涓?junit-platform 鐗堟湰瀵归綈鎴愭湰銆傛湰瑙勫垯闃叉涓讳唬鐮侊紙璇級閲嶆柊寮曞叆 jupiter / platform API銆?
+    /**
+     * Framework production code must not depend on JUnit 5. The test suite uses JUnit 4 for
+     * {@code CucumberWithSerenity}; keeping the frameworks separate avoids conflicting providers.
      */
     @Test
     public void frameworkCodeMustNotDependOnJunit5() {
@@ -105,11 +104,10 @@ public class LayeringArchTest {
                         .importPackages(TEST_BASE_PACKAGE));
     }
 
-        /**
-     * 姝ラ灞備笉鐩磋繛娴嬭瘯妗嗘灦鏂█ API锛圔-5锛屽彛寰勯殢 2026-10 鐨?JUnit4 缁熶竴鏇存柊锛夛細{@code tests} 鍖呬笅浠?
-     * {@code Steps} 缁撳熬鐨勬楠ょ被涓嶅緱鐩存帴渚濊禆 {@code org.junit.Assert}锛堟棫鍙ｅ緞绂佺殑鏄?jupiter 鐨?Assertions锛夈€?
-     * <p>姝ラ灞傛柇瑷€缁熶竴缁?{@code tests.verify.RouteDemoVerifications} 鏀跺彛鈥斺€旀棦瑙ｈ€︽祴璇曟鏋?API锛?
-     * 鍙堜负銆屾柇瑷€涓嬫矇鍒?Service / Verifier銆嶆彁渚涘敮涓€鏇挎崲閿氱偣銆傛湰瑙勫垯蹇呴』鎵弿娴嬭瘯绫伙紝鏁呭崟鐙互娴嬭瘯鏍瑰寘瀵煎叆銆?/p>
+    /**
+     * Step classes must not depend directly on JUnit assertions. Keep assertions in
+     * {@code tests.verify.RouteDemoVerifications} so test-framework APIs remain isolated from steps.
+     * This rule imports test classes because it checks the step layer.
      */
     @Test
     public void stepsMustNotUseJunitAssertionsDirectly() {

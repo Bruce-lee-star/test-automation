@@ -104,7 +104,10 @@ pipeline {
         stage('Run tests') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    bat "mvn -q -B test -Dtest=CucumberTestRunnerIT -Dcucumber.filter.tags=\"${params.TAGS}\" -Dsurefire.failIfNoSpecifiedTests=false -Dcheckstyle.skip=true -Dspotbugs.skip=true -Dcve.gate.skip=true"
+                    bat """
+                        @chcp 65001 >NUL
+                        mvn -q -B test -Dtest=CucumberTestRunnerIT -Dcucumber.filter.tags="${params.TAGS}" -Dsurefire.failIfNoSpecifiedTests=false -Dfile.encoding=UTF-8 -Dcheckstyle.skip=true -Dspotbugs.skip=true -Dcve.gate.skip=true
+                    """
                 }
             }
         }

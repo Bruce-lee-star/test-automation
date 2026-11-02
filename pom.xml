@@ -13,40 +13,27 @@
 
     <artifactId>test-automation</artifactId>
     <name>Test Automation</name>
-    <description>Cucumber/Serenity test suite: features, step definitions, CucumberTestRunnerIT. Aggregates all framework modules.</description>
+    <description>Cucumber test suite: features, step definitions, CucumberTestRunnerIT. Aggregates all framework modules.</description>
 
     <properties>
         <framework.version>1.0.1</framework.version>
-        <!-- Cucumber 鏍囩杩囨护锛氶粯璁ゅ彧璺?@test 鍦烘櫙锛堝榻?master 鐨?CucumberTestRunnerIT 娉ㄨВ @test锛夈€?
-             鏈睘鎬х粡 failsafe 鐨?systemPropertyVariables 娉ㄥ叆涓?cucumber.filter.tags锛屾槸涓昏繍琛屽櫒
-             銆怌ucumberTestRunnerIT銆戠殑鍗曚竴浜嬪疄鏉ユ簮锛堣鐩栧叾 @CucumberOptions(tags) 娉ㄨВ锛夈€?
-             杩愯妯″瀷锛?026-10-10 璧凤級锛氥€愬彧鎸?feature 杩愯銆戔€斺€?鍞竴鍏ュ彛 + 鏍囩閫夋嫨锛屼笉鍐嶆寜绫诲悕璺戯細
-               mvn verify -Dtags='@login'
-               mvn verify -Dtags='@route or @api'
-             -Dit.test=<绫诲悕> 浠呯敤浜庡畾鍚戣皟璇曪紙瀹冧細瑕嗙洊 failsafe 鐨?includes/excludes锛夈€?-->
+        <!-- Failsafe passes this tag expression to the single CucumberTestRunnerIT entry point.
+             Examples: mvn verify -Dtags='@login' or mvn verify -Dtags='@route or @api'.
+             Use -Dit.test=<class> for targeted runner debugging; it overrides Failsafe includes/excludes. -->
         <tags>@test</tags>
 
-        <!-- 鍗曟祴寮€鍏筹紙灞炴€э紝闈?profile锛夛細E2E 鍙窇 Cucumber 鍦烘櫙鏃讹紝鎶?surefire锛圝Unit 鍗曟祴锛夋暣浣撹烦杩囷細
-               mvn clean verify -Dskip.unit.tests=true -Dtags='@route-e2e'
-             榛樿 false 鈬?甯歌 mvn test / mvn verify 浠嶈窇鍏ㄩ儴 JUnit 鍗曟祴锛堥棬绂佷笉涓級銆?
-             娉ㄦ剰锛氫笉瑕佺敤 -DskipTests 浠ｆ浛 鈥斺€?閭ｄ釜寮€鍏充細鍚屾椂璺宠繃 failsafe锛孍2E 灏变笉浼氭墽琛屻€?-->
+        <!-- Set true only when running Cucumber E2E without unit tests:
+             mvn clean verify -Dskip.unit.tests=true -Dtags='@route-e2e'.
+             The default keeps unit tests enabled. Do not use -DskipTests, which also skips Failsafe. -->
         <skip.unit.tests>false</skip.unit.tests>
 
-        <!-- 澶辫触閲嶈窇锛氬榻?master 鍒嗘敮榛樿 0锛堜笉閲嶈窇锛夈€傛鏋剁埗 pom 榛樿 1锛?缁?flaky 鐣欎竴娆＄紦鍐?锛夛紝
-             鏈ā鍧楁樉寮忚鐩栦负 0 鈥斺€?2026-10-10 瀹炴祴锛氬€间负 1 鏃舵瘡涓け璐ュ満鏅悇璺?2 閬?
-             锛堟棩蹇楀嚭鐜?2 涓被绾ф姤鍛婂潡銆丗ailed: 14銆丼creenshots Taken: 2锛夛紝E2E 鏃堕暱杩戜箮缈诲€嶃€?
-             CI 闇€瑕?flaky 缂撳啿鏃舵寜鐖?pom 鐨勭害瀹氳鐩栵細-DrerunFailingTestsCount=N锛堢敤鎴峰睘鎬т紭鍏堢骇鏇撮珮锛夈€?-->
+        <!-- Align retry behavior with the master branch: no automatic reruns by default.
+             CI can opt in with -DrerunFailingTestsCount=N when a flaky-test buffer is required. -->
         <rerunFailingTestsCount>0</rerunFailingTestsCount>
 
-        <!-- Checkstyle 闂ㄧ锛氭湰妯″潡銆愭樉寮忓叧闂€戯紙2026-09-23锛屾湰鍦板叏閲忓疄娴嬶級銆?
-             鍘熷洜锛歱arent 鐨?configLocation 涓?${maven.multiModuleProjectDirectory}/checkstyle.xml锛岀敤浜庡畾浣?
-             鈥滄鏋朵粨搴撴牴鈥濈殑鍏变韩閰嶇疆锛涜€屽浣滀负銆愮嫭绔嬫瀯寤哄崟鍏冦€戠殑 test-automation锛坧arent 缁?<relativePath/>
-             浠?.m2 瑙ｆ瀽锛夛紝璇ュ彉閲忔寚鍚戞湰妯″潡鐩綍 鈫?閰嶇疆涓嶅瓨鍦?鈫?鎻掍欢鍦ㄦ壂鎻忓墠鍗崇‖澶辫触
-             锛堝疄娴嬶細Unable to find configuration file at location: .../test-automation/checkstyle.xml锛夛紝
-             浣?`mvn verify` 缁撴瀯鎬у繀绾紙涓庢祴璇曠粨鏋滄棤鍏筹級锛孋I 鐨?e2e job 鍚屾牱琚崱銆?
-             鍏抽棴涓嶆崯澶辫鐩栵細鈶?鏈ā鍧?src/main/java 涓虹┖锛堟棤 main 婧愮爜锛夛紱鈶?parent 鐨?checkstyle 鏈氨
-             includeTestSourceDirectory=false锛堟祴璇曟簮涓嶅叆璇ラ棬绂侊級鈫?姝ゆā鍧楁病鏈変换浣曞彲鏍￠獙瀵硅薄銆?
-             妗嗘灦鐢熶骇浠ｇ爜鐨勯鏍奸棬绂佷粛鍦ㄦ鏋朵粨搴撶殑 build job 涓己鍒舵墽琛岋紙鍚笌 checkstyle-baseline.xml 鐨勮鏁版瘮瀵癸級銆?-->
+        <!-- This standalone test-suite module has no production sources, and the framework Checkstyle
+             config resolves relative to the framework reactor rather than this repository. Keep the
+             module-level check disabled; framework production modules enforce the Checkstyle gate. -->
         <checkstyle.skip>true</checkstyle.skip>
 
         <!-- SSO 跨 fork 分区（设计文档 §9.5）：fork 索引与 stride，CI 经 -D 注入；
@@ -65,7 +52,7 @@
         </dependency>
         <dependency>
             <groupId>com.hsbc.cmb.dbb.hk.automation</groupId>
-            <artifactId>pw-reports-v2</artifactId>
+            <artifactId>pw-reports</artifactId>
             <version>${framework.version}</version>
         </dependency>
         <dependency>
@@ -78,7 +65,7 @@
             <artifactId>pw-web-ui</artifactId>
             <version>${framework.version}</version>
         </dependency>
-        <!-- Route V2锛氬敮涓€璺敱瀹炵幇锛圴1 pw-route 宸叉暣浣撶Щ闄わ紱涓氬姟灞傜粺涓€浣跨敤 RouteDsl锛?-->
+        <!-- Route V2 is the sole route implementation; business tests use RouteDsl. -->
         <dependency>
             <groupId>com.hsbc.cmb.dbb.hk.automation</groupId>
             <artifactId>pw-route</artifactId>
@@ -86,47 +73,19 @@
         </dependency>
         <dependency>
             <groupId>com.hsbc.cmb.dbb.hk.automation</groupId>
-            <artifactId>pw-codegen-v3</artifactId>
+            <artifactId>pw-codegen</artifactId>
             <version>${framework.version}</version>
         </dependency>
 
-        <!-- ENG-P0-2锛歵est-automation 瀹為檯鐢ㄥ埌鐨勫閮ㄤ緷璧栵紙鍘熺敱鏍?<dependencies> 缁ф壙锛岀幇鏄惧紡澹版槑锛涘潎涓烘祴璇曟湡锛?-->
-        <!-- M3：移除 serenity-model/core（测试代码已无 Serenity 引用；@Step/@Steps/@Shared 经 pw-reports-v2 shim 解析）。 -->
+        <!-- External libraries used by this test suite are declared explicitly and test-scoped. -->
+        <!-- M3：移除 serenity-model/core（测试代码已无 Serenity 引用；@Step/@Steps/@Shared 经 pw-reports shim 解析）。 -->
 
-        <!-- 杩愯 IT 鎵€闇€锛堟湰妗嗘灦鐢?Playwright锛屼笉鐪熸浣跨敤杩欎簺 driver锛夛細Serenity 4.2.0 鐨?
-             SupportedWebDriver 闈欐€佸垵濮嬪寲浼氬 FirefoxDriver/ChromeDriver/InternetExplorerDriver/
-             EdgeDriver/SafariDriver/HtmlUnitDriver/AppiumDriver 鍋?ldc锛岀被缂哄け鍗?NoClassDefFoundError
-             瀵艰嚧鍏ㄩ儴 IT 鍦?Serenity 鍒濆鍖栭樁娈靛け璐ャ€傛澶勮ˉ test 浣滅敤鍩熺被璺緞锛屼娇绫诲彲鍔犺浇銆?-->
-        <dependency>
-            <groupId>org.seleniumhq.selenium</groupId>
-            <artifactId>selenium-java</artifactId>
-            <version>${selenium.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.seleniumhq.selenium</groupId>
-            <artifactId>htmlunit3-driver</artifactId>
-            <version>${htmlunit3.driver.version}</version>
-            <scope>test</scope>
-            <exclusions>
-                <!-- 渚濊禆娌荤悊锛堝唴缃戦殧绂绘竻鍗曪級锛氭湰妗嗘灦浠庝笉瀹炰緥鍖?HtmlUnitDriver锛圥laywright 椹卞姩锛夛紝
-                     瀵瑰畠鐨勫敮涓€闇€姹傛槸銆岀被鍙姞杞姐€嶏紙涓婃柟璇存槑鐨?SupportedWebDriver 闈欐€?ldc锛夈€傝€?
-                     htmlunit-websocket-client 浠?HtmlUnit 鐪熸璺?WebSocket 鏃舵墠浼氱敤鍒帮紝鏈鏋剁敤涓嶅埌锛?
-                     涓旇鏋勪欢鍛戒腑鍐呯綉闅旂娓呭崟锛屾晠鍦ㄦ鏂紑锛坔tmlunit 鏈綋缁?htmlunit3-driver 浼犻€掍繚鐣欙級銆?-->
-                <exclusion>
-                    <groupId>org.htmlunit</groupId>
-                    <artifactId>htmlunit-websocket-client</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>io.appium</groupId>
-            <artifactId>java-client</artifactId>
-            <version>9.3.0</version>
-            <scope>test</scope>
-        </dependency>
-        <!-- M3：移除 serenity-cucumber/screenplay/rest-assured/junit（runner 已切纯 Cucumber；rest-assured 经 pw-api-core 传入）。 -->
-        <!-- JUnit 4锛氭墽琛屽櫒鍥為€€ master 鏂规锛?026-09-27锛孭0锛夆€斺€擟ucumberWithSerenity runner锛圫erenity 涓讳綋鎺ョ锛宻cenario tags 澶╃劧鍐欏叆 TestOutcome锛屾牴娌?JUnit5 鏃佹寕涓?@firefox/@edge 瑕嗙洊澶辨晥锛夈€?-->
+        <!-- DEV-V5 去 Serenity 后，框架改用 Playwright，测试代码已无任何 org.openqa.selenium / io.appium 引用；
+             selenium-java / selenium-support / htmlunit3-driver / appium java-client 均不再需要，已移除。 -->
+
+        <!-- M3：移除 serenity-cucumber/screenplay/rest-assured（runner 已切纯 Cucumber；rest-assured 经 pw-api-core 传入）。 -->
+        <!-- JUnit 4：本模块单元用例直接使用 org.junit.Test/@RunWith，Cucumber runner 也基于 io.cucumber.junit
+             （JUnit4 桥接）@RunWith(Cucumber.class)；与已废弃的 CucumberWithSerenity 无关。 -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -134,15 +93,14 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- cucumber-junit锛欯RunWith(CucumberWithSerenity) 鐨?JUnit4 妗ユ帴锛坰erenity-cucumber 渚濊禆鍏惰繍琛屽櫒锛?-->
+        <!-- Cucumber JUnit4 运行器（io.cucumber.junit.Cucumber + @RunWith(Cucumber.class)），供本模块 Cucumber *IT runner 使用；Serenity 已移除。 -->
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-junit</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- 渚濊禆娌荤悊锛堝唴缃戦殧绂绘竻鍗曪級锛欳ucumber 宸蹭粠 serenity-model 鐨勪紶閫掗摼璺帓闄わ紝鏀圭敱浣跨敤鏂规樉寮忓０鏄庛€?
-             鏈ā鍧?*纭疄浣跨敤**涓嬪垪涓夎€咃紙Cucumber 杩愯鍣?+ step 瀹氫箟 + DataTable 鏂█锛夛紝
-             鏁呭繀椤绘樉寮忔媺鍏ワ紱鐗堟湰缁熶竴鐢辨牴 DM 閽?${cucumber.version}锛?.31.0锛夛紝閬垮厤闅?Serenity 浼犻€掓紓绉汇€?-->
+        <!-- Declare the Cucumber runtime, step-definition, and DataTable dependencies explicitly;
+             versions are managed centrally by the framework BOM. -->
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-core</artifactId>
@@ -153,8 +111,7 @@
             <artifactId>cucumber-java</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- DEV-V5 对齐：v2(pw-reports-v2) 将 cucumber-gherkin/cucumber-plugin 钉在 7.31.0，与框架 cucumber-core 7.34.9 错配，
-             导致 cucumber 内置 shade 的 jackson 类 NoClassDefFoundError。此处就近声明 7.34.9 统一版本（正式修复应同步改 v2 的 pom）。 -->
+        <!-- 统一测试 classpath 的 cucumber 版本与框架 cucumber-core（7.34.9）对齐，避免 cucumber 内置 shade 的 jackson 类 NoClassDefFoundError。 -->
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-gherkin</artifactId>
@@ -192,21 +149,13 @@
             <artifactId>playwright</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- RestAssured POST 杩愯鏈熼渶瑕?commons-logging(LogFactory)锛泂erenity-* 宸插皢鍏舵帓闄わ紝姝ゅ鏄惧紡琛ュ洖 -->
+        <!-- RestAssured needs commons-logging at runtime; declare it explicitly for tests. -->
         <dependency>
             <groupId>commons-logging</groupId>
             <artifactId>commons-logging</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- selenium-support锛歴erenity 鍏紑 API 寮曠敤 org.openqa.selenium.support.ui.*锛堝 ExpectedCondition锛夛紱
-             娴嬭瘯婧愮爜鐢ㄥ埌 serenity 鐨?Wait/ExpectedCondition 绛惧悕锛岄』鏄惧紡澹版槑鍚﹀垯 javac 绗﹀彿琛ュ叏浼?CompletionFailure -->
-        <dependency>
-            <groupId>org.seleniumhq.selenium</groupId>
-            <artifactId>selenium-support</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- 绾崟娴嬶細mock Playwright Page/BrowserContext锛屾牎楠?start(page) 鐩戝惉鍣ㄥ箓绛夋敞鍐岋紙涓嶄緷璧栨祻瑙堝櫒杩愯鏃讹級 -->
+        <!-- Mockito supports isolated tests that mock Playwright pages and contexts. -->
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
@@ -214,9 +163,7 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <!-- Mockito inline mock-maker 鐨勫浐瀹氶厤瀵癸細byte-buddy 1.12.23 + objenesis 3.2銆?
-                 鍒绘剰銆愪笉銆戣縼杩?<dependencyManagement>锛歟nforcer 鐨?RequireUpperBoundDeps 鎶?managed 鐗堟湰涓?
-                 浼犻€掗渶姹傛瘮涓婇檺锛坰erenity-model 4.3.4 鈫?objenesis 3.4锛変細鍒よ繚瑙勶紱鍐呰仈澹版槑鎵嶈瑙嗕綔鏈ā鍧楁樉寮忛拤鐗堛€?-->
+            <!-- Pin inline mock-maker dependencies together to avoid conflicts with transitive versions. -->
             <groupId>net.bytebuddy</groupId>
             <artifactId>byte-buddy</artifactId>
             <version>1.12.23</version>
@@ -228,7 +175,7 @@
             <version>3.2</version>
             <scope>test</scope>
         </dependency>
-        <!-- T0-4 琛ュ叏鏀跺熬锛歁onitor DB 鎸佷箙鍖栫鍒扮楠岃瘉锛堝唴瀛樺簱锛屾棤闇€澶栭儴 DB锛?-->
+        <!-- H2 supports persistence tests without requiring an external database. -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
@@ -239,74 +186,18 @@
 
     <build>
         <plugins>
-            <!-- 鎶ュ憡鐩綍娓呯悊锛堝彛寰勭粺涓€锛氭姤鍛婂彧鍛堢幇銆愭湰娆¤繍琛屻€戠殑鍦烘櫙锛夈€?
-                 鑳屾櫙锛歋erenity 姣忔閮藉線鍚屼竴鐩綍杩藉姞鍦烘櫙 JSON/HTML锛屼笉娓呯悊鏃舵眹鎬绘姤鍛婁細鎶婂巻鍙茶繍琛岀殑琛屼竴璧风畻杩涘幓
-                 锛堝疄娴嬪悓涓€鐩綍绱Н 14 涓?JSON銆佸悓鍚嶅満鏅嚭鐜颁袱浠斤級锛?This run" 鍥犳涓嶅彲淇°€?
-                 鍋氭硶锛氭妸 maven-clean-plugin 缁戝埌 pre-integration-test锛坒ailsafe 璺?IT 涔嬪墠锛夛紝**鏁翠釜娓呯┖**
-                 ${project.build.directory}/site/serenity 鈥斺€?鏈湴璺?verify 鏃犻渶 mvn clean锛屽彛寰勪笌 CI 瀹屽叏涓€鑷淬€?
-                 涓?CI 鐨勭瓑浠锋€э細CI 姣忔杩愯閮芥槸鍏ㄦ柊宸ヤ綔鍖猴紙checkout 鍚?target/ 涓虹┖锛夛紝鏈氨鏃犲巻鍙插彲鐣欙紱
-                 淇濈暀鍘嗗彶鍙湪鏈湴杩炵画璺戞椂鎵嶆湁宸埆锛岃€?鎶ュ憡鍙唬琛ㄦ湰娆¤繍琛?鏄洿閲嶈鐨勪竴鑷存€ц姹傦紝鏁呬竴寰嬪叏娓呫€?
-                 鍓綔鐢紙宸茬‘璁ゆ帴鍙楋級锛歵rend-history/** 涔熶竴骞舵竻鎺夛紝鏁呰法鍦?FLAKY 寰芥爣锛堣繎 5 鍦哄け璐?鈮? 娆★級
-                 鍦ㄧ湡瀹炶繍琛屼腑涓嶅啀鍙兘瑙﹀彂 鈥斺€?瀹冩槸 trend 鏁版嵁鐨勫敮涓€娑堣垂鏂癸紱鑻ユ棩鍚庤鎭㈠锛屽簲鎶婅秼鍔垮揩鐓хЩ鍑?
-                 鎶ュ憡鐩綍锛堜緥濡?target/trend-history锛夛紝鑰屼笉鏄妸鍘嗗彶鐣欏湪鎶ュ憡鐩綍閲屼笌"鏈杩愯"鍙ｅ緞鎵撴灦銆?
-                 鍙︼細excludeDefaultDirectories=true 蹇呴』淇濈暀 鈥斺€?鍚﹀垯 clean 鐩爣浼氳繛甯﹀垹鎺夋暣涓?target/锛?
-                 鎶婂凡缂栬瘧浜х墿鍦?pre-integration-test 闃舵娓呯┖锛岀洿鎺ユ瘉鎺夋湰娆¤繍琛屻€?-->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-clean-plugin</artifactId>
-                <version>3.2.0</version>
-                <executions>
-                    <execution>
-                        <id>clean-serenity-report</id>
-                        <phase>pre-integration-test</phase>
-                        <goals>
-                            <goal>clean</goal>
-                        </goals>
-                        <configuration>
-                            <excludeDefaultDirectories>true</excludeDefaultDirectories>
-                            <filesets>
-                                <fileset>
-                                    <directory>${project.build.directory}/site/serenity</directory>
-                                </fileset>
-                            </filesets>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <!-- surefire 鍙窇鍗曟祴锛氭妸 IT 杩愯鍣ㄦ帓闄ゆ帀锛岄伩鍏嶄笌 failsafe 閲嶅鎵ц鍚屼竴濂椾欢銆?
-                 瀹炴祴锛?026-10-09锛夛細鍛戒护琛屽甫 -Dtest=<鏌?IT> 鏃讹紝鍚屼竴濂椾欢浼氳 surefire 涓?failsafe
-                 鍚勮窇涓€閬嶏紙鑰楁椂缈诲€嶏紝涓旀鏋剁洃鍚櫒浼氭妸"绗簩涓彃浠剁殑 suite"璇姤鎴?RERUN STARTING锛夈€?
-                 娉ㄦ剰锛?Dtest 浼氥€愯鐩栥€慽ncludes/excludes锛屾晠涓婇潰鐨?<excludes> 鍙槸闃插憜锛?
-                 鐪熸鐨勬姢鏍忔槸涓嬮潰娉ㄥ叆鐨?姘镐笉鍖归厤鏍囩"锛堣鐩?-Dtest 鐨勫満鏅紝瑙佽澶勬敞閲婏級銆?-->
+            <!-- Surefire runs unit tests; Failsafe runs integration tests. Keep the E2E runner out of Surefire. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven-surefire-plugin.version}</version>
                 <configuration>
-                    <!-- 鍗曟祴寮€鍏筹紙灞炴€э紝闈?profile锛夛細-Dskip.unit.tests=true 鈬?鏈杩愯鍙窇 Cucumber 鍦烘櫙锛?
-                         鏁翠釜 surefire锛圝Unit 鍗曟祴锛夎璺宠繃锛涢粯璁?false锛屽父瑙勬瀯寤轰笉鍙楀奖鍝嶃€?
-                         娉ㄦ剰锛氫笉鑳界敤 -DskipTests 浠ｆ浛锛堝畠杩?failsafe 涓€璧疯烦锛孍2E 灏变笉璺戜簡锛夈€?
-                         鍓綔鐢紙鍒绘剰锛夛細鏈ā鍧楃殑 <skipTests> 鐢?${skip.unit.tests} 椹卞姩锛屾晠妗嗘灦鐖?pom
-                         娌跨敤鐨勫懡浠よ -DskipTests 瀵规湰妯″潡 surefire 涓嶅啀鐢熸晥 鈥斺€?鍥犱负 -DskipTests 浼氳繛
-                         failsafe 涓€璧疯烦杩囷紝瀵?璺?E2E"鍦烘櫙娌℃湁鎰忎箟銆?-->
+                    <!-- Set true to run Cucumber E2E without unit tests. Do not use -DskipTests, which also skips Failsafe. -->
                     <skipTests>${skip.unit.tests}</skipTests>
 
-                    <!-- E2E 鍙湪 failsafe锛坕ntegration-test锛夎窇涓€閬嶏細surefire 鐨勯€夋祴鏂瑰紡鐢便€愭鏋剁埗 pom銆戠殑
-                         姝ｅ悜 include `**/*Test.java` 鍐冲畾锛堜笌 master 鍒嗘敮涓€鑷达級鈬?鏈繍琛屽櫒
-                         CucumberTestRunnerIT 鍙婁换浣?*IT 澶╃劧涓嶈繘 test 闃舵銆?
-                         姝ゅ鍘熷厛棰濆鍒楄繃 <excludes>**/*IT.java</exclude>锛氫笌鐖堕厤缃彔鍔犮€佹亽涓嶅懡涓€佺函鍐椾綑锛?
-                         宸蹭簬 2026-10-10 鍒犻櫎锛堜繚鐣欐湰娉ㄩ噴璇存槑"涓轰粈涔堜笉闇€瑕?锛夈€?-->
+                    <!-- The Cucumber *IT runner belongs to Failsafe, not the unit-test phase. -->
 
-                    <!-- 鈿?`-Dtest=<IT>` 浼氥€愯鐩栥€戠埗 pom 鐨?includes锛坰urefire 鏃㈡湁璇箟锛夛紝鎶?E2E 杩愯鍣ㄦ媺杩?
-                         test 闃舵锛涜闃舵涓€鏃﹀け璐ワ紝鏋勫缓绔嬪嵆涓 鈬?pre-integration-test / integration-test /
-                         post-integration-test 鍏ㄤ笉鎵ц 鈬?**娌℃湁娴嬭瘯鎶ュ憡**锛?026-10-10 瀹炴祴锛歵est 闃舵 7 errors
-                         鈬?BUILD FAILURE锛屾姤鍛婇樁娈?0 娆℃墽琛岋紱灞婃椂鍙兘鐢?serenity:aggregate 浜嬪悗琛ユ姤鍛婏級銆?
-                         瀹炴祴鍚﹀喅杩囩殑涓ょ"鎶ゆ爮"锛?
-                           鈶?娉ㄥ叆 cucumber.filter.tags 鈥斺€?瀹為檯鐢熸晥鐨勬槸绯荤粺灞炴€?tags锛屾棤鏁堬紱
-                           鈶?杩愯鍣ㄥ唴闈欐€佹敼灞炴€?鈥斺€?Serenity 鍦ㄨ繍琛屽櫒绫诲垵濮嬪寲涔嬪墠宸茶В鏋?tags锛屾棤鏁堛€?
-                         纭畾鎬у仛娉曪細E2E 涓€寰嬪甫 -Dskip.unit.tests=true锛堣涓婃柟 <skipTests>锛夛細
-                         skipTests 鏃╀簬 -Dtest 鐢熸晥 鈬?surefire 鏁翠釜璺宠繃銆佸彧璺?Cucumber锛屾姤鍛婇樁娈靛繀鐒舵墽琛岋細
-                             mvn clean verify -Dskip.unit.tests=true -Dtags='@route-e2e' -->
+                    <!-- -Dtest can override Surefire includes; use -Dskip.unit.tests=true to preserve Failsafe E2E execution. -->
                 </configuration>
             </plugin>
             <plugin>
@@ -325,54 +216,32 @@
                     <rerunFailingTestsCount>${rerunFailingTestsCount}</rerunFailingTestsCount>
                     <forkCount>${testForkCount}</forkCount>
                     <reuseForks>true</reuseForks>
-                    <!-- 2026-10-10锛氭湰妯″潡 E2E 涓嶅啀璁?fork 绾ц秴鏃讹紙鍘熶负 ${forkedProcessTimeoutInSeconds}=1800s锛夈€?
-                         鎰忓浘锛欵2E 鏃堕暱闅忕幆澧冩尝鍔ㄥぇ锛堝疄娴嬪崟杞?9:55锝?9:41锛夛紝涓€鏃﹁秴杩囦笂闄愪細琚己鏉€ 鈥斺€?
-                         鏈畬鎴愮殑鐢ㄤ緥缁撴灉鍏ㄩ儴涓㈠け锛屼笖"琚腑鏂?浼氳璇姤鎴愬け璐ワ紙master 鐨?pom 娉ㄩ噴閲?
-                         灏辫褰曚簡 300s 瑙﹀彂浜х敓涓€鎵瑰亣澶辫触鐨勪簨鏁咃級銆?
-                         浠ｄ环锛堥』鐭ワ級锛歠ork 瓒呮椂鏈槸"鍗℃鏈€鍚庨槻绾? 鈥斺€?鐢ㄤ緥/娴忚鍣ㄦ寕璧锋椂浼氭案涔呮寕浣?Maven
-                         锛堝巻鍙蹭笂鍑虹幇杩囨暣杞病鏈?BUILD 琛屻€丆I 姘镐笉杩斿洖鐨勬儏鍐碉級銆傝嫢鏃ュ悗瑕佹仮澶嶏細
-                         鍦ㄦ鍔犲洖 <forkedProcessTimeoutInSeconds>N</forkedProcessTimeoutInSeconds>锛堢锛夈€?
-                         娉細妗嗘灦鐖?pom 瀵?surefire锛堝崟娴嬶級浠嶄繚鐣?1800s 鍏滃簳锛屼笉鍙楁澶勫奖鍝嶃€?-->
-                    <!-- 鍞竴鍏ュ彛锛坒eature-only 杩愯妯″瀷锛?026-10-10锛夛細
-                         鎵€鏈?feature 涓€寰嬬粡 CucumberTestRunnerIT锛坒eatures=鏁翠釜 features 鐩綍锛? -Dtags 閫夋嫨锛?
-                         銆愪笉瑕佸啀涓哄崟涓?feature 鏂板缓 runner 绫汇€戔€斺€?姣忎釜 *IT.java 閮戒細琚?includes 鎷夎捣锛岃嫢涓や釜
-                         runner 鎸囧悜鍚屼竴 feature锛岃 feature 浼氳鐪熷疄鎵ц涓ら亶锛岃€?Serenity/JUnit4 鎶ュ憡鎸?feature
-                         鍚嶅悎骞?鈬?鎶ュ憡鏄剧ず Tests run: 14锛?7脳2锛変笖鑰楁椂缈诲€嶏紙2026-10-09/10 瀹炴祴锛?
-                         CucumberRouteE2ERunnerIT 涓庝富鍏ュ彛鍚?feature 鍚屾爣绛撅紝宸插垹闄わ級銆?
-                         瀹氬悜璋冭瘯浠嶅彲鐢?-Dit.test=<绫诲悕>锛堣鍙傛暟瑕嗙洊 includes/excludes锛夈€?-->
+                    <!-- Do not impose a fixed fork timeout on environment-dependent E2E runs. -->
+                    <!-- Use one CucumberTestRunnerIT entry point and select features with tags to avoid duplicate scenarios. -->
                     <includes>
                         <include>**/CucumberTestRunnerIT.java</include>
                     </includes>
                     <excludes>
-                        <!-- 瀹氬悜鍏ュ彛锛氫笉鍙備笌榛樿 verify锛屽悓鏃堕槻姝㈠皢鏉ユ斁瀹?includes 鏃惰鏃犳潯浠舵媺璧?
-                             锛?026-09-23 鏈湴鍏ㄩ噺瀹炴祴锛氫簩鑰呬緷璧栧叕鍙?SIT 缃戠粶涓庡嚟鎹紝榛樿璺戝繀绾?鈥斺€?绾?70s 瓒呮椂锛夈€?
-                             瀹氬悜鎵ц锛?Dit.test 瑕嗙洊 includes/excludes锛屽悇杩愯鍣ㄥ凡纭紪鐮佽嚜韬爣绛撅級锛?
-                               mvn verify -Dit.test=CucumberParallelLogonRunnerIT -Dserenity.parallel.for.tests=4 -Dplaywright.browser.headless=true
-                               mvn verify -Dit.test=CucumberConcurrentLogonRunnerIT -Dplaywright.browser.headless=true
-                             CucumberE2ESandboxRunnerIT 鍚岀悊灞炲畾鍚戝叆鍙ｏ紙涓嶅弬涓庨粯璁?verify锛夈€?-->
+                        <!-- These runners are opt-in only and excluded from the default verify run. -->
                         <exclude>**/CucumberParallelLogonRunnerIT.java</exclude>
                         <exclude>**/CucumberConcurrentLogonRunnerIT.java</exclude>
                     </excludes>
                     <testClassesDirectory>${project.build.testOutputDirectory}</testClassesDirectory>
                     <classesDirectory>${project.build.outputDirectory}</classesDirectory>
                     <useModulePath>false</useModulePath>
-                    <!-- 鈿?JDK16+ 寮哄皝瑁咃細Serenity REST(RestSpecificationFactory) 鍦ㄩ潤鎬佸垵濮嬪寲鏃剁敤 ByteBuddy
-                         鍙嶅皠娉ㄥ叆绫伙紝闇€ java.base 鎵撳紑 java.lang(ClassLoader.getPackage/defineClass)锛?
-                         java.lang.reflect 渚?Mockito/Serenity 鍙嶅皠澧炲己锛沯ava.util 渚?RestAssured 鐨?Groovy 鍙嶅皠銆?-->
+                    <!-- Open JDK internals required by ByteBuddy, Mockito, and Groovy reflection in the test runtime. -->
                     <argLine>@{jacocoArgLine} -XX:+EnableDynamicAgentLoading --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED -Dfork.index=${fork.index} -Dsso.fork.user.stride=${sso.fork.user.stride}</argLine>
                     <systemPropertyVariables>
-                        <serenity.outputDirectory>${project.build.directory}/site/serenity</serenity.outputDirectory>
                         <cucumber.filter.tags>${tags}</cucumber.filter.tags>
                         <!-- 框架 Cucumber 插件（FrameworkCucumberEventListener + PwReportPlugin）与
-                             ObjectFactory（PwReportObjectFactory）已由 pw-web-ui 自带的 /cucumber.properties
-                             自动注册，此处不再声明，避免同一插件被注册两次。 -->
+                             ObjectFactory（PwReportObjectFactory）由框架自带 Runner（CucumberWithPw）在构造
+                             Cucumber 前经系统属性注入注册，此处不再声明，避免同一插件被注册两次。 -->
                         <!-- D-4: env/env.code/base.url default empty (no environment metrics injected); runtime env resolved via Gherkin step logon DBB "<env>" (resolveEnv), no longer via Maven profile -->
                         <env>${env}</env>
                         <env.code>${env.code}</env.code>
                         <base.url>${base.url}</base.url>
                     </systemPropertyVariables>
-                    <!-- 鏈湴瀵归綈 CI 鐨勩€孖T 鏁?> 0銆嶅彲璇佷吉鏂█锛? 鏉?IT 鍛戒腑鏃跺搷浜け璐ワ紝
-                         鑰屼笉鏄湪鏈厤缃幆澧冿紙env/base.url 涓虹┖锛夋椂闈欓粯缁裤€?-->
+                    <!-- Fail when no integration tests match instead of silently generating an empty report. -->
                     <failIfNoTests>true</failIfNoTests>
                     <reportsDirectory>${project.build.directory}/failsafe-reports</reportsDirectory>
                 </configuration>
@@ -387,12 +256,7 @@
                 </executions>
             </plugin>
 
-            <!--
-              JaCoCo锛氳鐩栫巼鎺㈤拡锛坧repare-agent 鍦ㄧ埗 pom 娉ㄥ叆锛夈€?
-              褰撳墠鍗曞厓娴嬭瘯涓衡€滆涓烘姢鐩锯€濓紙Mockito 闅旂锛岄獙璇佸娲捐浆鍙戯級锛屽苟涓嶆墽琛?framework-web 瀹炵幇锛?
-              鏁?framework-web 琛岃鐩栫巼绾?0%锛涜鐩栫巼鈥滃彧鍗囦笉闄嶁€濋棬绂侊紙check锛夊緟 T1-9 琛ュ厖鐪熷疄瑕嗙洊娴嬭瘯鍚庡惎鐢ㄣ€?
-              姝ゅ浠呭嚭鎶ュ憡锛堣仛鐒﹀垰鎷嗗垎鐨?BasePage 鍖咃級锛屼究浜?CI/浜哄伐鏌ョ湅瑕嗙洊缂哄彛銆?
-            -->
+            <!-- Generate a JaCoCo report without enforcing a coverage threshold. -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
@@ -416,14 +280,11 @@
     </build>
 
     <profiles>
-        <!--
-          猸?寮曟搸绾у苟琛岋紙璇勫08绫?4 / X-1 / W-5锛夛細闇€鍦ㄩ殧绂诲墠缃紙C-1 鐢ㄤ緥绾х粦瀹氾級闂幆鍚庡惎鐢ㄣ€?
-          鏄惧紡 -Pparallel 鎵嶅紑鍚?cucumber/junit 骞惰锛涢粯璁?mvn test/verify 浠嶄覆琛岋紝瀹夊叏銆?
-        -->
+        <!-- Opt-in engine-level parallel execution; the default test run remains sequential. -->
         <profile>
             <id>parallel</id>
             <properties>
-                <!-- CON-1 寮曟搸绾у苟琛岋細骞跺彂搴︽棆閽紙CI 鐢?-Dparallelism=N -DmaxPoolSize=M 瑕嗙洊锛?-->
+                <!-- Defaults for the parallel profile; CI can override both values with Maven properties. -->
                 <parallelism>4</parallelism>
                 <maxPoolSize>8</maxPoolSize>
             </properties>
@@ -434,7 +295,7 @@
                         <artifactId>maven-failsafe-plugin</artifactId>
                         <configuration>
                             <systemPropertyVariables>
-                                <!-- 寮€鍚?Cucumber 寮曟搸绾у苟琛岋紙榛樿涓茶锛屼粎 -Pparallel 鐢熸晥锛?-->
+                                <!-- Cucumber parallel execution remains disabled unless -Pparallel is selected. -->
                                 <cucumber.execution.parallel.enabled>true</cucumber.execution.parallel.enabled>
                                 <cucumber.execution.parallel.config.fixed.parallelism>${parallelism}</cucumber.execution.parallel.config.fixed.parallelism>
                                 <cucumber.execution.parallel.config.fixed.max-pool-size>${maxPoolSize}</cucumber.execution.parallel.config.fixed.max-pool-size>
@@ -447,4 +308,3 @@
     </profiles>
 
 </project>
-
