@@ -9,10 +9,9 @@ pipeline {
 
     options {
         timestamps()
-        timeout(time: 120, unit: 'MINUTES')
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '20', artifactNumToKeepStr: '5'))
-        skipDefaultCheckout()
+
     }
 
     parameters {
@@ -33,7 +32,8 @@ pipeline {
         PATH = "${env.MAVEN_HOME}\\bin;${env.JAVA_HOME}\\bin;${env.PATH}"
         // 须与 test-automation/src/test/resources/pw.properties 的 framework.output.directory 一致——
         // 框架报告（index.html / email-report.html / pw-junit.xml / assets）落盘到此目录。
-        REPORT_DIR = 'target/site/serenity'
+        // DEV-V5 已将报告目录由 target/site/serenity 重命名为 target/report（pw.properties 已同步）。
+        REPORT_DIR = 'target/report'
 
         // ── CI 专属覆盖（不写进仓库配置文件，靠环境层生效）──
         // 浏览器/ffmpeg 落到工作区之外的持久目录，git clean -fdx 与 deleteDir 都清不到，跨构建复用
