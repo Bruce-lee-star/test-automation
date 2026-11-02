@@ -31,6 +31,8 @@ pipeline {
         MAVEN_HOME = 'D:\\Software\\apache-maven-3.9.9'
         JAVA_HOME = 'D:\\Software\\JDK\\JDK-21.0.9'
         PATH = "${env.MAVEN_HOME}\\bin;${env.JAVA_HOME}\\bin;${env.PATH}"
+        // 须与 test-automation/src/test/resources/pw.properties 的 framework.output.directory 一致——
+        // 框架报告（index.html / email-report.html / pw-junit.xml / assets）落盘到此目录。
         REPORT_DIR = 'target/site/serenity'
 
         // ── CI 专属覆盖（不写进仓库配置文件，靠环境层生效）──
@@ -106,7 +108,9 @@ pipeline {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     bat """
                         @chcp 65001 >NUL
-                        mvn -q -B test -Dtest=CucumberTestRunnerIT -Dcucumber.filter.tags="${params.TAGS}" -Dsurefire.failIfNoSpecifiedTests=false -Dfile.encoding=UTF-8 -Dcheckstyle.skip=true -Dspotbugs.skip=true -Dcve.gate.skip=true
+                        // 注：test-automation 已自包含（无 checkstyle/spotbugs/cve 插件），原先的
+                        // -Dcheckstyle.skip/-Dspotbugs.skip/-Dcve.gate.skip 均为死参数，已移除。
+                        mvn -q -B test -Dtest=CucumberTestRunnerIT -Dcucumber.filter.tags="${params.TAGS}" -Dsurefire.failIfNoSpecifiedTests=false -Dfile.encoding=UTF-8
                     """
                 }
             }
@@ -138,7 +142,8 @@ pipeline {
         always {
             script {
                 try {
-                    junit testResults: "${REPORT_DIR}/serenity-junit.xml",
+                    // 框架报告聚合 junit 结果（原 Serenity 的 serenity-junit.xml 已随 Serenity 移除）
+                    junit testResults: "${REPORT_DIR}/pw-junit.xml",
                           allowEmptyResults: true, healthScaleFactor: 1.0
                 } catch (e) { echo "junit parse failed (non-fatal): ${e.getMessage()}" }
             }
@@ -175,14 +180,14 @@ pipeline {
                             emailext(
                                 to: params.EMAIL_TO,
                                 from: params.EMAIL_FROM,
-                                subject: "Test Report ${env.JOB_NAME} #${env.BUILD_NUMBER} - ${currentBuild.currentResult}",
+                                subject: "[E2E] ${env.JOB_NAME} #${env.BUILD_NUMBER} - ${currentBuild.currentResult}",
                                 body: readFile(file: emailFile),
                                 mimeType: 'text/html'
                             )
                         } else {
                             emailext(
                                 to: params.EMAIL_TO, from: params.EMAIL_FROM,
-                                subject: "Test Report ${env.JOB_NAME} #${env.BUILD_NUMBER} - ${currentBuild.currentResult}",
+                                subject: "[E2E] ${env.JOB_NAME} #${env.BUILD_NUMBER} - ${currentBuild.currentResult}",
                                 body: "Report HTML missing. View online: ${onlineUrl}",
                                 mimeType: 'text/plain'
                             )
