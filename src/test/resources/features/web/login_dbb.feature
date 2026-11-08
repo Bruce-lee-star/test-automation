@@ -1,4 +1,4 @@
-@regression @web @login @test
+@regression @web @login
 Feature: testing logon - 1
 
   Scenario: testing logon to dbb-1
